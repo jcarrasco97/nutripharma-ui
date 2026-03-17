@@ -1,6 +1,8 @@
 import VistaResumen from "./vistas/VistaResumen";
 import VistaConsultas from "./vistas/VistaConsultas";
 import VistaPedidos from "./vistas/VistaPedidos";
+import VistaSuministros from "./vistas/VistaSuministros";
+import VistaDocumentacion from "./vistas/VistaDocumentacion";
 import React, { useEffect, useState } from "react";
 import {
   LogOut,
@@ -210,13 +212,17 @@ const Dashboard = () => {
 
         {/* Contenedor dinámico donde inyectaremos los componentes */}
         <div className="flex-1 overflow-auto p-4 md:p-8">
-          {/* Renderizado condicional */}
+          {/* NUEVO: Renderizado condicional COMPLETO */}
           {vistaActual === "resumen" ? (
             <VistaResumen />
           ) : vistaActual === "consultas" ? (
             <VistaConsultas />
           ) : vistaActual === "pedidos" ? (
             <VistaPedidos />
+          ) : vistaActual === "suministros" ? (
+            <VistaSuministros />
+          ) : vistaActual === "documentacion" ? (
+            <VistaDocumentacion />
           ) : (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 min-h-[500px] flex items-center justify-center">
               <div className="text-center">
