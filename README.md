@@ -1,16 +1,54 @@
-# React + Vite
+# NutriPharma UI 🏥
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend moderno para la gestión clínica de pacientes y consultas nutricionales. Desarrollado con un enfoque "Mobile-First" para facilitar el trabajo de los nutricionistas desde cualquier dispositivo.
 
-Currently, two official plugins are available:
+## 🚀 Tecnologías Principales
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Este proyecto utiliza el stack más avanzado de 2026:
 
-## React Compiler
+* **React 19** - Librería principal para la interfaz de usuario.
+* **Vite** - Herramienta de construcción ultra rápida.
+* **Tailwind CSS v4** - Motor de diseño atómico de última generación.
+* **Axios** - Cliente HTTP para la comunicación con la API.
+* **Lucide React** - Set de iconos vectoriales modernos y ligeros.
+* **React Router Dom** - Gestión de navegación y rutas.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🛠️ Instalación y Configuración
 
-## Expanding the ESLint configuration
+Sigue estos pasos para poner en marcha el entorno de desarrollo:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1.  **Clonar el repositorio:**
+    ```bash
+    git clone [https://github.com/jcarrasco97/nutripharma-ui.git](https://github.com/jcarrasco97/nutripharma-ui.git)
+    ```
+
+2.  **Entrar en la carpeta del proyecto:**
+    ```bash
+    cd nutripharma-ui
+    ```
+
+3.  **Instalar dependencias:**
+    ```bash
+    npm install
+    ```
+
+4.  **Arrancar el servidor de desarrollo:**
+    ```bash
+    npm run dev
+    ```
+
+La aplicación estará disponible en: `http://localhost:5173`
+
+## 📁 Estructura del Proyecto
+
+* `src/components/`: Componentes reutilizables de la interfaz.
+* `src/services/`: Lógica de conexión con la API (Axios).
+* `src/assets/`: Imágenes y recursos estáticos.
+* `src/index.css`: Configuración global de Tailwind CSS v4.
+
+## 📡 Conexión con el Backend
+
+La aplicación está configurada para comunicarse con la **API de NutriPharma** (Spring Boot) ejecutándose por defecto en `http://localhost:8080`. Asegúrate de tener el backend activo para que las funcionalidades clínicas (búsqueda predictiva, registro de consultas) operen correctamente.
+
+---
+Desarrollado con ❤️ para **NutriPharma**.
