@@ -1,8 +1,3 @@
-import VistaResumen from "./vistas/VistaResumen";
-import VistaConsultas from "./vistas/VistaConsultas";
-import VistaPedidos from "./vistas/VistaPedidos";
-import VistaSuministros from "./vistas/VistaSuministros";
-import VistaDocumentacion from "./vistas/VistaDocumentacion";
 import React, { useEffect, useState } from "react";
 import {
   LogOut,
@@ -19,6 +14,16 @@ import {
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 
+// Importación de Vistas
+import VistaResumen from "./vistas/VistaResumen";
+import VistaResumenFarmacia from "./vistas/VistaResumenFarmacia"; // <-- NUEVA VISTA
+import VistaConsultas from "./vistas/VistaConsultas";
+import VistaPedidos from "./vistas/VistaPedidos";
+import VistaSuministros from "./vistas/VistaSuministros";
+import VistaDocumentacion from "./vistas/VistaDocumentacion";
+import VistaValidaciones from "./vistas/VistaValidaciones";
+import VistaEmpleados from "./vistas/VistaEmpleados";
+
 const Dashboard = () => {
   const navigate = useNavigate();
 
@@ -30,13 +35,22 @@ const Dashboard = () => {
       const decoded = jwtDecode(token);
       return { email: decoded.sub, roles: decoded.roles || [] };
     } catch {
-      // ERROR CORREGIDO: Eliminado 'err' ya que no se usaba.
       return null;
     }
   });
 
-  // Estado para controlar qué módulo se está viendo en la pantalla principal
-  const [vistaActual, setVistaActual] = useState("resumen");
+  // Estado para controlar qué módulo se ve (INTELIGENTE SEGÚN EL ROL)
+  const [vistaActual, setVistaActual] = useState(() => {
+    if (
+      usuario &&
+      usuario.roles.includes("ROLE_ADMIN") &&
+      !usuario.roles.includes("ROLE_NUTRICIONISTA")
+    ) {
+      return "usuarios"; // El Admin va directo a Gestión Empleados
+    }
+    return "resumen"; // El resto va al Resumen
+  });
+
   // Estado para controlar el menú en móviles
   const [menuAbierto, setMenuAbierto] = useState(false);
 
@@ -60,7 +74,7 @@ const Dashboard = () => {
   const isNutricionista = usuario.roles.includes("ROLE_NUTRICIONISTA");
   const isFarmacia = usuario.roles.includes("ROLE_FARMACIA");
 
-  // 4. GENERACIÓN DEL MENÚ DINÁMICO SEGÚN EL ROL (Basado en el PRD)
+  // 4. GENERACIÓN DEL MENÚ DINÁMICO SEGÚN EL ROL
   const generarMenu = () => {
     const items = [];
 
@@ -111,7 +125,6 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex font-sans">
       {/* --- SIDEBAR (Barra Lateral) --- */}
-      {/* Botón menú móvil */}
       <button
         className="md:hidden fixed top-4 left-4 z-50 p-2 bg-sky-600 text-white rounded-lg"
         onClick={() => setMenuAbierto(!menuAbierto)}
@@ -203,7 +216,7 @@ const Dashboard = () => {
 
       {/* --- ÁREA DE CONTENIDO PRINCIPAL --- */}
       <main className="flex-1 flex flex-col min-h-screen overflow-hidden">
-        {/* Cabecera del contenido (oculta en móvil porque el menú tapa, visible en desktop) */}
+        {/* Cabecera del contenido */}
         <header className="h-20 bg-white border-b border-gray-200 flex items-center px-8 hidden md:flex">
           <h2 className="text-2xl font-bold text-gray-800 capitalize">
             {vistaActual.replace("-", " ")}
@@ -212,9 +225,13 @@ const Dashboard = () => {
 
         {/* Contenedor dinámico donde inyectaremos los componentes */}
         <div className="flex-1 overflow-auto p-4 md:p-8">
-          {/* NUEVO: Renderizado condicional COMPLETO */}
+          {/* NUEVO: Renderizado condicional COMPLETO con bifurcación para Farmacias */}
           {vistaActual === "resumen" ? (
-            <VistaResumen />
+            isFarmacia ? (
+              <VistaResumenFarmacia cambiarVista={setVistaActual} />
+            ) : (
+              <VistaResumen />
+            )
           ) : vistaActual === "consultas" ? (
             <VistaConsultas />
           ) : vistaActual === "pedidos" ? (
@@ -223,6 +240,10 @@ const Dashboard = () => {
             <VistaSuministros />
           ) : vistaActual === "documentacion" ? (
             <VistaDocumentacion />
+          ) : vistaActual === "validaciones" ? (
+            <VistaValidaciones />
+          ) : vistaActual === "usuarios" ? (
+            <VistaEmpleados />
           ) : (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 min-h-[500px] flex items-center justify-center">
               <div className="text-center">
@@ -240,7 +261,7 @@ const Dashboard = () => {
         </div>
       </main>
 
-      {/* Overlay oscuro para móviles cuando el menú está abierto */}
+      {/* Overlay oscuro para móviles */}
       {menuAbierto && (
         <div
           className="fixed inset-0 bg-gray-800/50 z-30 md:hidden"

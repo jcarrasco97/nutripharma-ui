@@ -8,22 +8,29 @@ import {
   MapPin,
   Loader2,
   X,
+  Filter,
+  ArrowUpDown,
+  Search, // <-- Asegúrate de que esto está
+  Calendar, // <-- ¡AQUÍ ESTABA EL FALLO DEL RENDERIZADO!
 } from "lucide-react";
 import { consultasService } from "../../services/consultasService";
 import { farmaciaService } from "../../services/farmaciaService";
+import { nutricionistasService } from "../../services/nutricionistasService";
 
 const VistaConsultas = () => {
   const [consultas, setConsultas] = useState([]);
   const [farmacias, setFarmacias] = useState([]);
+  const [perfil, setPerfil] = useState(null);
   const [cargando, setCargando] = useState(true);
 
-  // NUEVO ESTADO: Controla si el Pop-Up está visible
+  // ESTADOS DE FILTRO
+  const [mesFiltro, setMesFiltro] = useState("Todos");
+  const [ordenFiltro, setOrdenFiltro] = useState("recientes");
+  const [busqueda, setBusqueda] = useState("");
+
   const [mostrarModal, setMostrarModal] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
-  const NUTRICIONISTA_ID = 1; // ID temporal de Laura
-
-  // Estado del formulario
   const [formulario, setFormulario] = useState({
     farmaciaId: "",
     fecha: new Date().toISOString().split("T")[0],
@@ -40,12 +47,15 @@ const VistaConsultas = () => {
   const cargarDatos = async () => {
     setCargando(true);
     try {
-      const [datosConsultas, datosFarmacias] = await Promise.all([
-        consultasService.listarTodas(),
+      const [datosConsultas, datosFarmacias, miPerfil] = await Promise.all([
+        consultasService.obtenerMisConsultas(),
         farmaciaService.listarTodas(),
+        nutricionistasService.obtenerMiPerfil(),
       ]);
       setConsultas(datosConsultas);
       setFarmacias(datosFarmacias);
+      setPerfil(miPerfil);
+
       if (datosFarmacias.length > 0) {
         setFormulario((prev) => ({
           ...prev,
@@ -63,39 +73,63 @@ const VistaConsultas = () => {
     cargarDatos();
   }, []);
 
+  // --- LÓGICA DE FILTRADO Y ORDENACIÓN ---
+  const mesesDisponibles = [
+    "Todos",
+    ...new Set(consultas.map((c) => c.fecha.substring(0, 7))),
+  ].sort((a, b) => b.localeCompare(a));
+
+  const consultasFiltradas = consultas
+    .filter((c) => {
+      const coincideMes =
+        mesFiltro === "Todos" || c.fecha.startsWith(mesFiltro);
+      const coincideBusqueda = c.farmaciaNombre
+        .toLowerCase()
+        .includes(busqueda.toLowerCase());
+      return coincideMes && coincideBusqueda;
+    })
+    .sort((a, b) => {
+      if (ordenFiltro === "recientes")
+        return new Date(b.fecha) - new Date(a.fecha);
+      return new Date(a.fecha) - new Date(b.fecha);
+    });
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormulario({ ...formulario, [name]: value });
   };
 
-  // 1. ABRIR EL POP-UP (En lugar de guardar directamente)
   const handlePreSubmit = (e) => {
     e.preventDefault();
-    setMostrarModal(true); // Mostramos el modal de confirmación
+    setMostrarModal(true);
   };
 
-  // 2. CONFIRMAR Y GUARDAR (El doble combo a la API)
+  // --- CORRECCIÓN CLAVE: Uso de .crear() y .confirmar() ---
   const confirmarYGuardar = async () => {
+    if (!perfil)
+      return alert("El perfil del usuario no ha cargado correctamente.");
     setGuardando(true);
     try {
       const payload = {
         ...formulario,
-        nutricionistaId: NUTRICIONISTA_ID,
+        nutricionistaId: perfil.id, // Sincronizado dinámicamente
         farmaciaId: Number(formulario.farmaciaId),
-        horaInicio: formulario.horaInicio + ":00",
-        horaFin: formulario.horaFin + ":00",
+        horaInicio:
+          formulario.horaInicio.length === 5
+            ? formulario.horaInicio + ":00"
+            : formulario.horaInicio,
+        horaFin:
+          formulario.horaFin.length === 5
+            ? formulario.horaFin + ":00"
+            : formulario.horaFin,
       };
 
-      // Paso 1: Creamos el borrador
       const nuevaConsulta = await consultasService.crear(payload);
-
-      // Paso 2: Lo confirmamos inmediatamente usando el ID que nos ha devuelto el backend
       await consultasService.confirmar(nuevaConsulta.id);
 
-      setMostrarModal(false); // Cerramos el pop-up
-      cargarDatos(); // Recargamos la lista
+      setMostrarModal(false);
+      cargarDatos();
 
-      // Reseteamos las cantidades para el próximo turno, pero mantenemos la farmacia
       setFormulario((prev) => ({
         ...prev,
         nuevas: 0,
@@ -104,14 +138,18 @@ const VistaConsultas = () => {
         personalFarmacia: 0,
         observacionesJornada: "",
       }));
-    } catch {
-      alert("Error al registrar y confirmar el turno.");
+    } catch (err) {
+      console.error("Error al guardar:", err); // Chivato para la consola de React (F12)
+      alert(
+        "Error al registrar el turno: " +
+          (err.response?.data?.message || err.message),
+      );
     } finally {
       setGuardando(false);
     }
   };
 
-  // 3. ABRIR INCIDENCIA (Se mantiene igual)
+  // --- CORRECCIÓN CLAVE: Uso de .abrirIncidencia() ---
   const handleIncidencia = async (id) => {
     const mensaje = window.prompt("Escribe el motivo de la incidencia:");
     if (!mensaje) return;
@@ -119,17 +157,19 @@ const VistaConsultas = () => {
       await consultasService.abrirIncidencia(id, mensaje);
       cargarDatos();
     } catch (error) {
+      console.error("Error incidencia:", error);
       alert(error.response?.data?.message || "Error al abrir incidencia.");
     }
   };
 
-  // Mantenemos el handleConfirmar original por si quedó algún borrador antiguo colgado
+  // --- CORRECCIÓN CLAVE: Uso de .confirmar() ---
   const handleConfirmarAntiguo = async (id) => {
     if (!window.confirm("¿Seguro que quieres confirmar?")) return;
     try {
       await consultasService.confirmar(id);
       cargarDatos();
-    } catch {
+    } catch (err) {
+      console.error("Error al confirmar antiguo:", err);
       alert("Error al confirmar.");
     }
   };
@@ -141,13 +181,12 @@ const VistaConsultas = () => {
       </div>
     );
 
-  // Obtener el nombre de la farmacia seleccionada para mostrarlo en el Pop-Up
-  const farmaciaSeleccionada =
+  const farmaciaSeleccionadaNombre =
     farmacias.find((f) => f.id === Number(formulario.farmaciaId))?.nombre || "";
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 animate-fade-in relative">
-      {/* --- EL POP-UP (MODAL) --- */}
+      {/* MODAL DE CONFIRMACIÓN */}
       {mostrarModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-fade-in">
@@ -161,15 +200,10 @@ const VistaConsultas = () => {
               </button>
             </div>
             <div className="p-6 space-y-4">
-              <p className="text-gray-600 text-sm">
-                Revisa los datos antes de confirmar. Una vez guardado, solo
-                podrás modificarlo abriendo una incidencia.
-              </p>
-
               <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-2 text-sm">
                 <p>
                   <strong className="text-gray-700">Farmacia:</strong>{" "}
-                  {farmaciaSeleccionada}
+                  {farmaciaSeleccionadaNombre}
                 </p>
                 <p>
                   <strong className="text-gray-700">Fecha:</strong>{" "}
@@ -198,7 +232,6 @@ const VistaConsultas = () => {
                   </p>
                 </div>
               </div>
-
               <div className="flex gap-3 pt-4">
                 <button
                   onClick={() => setMostrarModal(false)}
@@ -223,7 +256,6 @@ const VistaConsultas = () => {
           </div>
         </div>
       )}
-      {/* --- FIN DEL POP-UP --- */}
 
       {/* FORMULARIO DE REGISTRO */}
       <div className="xl:col-span-1 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
@@ -234,7 +266,6 @@ const VistaConsultas = () => {
           <h2 className="text-xl font-bold text-gray-800">Registrar Turno</h2>
         </div>
 
-        {/* Cambiamos el onSubmit al nuevo handlePreSubmit */}
         <form onSubmit={handlePreSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-1">
@@ -315,6 +346,7 @@ const VistaConsultas = () => {
             </div>
           </div>
 
+          {/* MÉTRICAS DE ACTIVIDAD */}
           <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
             <div>
               <label className="block text-xs font-bold text-gray-500 mb-1">
@@ -385,25 +417,73 @@ const VistaConsultas = () => {
 
           <button
             type="submit"
-            className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 rounded-xl flex items-center justify-center transition-colors shadow-md shadow-sky-200"
+            className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 rounded-xl transition-colors shadow-md"
           >
             <CheckCircle size={18} className="mr-2" /> Revisar y Registrar
           </button>
         </form>
       </div>
 
-      {/* HISTORIAL Y MÁQUINA DE ESTADOS */}
+      {/* HISTORIAL Y FILTROS */}
       <div className="xl:col-span-2 space-y-4">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">
-          Historial de Turnos
-        </h2>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+          <h2 className="text-xl font-bold text-gray-800">
+            Historial de Turnos
+          </h2>
 
-        {consultas.length === 0 ? (
+          <div className="flex gap-2 w-full md:w-auto">
+            <div className="relative flex-1 md:w-36">
+              <Filter
+                size={14}
+                className="absolute left-2.5 top-3 text-gray-400"
+              />
+              <select
+                value={mesFiltro}
+                onChange={(e) => setMesFiltro(e.target.value)}
+                className="w-full pl-8 pr-2 py-2 text-xs border border-gray-200 rounded-lg bg-white"
+              >
+                {mesesDisponibles.map((mes) => (
+                  <option key={mes} value={mes}>
+                    {mes === "Todos" ? "Todos los meses" : mes}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="relative flex-1 md:w-36">
+              <ArrowUpDown
+                size={14}
+                className="absolute left-2.5 top-3 text-gray-400"
+              />
+              <select
+                value={ordenFiltro}
+                onChange={(e) => setOrdenFiltro(e.target.value)}
+                className="w-full pl-8 pr-2 py-2 text-xs border border-gray-200 rounded-lg bg-white"
+              >
+                <option value="recientes">Más Recientes</option>
+                <option value="antiguos">Más Antiguos</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Buscador de farmacias */}
+        <div className="relative mb-4">
+          <Search size={16} className="absolute left-3 top-3 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Buscar por nombre de farmacia..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl text-sm"
+          />
+        </div>
+
+        {consultasFiltradas.length === 0 ? (
           <div className="bg-white p-8 rounded-2xl border border-gray-100 text-center text-gray-500">
-            No tienes turnos registrados aún.
+            No se encontraron turnos con estos filtros.
           </div>
         ) : (
-          consultas.map((c) => (
+          consultasFiltradas.map((c) => (
             <div
               key={c.id}
               className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col md:flex-row gap-4 items-center justify-between transition-all hover:shadow-md"
@@ -433,7 +513,7 @@ const VistaConsultas = () => {
                 </div>
                 <div className="text-xs text-gray-400 mt-2 font-medium">
                   Nuevas: {c.nuevas} | Revisiones: {c.revisiones} | Promo:{" "}
-                  {c.promociones}
+                  {c.promociones} | Personal: {c.personalFarmacia}
                 </div>
                 {c.mensajeIncidencia && (
                   <div className="mt-2 text-sm text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-100">
@@ -442,7 +522,6 @@ const VistaConsultas = () => {
                 )}
               </div>
 
-              {/* BOTONES DE LA MÁQUINA DE ESTADOS */}
               <div className="flex gap-2 w-full md:w-auto">
                 {c.estado === "BORRADOR" && (
                   <button

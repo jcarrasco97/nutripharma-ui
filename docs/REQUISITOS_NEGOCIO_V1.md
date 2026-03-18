@@ -117,3 +117,35 @@ El salario de las nutricionistas no es únicamente fijo. Su panel de "Resumen" d
 
 1.  **Bolsa de Horas:** Comparativa de horas reales trabajadas en los turnos vs. las horas estipuladas en su contrato.
 2.  **Comisiones por Ventas:** Un porcentaje (bonus) asignado a la nutricionista en función del volumen en euros de los pedidos al por mayor que la farmacia donde ella trabaja realiza a NutriPharma. _(Fórmula exacta y porcentajes a definir en siguientes fases)._
+
+### A.7. Reglas de Bonificación de Productos (Cesta Principal)
+
+Los productos "bonificados" (unidades gratuitas entregadas a la farmacia) no se eligen manualmente por el personal en su panel, sino que responden a una regla estricta de escalado por volumen de compra en la cesta principal:
+
+- **Escala de tramos:**
+  - Por cada **6** unidades compradas ➔ **1** bonificado.
+  - Por cada **10** unidades compradas ➔ **2** bonificados.
+  - Por cada **20** unidades compradas ➔ **5** bonificados.
+  - Por cada **100** unidades compradas ➔ **20** bonificados.
+- **Excepción (Acuerdos Comerciales):** El rol `ADMIN` tendrá, en su panel exclusivo, la capacidad de sobrescribir esta regla y asignar cantidades bonificadas manuales para cerrar acuerdos telefónicos o personales con las farmacias.
+
+### A.8. Historial de Pedidos y Trazabilidad
+
+El historial de pedidos debe ofrecer herramientas de trazabilidad para el usuario:
+
+- **Ordenación por defecto:** Siempre debe mostrar los pedidos más recientes primero (orden cronológico inverso), no por orden de inserción en la base de datos.
+- **Filtros requeridos:**
+  1. **Por Mes:** Selector para filtrar los pedidos de un mes específico.
+  2. **Por Criterio:** Una vez filtrado el mes, debe permitir ordenar por precio (Ascendente / Descendente) y por fecha (Más recientes / Más antiguos).
+
+### A.9. Sistema de Incentivos de Nutricionistas (Pendiente)
+
+### A.9. Sistema de Incentivos de Nutricionistas (Modelo Proporcional)
+
+El cálculo de nóminas y comisiones se rige por una tabla base de 40 horas semanales. El sistema multiplicará estos valores por el factor de jornada de la nutricionista (ej. 32h = factor 0.8).
+
+- **Facturación Computable:** Se suma el importe de las Consultas Nuevas (25€), Revisiones (20€) y Pedidos B2B (Solo Cesta Principal; los productos pagados con Monedero Virtual no computan).
+- **Tramos Base (40h):**
+  - **OB1:** Meta 5.000€ (Mín. Prod 800€) ➔ Bono Fijo 200€
+  - **OB2:** Meta 6.800€ (Mín. Prod 1.000€) ➔ Bono Fijo 400€ + 5% del exceso.
+  - **OB3:** Meta 8.700€ (Mín. Prod 1.200€) ➔ Bono Fijo 600€ + 10% del exceso.
