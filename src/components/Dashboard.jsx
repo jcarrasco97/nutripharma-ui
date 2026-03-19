@@ -10,19 +10,22 @@ import {
   ShieldCheck,
   Users,
   Menu,
+  History, // <-- AÑADIDO
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 
 // Importación de Vistas
 import VistaResumen from "./vistas/VistaResumen";
-import VistaResumenFarmacia from "./vistas/VistaResumenFarmacia"; // <-- NUEVA VISTA
+import VistaResumenFarmacia from "./vistas/VistaResumenFarmacia";
 import VistaConsultas from "./vistas/VistaConsultas";
 import VistaPedidos from "./vistas/VistaPedidos";
 import VistaSuministros from "./vistas/VistaSuministros";
+import VistaAdminSuministros from "./vistas/VistaAdminSuministros";
 import VistaDocumentacion from "./vistas/VistaDocumentacion";
 import VistaValidaciones from "./vistas/VistaValidaciones";
 import VistaEmpleados from "./vistas/VistaEmpleados";
+import VistaHistorialFarmacia from "./vistas/VistaHistorialFarmacia"; // <-- YA IMPORTADO
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -39,19 +42,21 @@ const Dashboard = () => {
     }
   });
 
-  // Estado para controlar qué módulo se ve (INTELIGENTE SEGÚN EL ROL)
   const [vistaActual, setVistaActual] = useState(() => {
     if (
       usuario &&
       usuario.roles.includes("ROLE_ADMIN") &&
       !usuario.roles.includes("ROLE_NUTRICIONISTA")
     ) {
-      return "usuarios"; // El Admin va directo a Gestión Empleados
+      return "usuarios";
     }
-    return "resumen"; // El resto va al Resumen
+    // Si es farmacia, la mandamos directo al historial para que vea su valor
+    if (usuario && usuario.roles.includes("ROLE_FARMACIA")) {
+      return "historial-farmacia";
+    }
+    return "resumen";
   });
 
-  // Estado para controlar el menú en móviles
   const [menuAbierto, setMenuAbierto] = useState(false);
 
   // 2. PROTECCIÓN DE RUTA
@@ -74,11 +79,10 @@ const Dashboard = () => {
   const isNutricionista = usuario.roles.includes("ROLE_NUTRICIONISTA");
   const isFarmacia = usuario.roles.includes("ROLE_FARMACIA");
 
-  // 4. GENERACIÓN DEL MENÚ DINÁMICO SEGÚN EL ROL
+  // 4. GENERACIÓN DEL MENÚ DINÁMICO
   const generarMenu = () => {
     const items = [];
 
-    // Módulos para Farmacia y Nutricionista
     if (isNutricionista || isFarmacia) {
       items.push({ id: "resumen", label: "Resumen", icon: BarChart3 });
       items.push({
@@ -88,17 +92,28 @@ const Dashboard = () => {
       });
     }
 
-    // Módulos EXCLUSIVOS de Nutricionista
+    // --- MÓDULO NUEVO PARA FARMACIA ---
+    if (isFarmacia) {
+      items.push({
+        id: "historial-farmacia",
+        label: "Historial Consultas",
+        icon: History,
+      });
+    }
+
     if (isNutricionista) {
       items.push({
         id: "consultas",
         label: "Mis Consultas",
         icon: Stethoscope,
       });
-      items.push({ id: "suministros", label: "Suministros", icon: Package });
+      items.push({
+        id: "suministros",
+        label: "Suministros",
+        icon: Package,
+      });
     }
 
-    // Módulo compartido
     if (isNutricionista || isFarmacia) {
       items.push({
         id: "documentacion",
@@ -107,12 +122,16 @@ const Dashboard = () => {
       });
     }
 
-    // Módulos EXCLUSIVOS del Admin
     if (isAdmin) {
       items.push({
         id: "validaciones",
         label: "Validaciones",
         icon: ShieldCheck,
+      });
+      items.push({
+        id: "admin-suministros",
+        label: "Peticiones Material",
+        icon: Package,
       });
       items.push({ id: "usuarios", label: "Gestión Empleados", icon: Users });
     }
@@ -124,7 +143,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex font-sans">
-      {/* --- SIDEBAR (Barra Lateral) --- */}
+      {/* SIDEBAR */}
       <button
         className="md:hidden fixed top-4 left-4 z-50 p-2 bg-sky-600 text-white rounded-lg"
         onClick={() => setMenuAbierto(!menuAbierto)}
@@ -134,17 +153,15 @@ const Dashboard = () => {
 
       <aside
         className={`
-        fixed md:static inset-y-0 left-0 z-40 w-72 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out flex flex-col
-        ${menuAbierto ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
-      `}
+          fixed md:static inset-y-0 left-0 z-40 w-72 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out flex flex-col
+          ${menuAbierto ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+        `}
       >
-        {/* Branding */}
         <div className="h-20 flex items-center px-8 border-b border-gray-100 bg-sky-600 text-white">
           <Activity size={28} className="mr-3" />
           <h1 className="text-2xl font-bold tracking-tight">NutriPharma</h1>
         </div>
 
-        {/* Info Usuario */}
         <div className="p-6 border-b border-gray-100 bg-sky-50">
           <p className="text-xs text-sky-600 font-bold uppercase tracking-wider mb-1">
             Conectado como
@@ -174,7 +191,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Navegación */}
         <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
           {menuItems.map((item) => {
             const Icono = item.icon;
@@ -184,7 +200,7 @@ const Dashboard = () => {
                 key={item.id}
                 onClick={() => {
                   setVistaActual(item.id);
-                  setMenuAbierto(false); // Cierra menú en móvil al hacer clic
+                  setMenuAbierto(false);
                 }}
                 className={`w-full flex items-center px-4 py-3 rounded-xl transition-all duration-200 ${
                   activo
@@ -202,7 +218,6 @@ const Dashboard = () => {
           })}
         </nav>
 
-        {/* Botón Salir */}
         <div className="p-4 border-t border-gray-100">
           <button
             onClick={handleLogout}
@@ -214,18 +229,15 @@ const Dashboard = () => {
         </div>
       </aside>
 
-      {/* --- ÁREA DE CONTENIDO PRINCIPAL --- */}
+      {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col min-h-screen overflow-hidden">
-        {/* Cabecera del contenido */}
         <header className="h-20 bg-white border-b border-gray-200 flex items-center px-8 hidden md:flex">
           <h2 className="text-2xl font-bold text-gray-800 capitalize">
             {vistaActual.replace("-", " ")}
           </h2>
         </header>
 
-        {/* Contenedor dinámico donde inyectaremos los componentes */}
         <div className="flex-1 overflow-auto p-4 md:p-8">
-          {/* NUEVO: Renderizado condicional COMPLETO con bifurcación para Farmacias */}
           {vistaActual === "resumen" ? (
             isFarmacia ? (
               <VistaResumenFarmacia cambiarVista={setVistaActual} />
@@ -242,6 +254,10 @@ const Dashboard = () => {
             <VistaDocumentacion />
           ) : vistaActual === "validaciones" ? (
             <VistaValidaciones />
+          ) : vistaActual === "admin-suministros" ? (
+            <VistaAdminSuministros />
+          ) : vistaActual === "historial-farmacia" ? ( // <-- CASO AÑADIDO
+            <VistaHistorialFarmacia />
           ) : vistaActual === "usuarios" ? (
             <VistaEmpleados />
           ) : (
@@ -261,7 +277,6 @@ const Dashboard = () => {
         </div>
       </main>
 
-      {/* Overlay oscuro para móviles */}
       {menuAbierto && (
         <div
           className="fixed inset-0 bg-gray-800/50 z-30 md:hidden"

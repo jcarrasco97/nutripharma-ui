@@ -33,4 +33,11 @@ export const consultasService = {
     });
     return response.data;
   },
+  obtenerHistorialFarmacia: async () => {
+    const response = await axios.get(
+      `${API_URL}/historial-farmacia`,
+      getConfig(),
+    );
+    return response.data;
+  },
 };
