@@ -49,4 +49,15 @@ export const suministrosService = {
     );
     return response.data;
   },
+  cambiarEstadoPeticion: async (id, estado) => {
+    const response = await axios.put(
+      `${API_URL}/peticiones/${id}/estado`, // <-- AQUÍ ESTABA EL ERROR, FALTABA "/peticiones"
+      null,
+      {
+        ...getConfig(),
+        params: { estado },
+      },
+    );
+    return response.data;
+  },
 };

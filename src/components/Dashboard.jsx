@@ -24,8 +24,9 @@ import VistaSuministros from "./vistas/VistaSuministros";
 import VistaAdminSuministros from "./vistas/VistaAdminSuministros";
 import VistaDocumentacion from "./vistas/VistaDocumentacion";
 import VistaValidaciones from "./vistas/VistaValidaciones";
-import VistaEmpleados from "./vistas/VistaEmpleados";
+import VistaEmpleados from "./vistas/VistaAdministracion";
 import VistaHistorialFarmacia from "./vistas/VistaHistorialFarmacia"; // <-- YA IMPORTADO
+import VistaResumenAdmin from "./vistas/VistaResumenAdmin";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -42,18 +43,20 @@ const Dashboard = () => {
     }
   });
 
+  // Estado para controlar qué módulo se ve al arrancar
   const [vistaActual, setVistaActual] = useState(() => {
-    if (
-      usuario &&
-      usuario.roles.includes("ROLE_ADMIN") &&
-      !usuario.roles.includes("ROLE_NUTRICIONISTA")
-    ) {
-      return "usuarios";
+    // 1. Si es el Jefe (Admin), lo mandamos directo a su nuevo panel gráfico y calendario.
+    // Ya no importa si también es Nutricionista, su vista principal es la de mando.
+    if (usuario && usuario.roles.includes("ROLE_ADMIN")) {
+      return "resumen-admin";
     }
-    // Si es farmacia, la mandamos directo al historial para que vea su valor
+
+    // 2. Si es Farmacia, lo mandamos directo a su historial de consultas.
     if (usuario && usuario.roles.includes("ROLE_FARMACIA")) {
       return "historial-farmacia";
     }
+
+    // 3. Por defecto (para las Nutricionistas base), a su resumen operativo.
     return "resumen";
   });
 
@@ -83,25 +86,18 @@ const Dashboard = () => {
   const generarMenu = () => {
     const items = [];
 
-    if (isNutricionista || isFarmacia) {
-      items.push({ id: "resumen", label: "Resumen", icon: BarChart3 });
+    // Módulos de Nutricionista
+    if (isNutricionista) {
+      items.push({
+        id: "resumen",
+        label: "Resumen Operativo",
+        icon: BarChart3,
+      });
       items.push({
         id: "pedidos",
         label: "Pedidos y Liquidación",
         icon: ShoppingCart,
       });
-    }
-
-    // --- MÓDULO NUEVO PARA FARMACIA ---
-    if (isFarmacia) {
-      items.push({
-        id: "historial-farmacia",
-        label: "Historial Consultas",
-        icon: History,
-      });
-    }
-
-    if (isNutricionista) {
       items.push({
         id: "consultas",
         label: "Mis Consultas",
@@ -109,32 +105,50 @@ const Dashboard = () => {
       });
       items.push({
         id: "suministros",
-        label: "Suministros",
+        label: "Petición Suministros",
         icon: Package,
       });
     }
 
-    if (isNutricionista || isFarmacia) {
+    // Módulos de Farmacia
+    if (isFarmacia) {
+      // Usamos .some para no duplicar botones si el usuario tuviera perfiles raros
+      if (!items.some((i) => i.id === "resumen"))
+        items.push({ id: "resumen", label: "Mi Resumen", icon: BarChart3 });
+      if (!items.some((i) => i.id === "pedidos"))
+        items.push({
+          id: "pedidos",
+          label: "Hacer Pedido",
+          icon: ShoppingCart,
+        });
       items.push({
-        id: "documentacion",
-        label: "Documentación",
-        icon: FileText,
+        id: "historial-farmacia",
+        label: "Historial Consultas",
+        icon: History,
       });
     }
 
+    // Módulos Exclusivos del Admin (Paco)
     if (isAdmin) {
       items.push({
-        id: "validaciones",
-        label: "Validaciones",
-        icon: ShieldCheck,
+        id: "resumen-admin",
+        label: "Dashboard General",
+        icon: BarChart3,
       });
       items.push({
-        id: "admin-suministros",
-        label: "Peticiones Material",
-        icon: Package,
+        id: "validaciones",
+        label: "Centro Validaciones",
+        icon: ShieldCheck,
       });
       items.push({ id: "usuarios", label: "Gestión Empleados", icon: Users });
     }
+
+    // El módulo de Documentación es para todos, así que lo empujamos una sola vez al final
+    items.push({
+      id: "documentacion",
+      label: "Gestión Documental",
+      icon: FileText,
+    });
 
     return items;
   };
@@ -238,7 +252,10 @@ const Dashboard = () => {
         </header>
 
         <div className="flex-1 overflow-auto p-4 md:p-8">
-          {vistaActual === "resumen" ? (
+          {/* 👇 AQUÍ INSERTAMOS LA VISTA DEL ADMIN 👇 */}
+          {vistaActual === "resumen-admin" ? (
+            <VistaResumenAdmin />
+          ) : vistaActual === "resumen" ? (
             isFarmacia ? (
               <VistaResumenFarmacia cambiarVista={setVistaActual} />
             ) : (
@@ -256,7 +273,7 @@ const Dashboard = () => {
             <VistaValidaciones />
           ) : vistaActual === "admin-suministros" ? (
             <VistaAdminSuministros />
-          ) : vistaActual === "historial-farmacia" ? ( // <-- CASO AÑADIDO
+          ) : vistaActual === "historial-farmacia" ? (
             <VistaHistorialFarmacia />
           ) : vistaActual === "usuarios" ? (
             <VistaEmpleados />

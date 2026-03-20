@@ -40,4 +40,16 @@ export const consultasService = {
     );
     return response.data;
   },
+  obtenerTodas: async () => {
+    const response = await axios.get(API_URL, getConfig());
+    return response.data;
+  },
+  validarTurnoAdmin: async (id) => {
+    const response = await axios.put(
+      `${API_URL}/${id}/validar`,
+      {},
+      getConfig(),
+    );
+    return response.data;
+  },
 };

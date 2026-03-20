@@ -1,0 +1,5142 @@
+﻿
+========================================
+FILE: VistaAdminSuministros.jsx
+========================================
+
+import React, { useState, useEffect } from "react";
+import {
+  Package,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Loader2,
+  Filter,
+  Search,
+} from "lucide-react";
+import { suministrosService } from "../../services/suministrosService";
+
+const VistaAdminSuministros = () => {
+  const [peticiones, setPeticiones] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [busqueda, setBusqueda] = useState("");
+  const [estadoFiltro, setEstadoFiltro] = useState("Todos");
+
+  const cargarPeticiones = async () => {
+    setCargando(true);
+    try {
+      const datos = await suministrosService.listarPeticionesAdmin();
+      setPeticiones(datos);
+    } catch (error) {
+      console.error("Error cargando peticiones admin:", error); // <-- Â¡AquÃ­ sÃ­ se usa!
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarPeticiones();
+  }, []);
+
+  const handleCambiarEstado = async (id, nuevoEstado) => {
+    if (
+      !window.confirm(
+        `Â¿Seguro que quieres marcar esta peticiÃ³n como ${nuevoEstado}?`,
+      )
+    )
+      return;
+
+    try {
+      await suministrosService.cambiarEstado(id, nuevoEstado);
+      cargarPeticiones();
+    } catch (error) {
+      console.error("Error al cambiar estado:", error); // <-- SOLUCIONADO
+      alert("Error al cambiar el estado.");
+    }
+  };
+
+  const peticionesFiltradas = peticiones.filter((p) => {
+    const matchEstado = estadoFiltro === "Todos" || p.estado === estadoFiltro;
+    const matchNombre = p.nutricionistaNombre
+      .toLowerCase()
+      .includes(busqueda.toLowerCase());
+    return matchEstado && matchNombre;
+  });
+
+  if (cargando)
+    return (
+      <div className="flex justify-center p-20">
+        <Loader2 className="animate-spin text-sky-500" size={48} />
+      </div>
+    );
+
+  return (
+    <div className="animate-fade-in space-y-6 pb-10">
+      {/* Cabecera y Filtros */}
+      <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="flex items-center gap-4">
+          <div className="bg-indigo-600 p-4 rounded-3xl text-white shadow-lg shadow-indigo-100">
+            <Package size={32} />
+          </div>
+          <div>
+            <h2 className="text-3xl font-black text-gray-800">
+              Validar Suministros
+            </h2>
+            <p className="text-gray-500 font-medium">
+              Gestiona las peticiones de material de la red.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex w-full md:w-auto gap-4">
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-4 top-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar nutricionista..."
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm outline-none focus:border-indigo-500"
+            />
+          </div>
+          <div className="relative flex-1">
+            <Filter size={16} className="absolute left-4 top-4 text-gray-400" />
+            <select
+              value={estadoFiltro}
+              onChange={(e) => setEstadoFiltro(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm outline-none focus:border-indigo-500 appearance-none"
+            >
+              <option value="Todos">Todos los estados</option>
+              <option value="SOLICITADO">Pendientes (Solicitado)</option>
+              <option value="APROBADO">Aprobados</option>
+              <option value="CANCELADO">Cancelados</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Lista de Peticiones */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        {peticionesFiltradas.length === 0 ? (
+          <div className="col-span-full text-center py-20 bg-white rounded-[2.5rem] border border-gray-100">
+            <p className="text-gray-500 font-bold">
+              No hay peticiones de suministros con estos filtros.
+            </p>
+          </div>
+        ) : (
+          peticionesFiltradas.map((pet) => (
+            <div
+              key={pet.id}
+              className={`bg-white rounded-[2rem] p-6 border-2 transition-all shadow-sm ${
+                pet.estado === "SOLICITADO"
+                  ? "border-sky-200 hover:shadow-sky-100"
+                  : "border-gray-50 opacity-75 hover:opacity-100"
+              }`}
+            >
+              <div className="flex justify-between items-start mb-4 border-b border-gray-50 pb-4">
+                <div>
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                    PeticiÃ³n #{pet.id}
+                  </span>
+                  <h3 className="text-lg font-black text-gray-800">
+                    {pet.nutricionistaNombre}
+                  </h3>
+                  <p className="text-xs text-gray-500 font-bold mt-1 flex items-center gap-1">
+                    <Clock size={12} /> {pet.fechaPeticion}
+                  </p>
+                </div>
+                <span
+                  className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${
+                    pet.estado === "SOLICITADO"
+                      ? "bg-sky-100 text-sky-700"
+                      : pet.estado === "APROBADO"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-red-100 text-red-700"
+                  }`}
+                >
+                  {pet.estado}
+                </span>
+              </div>
+
+              <div className="mb-6 min-h-[100px]">
+                <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">
+                  Material Requerido:
+                </p>
+                <ul className="space-y-1 text-sm font-bold text-gray-700">
+                  {pet.materiales.map((mat, i) => (
+                    <li key={i} className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-indigo-400"></div>
+                      {mat.nombre}{" "}
+                      <span className="text-gray-400 font-medium">
+                        ({mat.cantidadEstandar} uds)
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Botones de AcciÃ³n (Solo si estÃ¡ PENDIENTE) */}
+              {pet.estado === "SOLICITADO" && (
+                <div className="flex gap-2 pt-4 border-t border-gray-50">
+                  <button
+                    onClick={() => handleCambiarEstado(pet.id, "CANCELADO")}
+                    className="flex-1 py-3 bg-red-50 hover:bg-red-100 text-red-600 font-black text-xs uppercase tracking-widest rounded-xl transition-colors flex justify-center items-center gap-2"
+                  >
+                    <XCircle size={16} /> Denegar
+                  </button>
+                  <button
+                    onClick={() => handleCambiarEstado(pet.id, "APROBADO")}
+                    className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-colors shadow-md shadow-emerald-200 flex justify-center items-center gap-2"
+                  >
+                    <CheckCircle size={16} /> Aprobar
+                  </button>
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default VistaAdminSuministros;
+
+========================================
+FILE: VistaConsultas.jsx
+========================================
+
+import React, { useState, useEffect } from "react";
+import {
+  Stethoscope,
+  Save,
+  CheckCircle,
+  AlertTriangle,
+  Clock,
+  MapPin,
+  Loader2,
+  X,
+  Filter,
+  ArrowUpDown,
+  Search, // <-- AsegÃºrate de que esto estÃ¡
+  Calendar, // <-- Â¡AQUÃ ESTABA EL FALLO DEL RENDERIZADO!
+} from "lucide-react";
+import { consultasService } from "../../services/consultasService";
+import { farmaciaService } from "../../services/farmaciaService";
+import { nutricionistasService } from "../../services/nutricionistasService";
+
+const VistaConsultas = () => {
+  const [consultas, setConsultas] = useState([]);
+  const [farmacias, setFarmacias] = useState([]);
+  const [perfil, setPerfil] = useState(null);
+  const [cargando, setCargando] = useState(true);
+
+  // ESTADOS DE FILTRO
+  const [mesFiltro, setMesFiltro] = useState("Todos");
+  const [ordenFiltro, setOrdenFiltro] = useState("recientes");
+  const [busqueda, setBusqueda] = useState("");
+
+  const [mostrarModal, setMostrarModal] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+
+  const [formulario, setFormulario] = useState({
+    farmaciaId: "",
+    fecha: new Date().toISOString().split("T")[0],
+    tipoTurno: "MANANA",
+    horaInicio: "09:00",
+    horaFin: "14:00",
+    nuevas: 0,
+    revisiones: 0,
+    promociones: 0,
+    personalFarmacia: 0,
+    observacionesJornada: "",
+  });
+
+  const cargarDatos = async () => {
+    setCargando(true);
+    try {
+      const [datosConsultas, datosFarmacias, miPerfil] = await Promise.all([
+        consultasService.obtenerMisConsultas(),
+        farmaciaService.listarTodas(),
+        nutricionistasService.obtenerMiPerfil(),
+      ]);
+      setConsultas(datosConsultas);
+      setFarmacias(datosFarmacias);
+      setPerfil(miPerfil);
+
+      if (datosFarmacias.length > 0) {
+        setFormulario((prev) => ({
+          ...prev,
+          farmaciaId: datosFarmacias[0].id,
+        }));
+      }
+    } catch (error) {
+      console.error("Error cargando datos:", error);
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  // --- LÃ“GICA DE FILTRADO Y ORDENACIÃ“N ---
+  const mesesDisponibles = [
+    "Todos",
+    ...new Set(consultas.map((c) => c.fecha.substring(0, 7))),
+  ].sort((a, b) => b.localeCompare(a));
+
+  const consultasFiltradas = consultas
+    .filter((c) => {
+      const coincideMes =
+        mesFiltro === "Todos" || c.fecha.startsWith(mesFiltro);
+      const coincideBusqueda = c.farmaciaNombre
+        .toLowerCase()
+        .includes(busqueda.toLowerCase());
+      return coincideMes && coincideBusqueda;
+    })
+    .sort((a, b) => {
+      if (ordenFiltro === "recientes")
+        return new Date(b.fecha) - new Date(a.fecha);
+      return new Date(a.fecha) - new Date(b.fecha);
+    });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormulario({ ...formulario, [name]: value });
+  };
+
+  const handlePreSubmit = (e) => {
+    e.preventDefault();
+    setMostrarModal(true);
+  };
+
+  // --- CORRECCIÃ“N CLAVE: Uso de .crear() y .confirmar() ---
+  const confirmarYGuardar = async () => {
+    if (!perfil)
+      return alert("El perfil del usuario no ha cargado correctamente.");
+    setGuardando(true);
+    try {
+      const payload = {
+        ...formulario,
+        nutricionistaId: perfil.id, // Sincronizado dinÃ¡micamente
+        farmaciaId: Number(formulario.farmaciaId),
+        horaInicio:
+          formulario.horaInicio.length === 5
+            ? formulario.horaInicio + ":00"
+            : formulario.horaInicio,
+        horaFin:
+          formulario.horaFin.length === 5
+            ? formulario.horaFin + ":00"
+            : formulario.horaFin,
+      };
+
+      const nuevaConsulta = await consultasService.crear(payload);
+      await consultasService.confirmar(nuevaConsulta.id);
+
+      setMostrarModal(false);
+      cargarDatos();
+
+      setFormulario((prev) => ({
+        ...prev,
+        nuevas: 0,
+        revisiones: 0,
+        promociones: 0,
+        personalFarmacia: 0,
+        observacionesJornada: "",
+      }));
+    } catch (err) {
+      console.error("Error al guardar:", err); // Chivato para la consola de React (F12)
+      alert(
+        "Error al registrar el turno: " +
+          (err.response?.data?.message || err.message),
+      );
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  // --- CORRECCIÃ“N CLAVE: Uso de .abrirIncidencia() ---
+  const handleIncidencia = async (id) => {
+    const mensaje = window.prompt("Escribe el motivo de la incidencia:");
+    if (!mensaje) return;
+    try {
+      await consultasService.abrirIncidencia(id, mensaje);
+      cargarDatos();
+    } catch (error) {
+      console.error("Error incidencia:", error);
+      alert(error.response?.data?.message || "Error al abrir incidencia.");
+    }
+  };
+
+  // --- CORRECCIÃ“N CLAVE: Uso de .confirmar() ---
+  const handleConfirmarAntiguo = async (id) => {
+    if (!window.confirm("Â¿Seguro que quieres confirmar?")) return;
+    try {
+      await consultasService.confirmar(id);
+      cargarDatos();
+    } catch (err) {
+      console.error("Error al confirmar antiguo:", err);
+      alert("Error al confirmar.");
+    }
+  };
+
+  if (cargando)
+    return (
+      <div className="flex justify-center p-8">
+        <Loader2 className="animate-spin text-sky-500" size={48} />
+      </div>
+    );
+
+  const farmaciaSeleccionadaNombre =
+    farmacias.find((f) => f.id === Number(formulario.farmaciaId))?.nombre || "";
+
+  return (
+    <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 animate-fade-in relative">
+      {/* MODAL DE CONFIRMACIÃ“N */}
+      {mostrarModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-fade-in">
+            <div className="bg-sky-600 p-6 text-white flex justify-between items-center">
+              <h3 className="text-xl font-bold">Resumen del Turno</h3>
+              <button
+                onClick={() => setMostrarModal(false)}
+                className="text-sky-200 hover:text-white transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-2 text-sm">
+                <p>
+                  <strong className="text-gray-700">Farmacia:</strong>{" "}
+                  {farmaciaSeleccionadaNombre}
+                </p>
+                <p>
+                  <strong className="text-gray-700">Fecha:</strong>{" "}
+                  {formulario.fecha} ({formulario.tipoTurno})
+                </p>
+                <p>
+                  <strong className="text-gray-700">Horario:</strong>{" "}
+                  {formulario.horaInicio} a {formulario.horaFin}
+                </p>
+                <div className="border-t border-gray-200 my-2 pt-2 grid grid-cols-2 gap-2">
+                  <p>
+                    <strong className="text-gray-700">Nuevas:</strong>{" "}
+                    {formulario.nuevas}
+                  </p>
+                  <p>
+                    <strong className="text-gray-700">Revisiones:</strong>{" "}
+                    {formulario.revisiones}
+                  </p>
+                  <p>
+                    <strong className="text-gray-700">Promo:</strong>{" "}
+                    {formulario.promociones}
+                  </p>
+                  <p>
+                    <strong className="text-gray-700">Personal:</strong>{" "}
+                    {formulario.personalFarmacia}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => setMostrarModal(false)}
+                  disabled={guardando}
+                  className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmarYGuardar}
+                  disabled={guardando}
+                  className="flex-1 py-3 px-4 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl transition-colors flex items-center justify-center disabled:opacity-50"
+                >
+                  {guardando ? (
+                    <Loader2 className="animate-spin" size={20} />
+                  ) : (
+                    "SÃ­, Confirmar"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FORMULARIO DE REGISTRO */}
+      <div className="xl:col-span-1 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
+          <div className="bg-sky-100 p-2 rounded-lg text-sky-600">
+            <Stethoscope size={24} />
+          </div>
+          <h2 className="text-xl font-bold text-gray-800">Registrar Turno</h2>
+        </div>
+
+        <form onSubmit={handlePreSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">
+              Farmacia
+            </label>
+            <select
+              name="farmaciaId"
+              value={formulario.farmaciaId}
+              onChange={handleChange}
+              className="w-full border-gray-200 rounded-xl text-sm"
+              required
+            >
+              {farmacias.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">
+                Fecha
+              </label>
+              <input
+                type="date"
+                name="fecha"
+                value={formulario.fecha}
+                onChange={handleChange}
+                className="w-full border-gray-200 rounded-xl text-sm"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">
+                Turno
+              </label>
+              <select
+                name="tipoTurno"
+                value={formulario.tipoTurno}
+                onChange={handleChange}
+                className="w-full border-gray-200 rounded-xl text-sm"
+              >
+                <option value="MANANA">MaÃ±ana</option>
+                <option value="TARDE">Tarde</option>
+                <option value="DIA_COMPLETO">DÃ­a Completo</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">
+                Hora Inicio
+              </label>
+              <input
+                type="time"
+                name="horaInicio"
+                value={formulario.horaInicio}
+                onChange={handleChange}
+                className="w-full border-gray-200 rounded-xl text-sm"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">
+                Hora Fin
+              </label>
+              <input
+                type="time"
+                name="horaFin"
+                value={formulario.horaFin}
+                onChange={handleChange}
+                className="w-full border-gray-200 rounded-xl text-sm"
+                required
+              />
+            </div>
+          </div>
+
+          {/* MÃ‰TRICAS DE ACTIVIDAD */}
+          <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1">
+                Nuevas
+              </label>
+              <input
+                type="number"
+                min="0"
+                name="nuevas"
+                value={formulario.nuevas}
+                onChange={handleChange}
+                className="w-full border-gray-200 rounded-lg text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1">
+                Revisiones
+              </label>
+              <input
+                type="number"
+                min="0"
+                name="revisiones"
+                value={formulario.revisiones}
+                onChange={handleChange}
+                className="w-full border-gray-200 rounded-lg text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1">
+                Promociones
+              </label>
+              <input
+                type="number"
+                min="0"
+                name="promociones"
+                value={formulario.promociones}
+                onChange={handleChange}
+                className="w-full border-gray-200 rounded-lg text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1">
+                Personal
+              </label>
+              <input
+                type="number"
+                min="0"
+                name="personalFarmacia"
+                value={formulario.personalFarmacia}
+                onChange={handleChange}
+                className="w-full border-gray-200 rounded-lg text-sm"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">
+              Observaciones
+            </label>
+            <textarea
+              name="observacionesJornada"
+              value={formulario.observacionesJornada}
+              onChange={handleChange}
+              rows="2"
+              className="w-full border-gray-200 rounded-xl text-sm"
+            ></textarea>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 rounded-xl transition-colors shadow-md"
+          >
+            <CheckCircle size={18} className="mr-2" /> Revisar y Registrar
+          </button>
+        </form>
+      </div>
+
+      {/* HISTORIAL Y FILTROS */}
+      <div className="xl:col-span-2 space-y-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+          <h2 className="text-xl font-bold text-gray-800">
+            Historial de Turnos
+          </h2>
+
+          <div className="flex gap-2 w-full md:w-auto">
+            <div className="relative flex-1 md:w-36">
+              <Filter
+                size={14}
+                className="absolute left-2.5 top-3 text-gray-400"
+              />
+              <select
+                value={mesFiltro}
+                onChange={(e) => setMesFiltro(e.target.value)}
+                className="w-full pl-8 pr-2 py-2 text-xs border border-gray-200 rounded-lg bg-white"
+              >
+                {mesesDisponibles.map((mes) => (
+                  <option key={mes} value={mes}>
+                    {mes === "Todos" ? "Todos los meses" : mes}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="relative flex-1 md:w-36">
+              <ArrowUpDown
+                size={14}
+                className="absolute left-2.5 top-3 text-gray-400"
+              />
+              <select
+                value={ordenFiltro}
+                onChange={(e) => setOrdenFiltro(e.target.value)}
+                className="w-full pl-8 pr-2 py-2 text-xs border border-gray-200 rounded-lg bg-white"
+              >
+                <option value="recientes">MÃ¡s Recientes</option>
+                <option value="antiguos">MÃ¡s Antiguos</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Buscador de farmacias */}
+        <div className="relative mb-4">
+          <Search size={16} className="absolute left-3 top-3 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Buscar por nombre de farmacia..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl text-sm"
+          />
+        </div>
+
+        {consultasFiltradas.length === 0 ? (
+          <div className="bg-white p-8 rounded-2xl border border-gray-100 text-center text-gray-500">
+            No se encontraron turnos con estos filtros.
+          </div>
+        ) : (
+          consultasFiltradas.map((c) => (
+            <div
+              key={c.id}
+              className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col md:flex-row gap-4 items-center justify-between transition-all hover:shadow-md"
+            >
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span
+                    className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide
+                    ${c.estado === "BORRADOR" ? "bg-gray-100 text-gray-600" : ""}
+                    ${c.estado === "CONFIRMADA" ? "bg-emerald-100 text-emerald-700" : ""}
+                    ${c.estado === "CON_INCIDENCIA" ? "bg-amber-100 text-amber-700" : ""}
+                  `}
+                  >
+                    {c.estado.replace("_", " ")}
+                  </span>
+                  <span className="text-sm font-bold text-gray-800 flex items-center gap-1">
+                    <MapPin size={14} /> {c.farmaciaNombre}
+                  </span>
+                </div>
+                <div className="text-sm text-gray-500 flex items-center gap-3">
+                  <span className="flex items-center gap-1">
+                    <Clock size={14} /> {c.fecha} ({c.tipoTurno})
+                  </span>
+                  <span>
+                    {c.horaInicio.substring(0, 5)} - {c.horaFin.substring(0, 5)}
+                  </span>
+                </div>
+                <div className="text-xs text-gray-400 mt-2 font-medium">
+                  Nuevas: {c.nuevas} | Revisiones: {c.revisiones} | Promo:{" "}
+                  {c.promociones} | Personal: {c.personalFarmacia}
+                </div>
+                {c.mensajeIncidencia && (
+                  <div className="mt-2 text-sm text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-100">
+                    <strong>Incidencia:</strong> {c.mensajeIncidencia}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-2 w-full md:w-auto">
+                {c.estado === "BORRADOR" && (
+                  <button
+                    onClick={() => handleConfirmarAntiguo(c.id)}
+                    className="flex-1 md:flex-none px-4 py-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle size={18} /> Confirmar
+                  </button>
+                )}
+                {c.estado === "CONFIRMADA" && (
+                  <button
+                    onClick={() => handleIncidencia(c.id)}
+                    className="flex-1 md:flex-none px-4 py-2 bg-amber-50 text-amber-600 hover:bg-amber-500 hover:text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
+                  >
+                    <AlertTriangle size={18} /> Abrir Incidencia
+                  </button>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default VistaConsultas;
+
+========================================
+FILE: VistaDocumentacion.jsx
+========================================
+
+import React, { useState, useEffect } from "react";
+import {
+  FileText,
+  UploadCloud,
+  Download,
+  Loader2,
+  FileCheck,
+  ShieldCheck,
+  Search,
+  Filter,
+  Trash2,
+} from "lucide-react";
+import { jwtDecode } from "jwt-decode";
+import { documentosService } from "../../services/documentosService";
+
+const VistaDocumentacion = () => {
+  const [documentos, setDocumentos] = useState([]);
+  const [destinatarios, setDestinatarios] = useState([]); // Lista para el desplegable
+  const [cargando, setCargando] = useState(true);
+  const [subiendo, setSubiendo] = useState(false);
+  const [descargandoId, setDescargandoId] = useState(null);
+  const [borrandoId, setBorrandoId] = useState(null);
+
+  // Filtros
+  const [filtroTexto, setFiltroTexto] = useState("");
+  const [filtroMes, setFiltroMes] = useState("Todos");
+
+  const token = localStorage.getItem("token");
+  const isAdmin = token ? jwtDecode(token).roles.includes("ROLE_ADMIN") : false;
+
+  // Formulario simplificado (sin tÃ­tulo ni descripciÃ³n)
+  const [formulario, setFormulario] = useState({
+    alcance: "GLOBAL_TODOS",
+    propietarioEmail: "",
+    archivo: null,
+  });
+
+  const cargarDatos = async () => {
+    setCargando(true);
+    try {
+      const docs = await documentosService.listar();
+      setDocumentos(docs);
+
+      // Si es Admin, cargamos la lista de destinatarios para el desplegable
+      if (isAdmin) {
+        const dest = await documentosService.obtenerDestinatarios();
+        setDestinatarios(dest);
+      }
+    } catch (error) {
+      console.error("Error al cargar datos:", error);
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  const handleSubir = async (e) => {
+    e.preventDefault();
+    if (!formulario.archivo) return alert("Por favor, selecciona un archivo.");
+    if (formulario.alcance === "INDIVIDUAL" && !formulario.propietarioEmail) {
+      return alert("Por favor, selecciona un destinatario.");
+    }
+
+    setSubiendo(true);
+    try {
+      const formData = new FormData();
+      formData.append("alcance", formulario.alcance);
+      if (formulario.alcance === "INDIVIDUAL") {
+        formData.append("propietarioEmail", formulario.propietarioEmail);
+      }
+      formData.append("archivo", formulario.archivo);
+
+      await documentosService.subir(formData);
+
+      alert("Documento subido con Ã©xito.");
+      setFormulario({
+        alcance: "GLOBAL_TODOS",
+        propietarioEmail: "",
+        archivo: null,
+      });
+      document.getElementById("fileInput").value = "";
+      cargarDatos();
+    } catch (error) {
+      console.error("Error al subir:", error);
+      alert("Error al subir el documento.");
+    } finally {
+      setSubiendo(false);
+    }
+  };
+
+  const handleDescargar = async (id, nombreOriginal) => {
+    setDescargandoId(id);
+    try {
+      await documentosService.descargar(id, nombreOriginal);
+    } catch (error) {
+      alert("Error al descargar el archivo.");
+      console.error(error);
+    } finally {
+      setDescargandoId(null);
+    }
+  };
+
+  const handleBorrar = async (id) => {
+    if (
+      !window.confirm(
+        "Â¿EstÃ¡s seguro de que deseas eliminar este documento? Se borrarÃ¡ permanentemente de la base de datos y de la nube.",
+      )
+    )
+      return;
+
+    setBorrandoId(id);
+    try {
+      await documentosService.eliminar(id);
+      alert("Documento eliminado correctamente.");
+      cargarDatos(); // Recargar lista tras borrar
+    } catch (error) {
+      alert("Error al eliminar el documento.");
+      console.error(error);
+    } finally {
+      setBorrandoId(null);
+    }
+  };
+
+  const formatearAlcance = (doc) => {
+    switch (doc.alcance) {
+      case "GLOBAL_TODOS":
+        return (
+          <span className="bg-indigo-100 text-indigo-700 px-2 py-1 rounded-md text-[10px] font-black uppercase">
+            Para Todos
+          </span>
+        );
+      case "GLOBAL_NUTRICIONISTAS":
+        return (
+          <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded-md text-[10px] font-black uppercase">
+            Solo Nutricionistas
+          </span>
+        );
+      case "GLOBAL_FARMACIAS":
+        return (
+          <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded-md text-[10px] font-black uppercase">
+            Solo Farmacias
+          </span>
+        );
+      case "INDIVIDUAL":
+        // Si somos admin mostramos el nombre del destinatario. Si no, solo dice "Personal"
+        return (
+          <span className="bg-sky-100 text-sky-700 px-2 py-1 rounded-md text-[10px] font-black uppercase">
+            {isAdmin ? `Para: ${doc.propietarioEmail}` : "Personal"}
+          </span>
+        );
+      default:
+        return doc.alcance;
+    }
+  };
+
+  // --- LÃ“GICA DE FILTROS ---
+  const mesesDisponibles = [
+    "Todos",
+    ...new Set(documentos.map((d) => d.fechaSubida.substring(0, 7))),
+  ].sort((a, b) => b.localeCompare(a));
+
+  const documentosFiltrados = documentos
+    .filter((d) => filtroMes === "Todos" || d.fechaSubida.startsWith(filtroMes))
+    .filter((d) =>
+      d.nombreOriginal.toLowerCase().includes(filtroTexto.toLowerCase()),
+    );
+
+  if (cargando)
+    return (
+      <div className="flex justify-center p-20">
+        <Loader2 className="animate-spin text-sky-500" size={48} />
+      </div>
+    );
+
+  return (
+    <div className="space-y-8 animate-fade-in pb-10">
+      {/* PANEL DE SUBIDA (Solo Admin) */}
+      {isAdmin && (
+        <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="bg-indigo-600 p-4 rounded-3xl text-white shadow-lg shadow-indigo-100">
+              <UploadCloud size={28} />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black text-gray-800">
+                Subir Documento
+              </h2>
+              <p className="text-gray-500 font-medium">
+                Sube PDFs, Word o ImÃ¡genes directamente a la nube corporativa.
+              </p>
+            </div>
+          </div>
+
+          <form
+            onSubmit={handleSubir}
+            className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end"
+          >
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">
+                  Destinatarios *
+                </label>
+                <select
+                  value={formulario.alcance}
+                  onChange={(e) =>
+                    setFormulario({
+                      ...formulario,
+                      alcance: e.target.value,
+                      propietarioEmail: "",
+                    })
+                  }
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium focus:border-indigo-500 outline-none"
+                >
+                  <option value="GLOBAL_TODOS">
+                    Toda la empresa (General)
+                  </option>
+                  <option value="GLOBAL_NUTRICIONISTAS">
+                    Todas las Nutricionistas
+                  </option>
+                  <option value="GLOBAL_FARMACIAS">Todas las Farmacias</option>
+                  <option value="INDIVIDUAL">EnvÃ­o Individual (Privado)</option>
+                </select>
+              </div>
+
+              {formulario.alcance === "INDIVIDUAL" && (
+                <div className="animate-fade-in">
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">
+                    Seleccionar Usuario *
+                  </label>
+                  <select
+                    required
+                    value={formulario.propietarioEmail}
+                    onChange={(e) =>
+                      setFormulario({
+                        ...formulario,
+                        propietarioEmail: e.target.value,
+                      })
+                    }
+                    className="w-full bg-sky-50 border border-sky-200 rounded-xl px-4 py-3 text-sm font-bold text-sky-900 focus:border-sky-500 outline-none"
+                  >
+                    <option value="" disabled>
+                      -- Elige un usuario --
+                    </option>
+                    {destinatarios.map((user, idx) => (
+                      <option key={idx} value={user.email}>
+                        {user.nombreCompleto} ({user.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">
+                  Seleccionar Archivo *
+                </label>
+                <input
+                  id="fileInput"
+                  type="file"
+                  required
+                  onChange={(e) =>
+                    setFormulario({ ...formulario, archivo: e.target.files[0] })
+                  }
+                  accept=".pdf,.doc,.docx,.jpg,.png"
+                  className="w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition-colors"
+                />
+              </div>
+            </div>
+
+            <div className="md:col-span-2 pt-4 border-t border-gray-50 flex justify-end">
+              <button
+                type="submit"
+                disabled={subiendo}
+                className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white font-black px-8 py-3 rounded-xl flex items-center gap-2 transition-colors shadow-lg shadow-indigo-100"
+              >
+                {subiendo ? (
+                  <Loader2 className="animate-spin" size={18} />
+                ) : (
+                  <ShieldCheck size={18} />
+                )}
+                {subiendo ? "Subiendo a la nube..." : "Guardar Documento"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* REPOSITORIO DE DOCUMENTOS (Visible para todos) */}
+      <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-4 border-b border-gray-100">
+          <div className="flex items-center gap-4">
+            <div className="bg-gray-100 p-3 rounded-2xl text-gray-600">
+              <FileText size={24} />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-gray-800">
+                Repositorio Documental
+              </h2>
+            </div>
+          </div>
+        </div>
+
+        {/* --- FILTROS --- */}
+        <div className="flex flex-col md:flex-row gap-4 mb-8">
+          <div className="relative flex-1">
+            <Search
+              size={16}
+              className="absolute left-3 top-3.5 text-gray-400"
+            />
+            <input
+              type="text"
+              placeholder="Buscar por nombre de archivo..."
+              value={filtroTexto}
+              onChange={(e) => setFiltroTexto(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:border-indigo-500 outline-none transition-colors"
+            />
+          </div>
+
+          <div className="relative w-full md:w-64">
+            <Filter
+              size={16}
+              className="absolute left-3 top-3.5 text-gray-400"
+            />
+            <select
+              value={filtroMes}
+              onChange={(e) => setFiltroMes(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:border-indigo-500 outline-none transition-colors appearance-none"
+            >
+              {mesesDisponibles.map((mes) => (
+                <option key={mes} value={mes}>
+                  {mes === "Todos" ? "Todas las fechas" : mes}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* --- GRID DE DOCUMENTOS --- */}
+        {documentosFiltrados.length === 0 ? (
+          <div className="text-center py-16">
+            <FileCheck size={48} className="mx-auto text-gray-300 mb-4" />
+            <p className="text-gray-500 font-bold">
+              No se encontraron documentos.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {documentosFiltrados.map((doc) => (
+              <div
+                key={doc.id}
+                className="border-2 border-gray-50 rounded-[2rem] p-6 hover:border-gray-200 hover:shadow-lg transition-all flex flex-col justify-between group relative overflow-hidden bg-white"
+              >
+                {/* BotÃ³n Borrar (Solo Admin) */}
+                {isAdmin && (
+                  <button
+                    onClick={() => handleBorrar(doc.id)}
+                    disabled={borrandoId === doc.id}
+                    title="Eliminar documento"
+                    className="absolute top-4 right-4 p-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-lg transition-colors"
+                  >
+                    {borrandoId === doc.id ? (
+                      <Loader2 className="animate-spin" size={16} />
+                    ) : (
+                      <Trash2 size={16} />
+                    )}
+                  </button>
+                )}
+
+                <div>
+                  <div className="flex justify-between items-start mb-4 pr-10">
+                    {formatearAlcance(doc)}
+                  </div>
+                  <h3
+                    className="font-black text-gray-800 mb-2 truncate text-lg"
+                    title={doc.nombreOriginal}
+                  >
+                    {doc.nombreOriginal}
+                  </h3>
+                  <p className="text-xs text-gray-400 font-bold flex items-center gap-1">
+                    <span className="uppercase">{doc.fechaSubida}</span>
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => handleDescargar(doc.id, doc.nombreOriginal)}
+                  disabled={descargandoId === doc.id}
+                  className="mt-6 w-full bg-gray-50 hover:bg-gray-900 hover:text-white text-gray-700 font-black py-3 rounded-xl flex items-center justify-center gap-2 transition-all border border-transparent group-hover:border-gray-900"
+                >
+                  {descargandoId === doc.id ? (
+                    <Loader2 className="animate-spin" size={16} />
+                  ) : (
+                    <Download size={16} />
+                  )}
+                  {descargandoId === doc.id ? "Descargando..." : "Descargar"}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default VistaDocumentacion;
+
+========================================
+FILE: VistaEmpleados.jsx
+========================================
+
+import React, { useState, useEffect } from "react";
+import {
+  Users,
+  Store,
+  Plus,
+  Loader2,
+  Mail,
+  Lock,
+  Building,
+  User,
+  Clock,
+  FileText,
+} from "lucide-react";
+import { farmaciaService } from "../../services/farmaciaService";
+import { nutricionistasService } from "../../services/nutricionistasService";
+
+const VistaEmpleados = () => {
+  const [pestana, setPestana] = useState("nutricionistas");
+  const [nutricionistas, setNutricionistas] = useState([]);
+  const [farmacias, setFarmacias] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [enviando, setEnviando] = useState(false);
+
+  // Formulario adaptado a tus NutricionistaRequest y FarmaciaRequest
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    nombre: "",
+    apellidos: "",
+    dni: "",
+    horasContratoMensual: "", // Para Nutricionistas
+    cif: "",
+    direccion: "",
+    telefono: "", // Para Farmacias
+  });
+
+  const cargarDatos = async () => {
+    setCargando(true);
+    try {
+      const [datosNutris, datosFarms] = await Promise.all([
+        nutricionistasService.listarTodas(),
+        farmaciaService.listarTodas(),
+      ]);
+      setNutricionistas(datosNutris);
+      setFarmacias(datosFarms);
+    } catch (error) {
+      console.error("Error al cargar usuarios:", error);
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleCrearUsuario = async (e) => {
+    e.preventDefault();
+    setEnviando(true);
+    try {
+      if (pestana === "nutricionistas") {
+        await nutricionistasService.crear({
+          email: formData.email,
+          password: formData.password,
+          nombre: formData.nombre,
+          apellidos: formData.apellidos,
+          dni: formData.dni, // Requisito de tu BD
+          horasContratoMensual: Number(formData.horasContratoMensual), // Requisito de tu BD
+        });
+        alert("Nutricionista creada con Ã©xito.");
+      } else {
+        await farmaciaService.crear({
+          email: formData.email,
+          password: formData.password,
+          nombre: formData.nombre,
+          cif: formData.cif,
+          direccion: formData.direccion,
+          // AÃ±adimos telefono si tu FarmaciaRequest lo requiere, si no, se ignorarÃ¡
+        });
+        alert("Farmacia registrada con Ã©xito.");
+      }
+
+      // Limpiar formulario y recargar
+      setFormData({
+        email: "",
+        password: "",
+        nombre: "",
+        apellidos: "",
+        dni: "",
+        horasContratoMensual: "",
+        cif: "",
+        direccion: "",
+        telefono: "",
+      });
+      cargarDatos();
+    } catch (error) {
+      alert(error.response?.data?.message || "Error al crear el usuario.");
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  if (cargando)
+    return (
+      <div className="flex justify-center p-8">
+        <Loader2 className="animate-spin text-indigo-500" size={48} />
+      </div>
+    );
+
+  return (
+    <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 animate-fade-in">
+      {/* COLUMNA IZQUIERDA: LISTADO */}
+      <div className="xl:col-span-2 space-y-6">
+        <div className="flex gap-4 border-b border-gray-200 pb-4">
+          <button
+            onClick={() => setPestana("nutricionistas")}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${pestana === "nutricionistas" ? "bg-indigo-600 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100"}`}
+          >
+            <Users size={20} /> Plantilla Nutricionistas
+          </button>
+          <button
+            onClick={() => setPestana("farmacias")}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${pestana === "farmacias" ? "bg-indigo-600 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100"}`}
+          >
+            <Store size={20} /> Red de Farmacias
+          </button>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          {pestana === "nutricionistas" ? (
+            <div className="divide-y divide-gray-100">
+              {nutricionistas.length === 0 ? (
+                <p className="p-8 text-center text-gray-400">
+                  No hay nutricionistas registradas.
+                </p>
+              ) : (
+                nutricionistas.map((n) => (
+                  <div
+                    key={n.id}
+                    className="p-4 flex justify-between items-center hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="bg-indigo-100 text-indigo-600 w-10 h-10 rounded-full flex items-center justify-center font-bold">
+                        {n.nombre.charAt(0)}
+                        {n.apellidos ? n.apellidos.charAt(0) : ""}
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-800">
+                          {n.nombre} {n.apellidos}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {n.email} â€¢ DNI: {n.dni}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="bg-indigo-50 text-indigo-700 text-xs font-bold px-3 py-1 rounded-md mb-1 inline-block">
+                        <Clock size={12} className="inline mr-1" />
+                        {n.horasContratoMensual}h/mes
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {farmacias.length === 0 ? (
+                <p className="p-8 text-center text-gray-400">
+                  No hay farmacias registradas.
+                </p>
+              ) : (
+                farmacias.map((f) => (
+                  <div
+                    key={f.id}
+                    className="p-4 flex justify-between items-center hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="bg-emerald-100 text-emerald-600 p-2 rounded-lg">
+                        <Store size={24} />
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-800">{f.nombre}</p>
+                        <p className="text-xs text-gray-500">
+                          {f.direccion} â€¢ CIF: {f.cif}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-400 font-bold uppercase mb-1">
+                        Saldo Virtual
+                      </p>
+                      <span className="bg-purple-100 text-purple-700 text-sm font-black px-3 py-1 rounded-lg">
+                        {f.saldoVirtual ? f.saldoVirtual.toFixed(2) : "0.00"}â‚¬
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* COLUMNA DERECHA: FORMULARIO ALTA */}
+      <div className="bg-gray-900 rounded-3xl p-6 text-white shadow-xl h-fit sticky top-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="bg-indigo-500 p-2 rounded-xl">
+            <Plus size={20} className="text-white" />
+          </div>
+          <h3 className="text-xl font-bold">Dar de Alta</h3>
+        </div>
+
+        <form onSubmit={handleCrearUsuario} className="space-y-4">
+          <div className="space-y-3">
+            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-700 pb-2">
+              1. Credenciales
+            </h4>
+            <div className="relative">
+              <Mail
+                size={16}
+                className="absolute left-3 top-3.5 text-gray-400"
+              />
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                placeholder="Correo electrÃ³nico"
+                className="w-full bg-gray-800 border-none rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+            <div className="relative">
+              <Lock
+                size={16}
+                className="absolute left-3 top-3.5 text-gray-400"
+              />
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                placeholder="ContraseÃ±a temporal"
+                className="w-full bg-gray-800 border-none rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3 pt-4">
+            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-700 pb-2">
+              2. Perfil Laboral
+            </h4>
+
+            <div className="relative">
+              <User
+                size={16}
+                className="absolute left-3 top-3.5 text-gray-400"
+              />
+              <input
+                type="text"
+                name="nombre"
+                value={formData.nombre}
+                onChange={handleChange}
+                required
+                placeholder={
+                  pestana === "nutricionistas"
+                    ? "Nombre de la empleada"
+                    : "Nombre de la Farmacia"
+                }
+                className="w-full bg-gray-800 border-none rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+
+            {pestana === "nutricionistas" && (
+              <>
+                <input
+                  type="text"
+                  name="apellidos"
+                  value={formData.apellidos}
+                  onChange={handleChange}
+                  required
+                  placeholder="Apellidos"
+                  className="w-full bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+
+                <div className="relative">
+                  <FileText
+                    size={16}
+                    className="absolute left-3 top-3.5 text-gray-400"
+                  />
+                  <input
+                    type="text"
+                    name="dni"
+                    value={formData.dni}
+                    onChange={handleChange}
+                    required
+                    placeholder="DNI / NIE"
+                    className="w-full bg-gray-800 border-none rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
+
+                <div className="relative">
+                  <Clock
+                    size={16}
+                    className="absolute left-3 top-3.5 text-gray-400"
+                  />
+                  <input
+                    type="number"
+                    name="horasContratoMensual"
+                    value={formData.horasContratoMensual}
+                    onChange={handleChange}
+                    required
+                    min="1"
+                    max="160"
+                    placeholder="Horas mensuales de contrato"
+                    className="w-full bg-gray-800 border-none rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
+              </>
+            )}
+
+            {pestana === "farmacias" && (
+              <>
+                <div className="relative">
+                  <Building
+                    size={16}
+                    className="absolute left-3 top-3.5 text-gray-400"
+                  />
+                  <input
+                    type="text"
+                    name="cif"
+                    value={formData.cif}
+                    onChange={handleChange}
+                    required
+                    placeholder="CIF de la Farmacia"
+                    className="w-full bg-gray-800 border-none rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
+                <input
+                  type="text"
+                  name="direccion"
+                  value={formData.direccion}
+                  onChange={handleChange}
+                  required
+                  placeholder="DirecciÃ³n completa"
+                  className="w-full bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </>
+            )}
+          </div>
+
+          <button
+            type="submit"
+            disabled={enviando}
+            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl mt-4 transition-colors flex justify-center items-center shadow-lg shadow-indigo-500/30"
+          >
+            {enviando ? (
+              <Loader2 className="animate-spin" size={20} />
+            ) : (
+              `Registrar ${pestana === "nutricionistas" ? "Nutricionista" : "Farmacia"}`
+            )}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default VistaEmpleados;
+
+========================================
+FILE: VistaHistorialFarmacia.jsx
+========================================
+
+import React, { useState, useEffect } from "react";
+import {
+  History,
+  Search,
+  Calendar,
+  ArrowUpDown,
+  User,
+  TrendingUp,
+  Clock,
+  Filter,
+  Loader2,
+} from "lucide-react";
+import { consultasService } from "../../services/consultasService";
+
+const VistaHistorialFarmacia = () => {
+  const [consultas, setConsultas] = useState([]);
+  const [cargando, setCargando] = useState(true);
+
+  // Estados de Filtro
+  const [busqueda, setBusqueda] = useState("");
+  const [fechaFiltro, setFechaFiltro] = useState("");
+  const [orden, setOrden] = useState("desc"); // desc = mÃ¡s recientes primero
+
+  const cargarHistorial = async () => {
+    setCargando(true);
+    try {
+      const data = await consultasService.obtenerHistorialFarmacia();
+      setConsultas(data);
+    } catch (error) {
+      console.error("Error al cargar el historial:", error);
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarHistorial();
+  }, []);
+
+  // LÃ³gica de Filtrado y OrdenaciÃ³n
+  const consultasFiltradas = consultas
+    .filter((c) => {
+      const coincideNombre = c.nutricionistaNombre
+        .toLowerCase()
+        .includes(busqueda.toLowerCase());
+      const coincideFecha = fechaFiltro === "" || c.fecha === fechaFiltro;
+      return coincideNombre && coincideFecha;
+    })
+    .sort((a, b) => {
+      const dateA = new Date(a.fecha);
+      const dateB = new Date(b.fecha);
+      return orden === "desc" ? dateB - dateA : dateA - dateB;
+    });
+
+  if (cargando)
+    return (
+      <div className="flex justify-center p-20">
+        <Loader2 className="animate-spin text-sky-500" size={48} />
+      </div>
+    );
+
+  return (
+    <div className="space-y-6 animate-fade-in pb-10">
+      {/* CABECERA Y RESUMEN RÃPIDO */}
+      <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="flex items-center gap-4">
+          <div className="bg-emerald-600 p-4 rounded-3xl text-white shadow-lg shadow-emerald-100">
+            <History size={28} />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-gray-800">
+              Historial de Consultas
+            </h2>
+            <p className="text-gray-500 font-medium">
+              Registro de nutricionistas y jornadas en tu farmacia.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-4">
+          <div className="bg-gray-50 px-6 py-3 rounded-2xl border border-gray-100 text-center">
+            <span className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">
+              Total Jornadas
+            </span>
+            <span className="text-xl font-black text-gray-800">
+              {consultas.length}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* BARRA DE FILTROS (Estilo Suministros) */}
+      <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-wrap gap-4">
+        <div className="relative flex-1 min-w-[250px]">
+          <Search size={18} className="absolute left-4 top-3.5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Buscar por nombre del nutricionista..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:border-emerald-500 outline-none transition-all"
+          />
+        </div>
+
+        <div className="relative min-w-[180px]">
+          <Calendar
+            size={18}
+            className="absolute left-4 top-3.5 text-gray-400"
+          />
+          <input
+            type="date"
+            value={fechaFiltro}
+            onChange={(e) => setFechaFiltro(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:border-emerald-500 outline-none transition-all"
+          />
+        </div>
+
+        <div className="relative min-w-[180px]">
+          <ArrowUpDown
+            size={18}
+            className="absolute left-4 top-3.5 text-gray-400"
+          />
+          <select
+            value={orden}
+            onChange={(e) => setOrden(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:border-emerald-500 outline-none transition-all appearance-none"
+          >
+            <option value="desc">MÃ¡s recientes</option>
+            <option value="asc">MÃ¡s antiguos</option>
+          </select>
+        </div>
+      </div>
+
+      {/* LISTADO DE RESULTADOS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        {consultasFiltradas.length === 0 ? (
+          <div className="col-span-full bg-white p-20 rounded-[3rem] text-center border-2 border-dashed border-gray-100">
+            <Filter size={48} className="mx-auto text-gray-200 mb-4" />
+            <p className="text-gray-400 font-bold">
+              No hay registros que coincidan con la bÃºsqueda.
+            </p>
+          </div>
+        ) : (
+          consultasFiltradas.map((c) => (
+            <div
+              key={c.id}
+              className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-xl hover:border-emerald-100 transition-all group"
+            >
+              <div className="flex justify-between items-start mb-6">
+                <div className="bg-emerald-50 p-3 rounded-2xl text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                  <User size={24} />
+                </div>
+                <span
+                  className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${
+                    c.estado === "CONFIRMADA"
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-amber-100 text-amber-700"
+                  }`}
+                >
+                  {c.estado}
+                </span>
+              </div>
+
+              <h3 className="text-lg font-black text-gray-800 mb-1">
+                {c.nutricionistaNombre}
+              </h3>
+              <div className="flex items-center gap-2 text-gray-400 mb-6">
+                <Calendar size={14} />
+                <span className="text-xs font-bold uppercase">{c.fecha}</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 pt-6 border-t border-gray-50">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">
+                    Horario
+                  </span>
+                  <div className="flex items-center gap-1 text-gray-700 font-bold text-sm">
+                    <Clock size={14} className="text-emerald-500" />
+                    {c.horaInicio.substring(0, 5)} - {c.horaFin.substring(0, 5)}
+                  </div>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">
+                    Turno
+                  </span>
+                  <span className="text-gray-700 font-bold text-sm uppercase">
+                    {c.tipoTurno}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-6 bg-gray-50 p-4 rounded-2xl flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <TrendingUp size={16} className="text-emerald-600" />
+                  <span className="text-xs font-bold text-gray-600">
+                    ComisiÃ³n Generada
+                  </span>
+                </div>
+                {/* Calculamos la comisiÃ³n 70/30 (30% para farmacia) basÃ¡ndonos en los precios estÃ¡ndar */}
+                <span className="text-lg font-black text-emerald-700">
+                  {((c.nuevas * 25 + c.revisiones * 20) * 0.3).toFixed(2)}â‚¬
+                </span>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default VistaHistorialFarmacia;
+
+========================================
+FILE: VistaPedidos.jsx
+========================================
+
+import React, { useState, useEffect } from "react";
+import {
+  ShoppingBag,
+  Plus,
+  Minus,
+  ShoppingCart,
+  Check,
+  Package,
+  Loader2,
+  AlertCircle,
+  Wallet,
+  Banknote,
+  Filter,
+  ArrowUpDown,
+  FileText,
+  X,
+  Info,
+  ChevronRight,
+  History,
+} from "lucide-react";
+import { productosService } from "../../services/productosService";
+import { pedidosService } from "../../services/pedidosService";
+import { farmaciaService } from "../../services/farmaciaService";
+import { nutricionistasService } from "../../services/nutricionistasService";
+import { jwtDecode } from "jwt-decode";
+
+const VistaPedidos = () => {
+  // --- ESTADOS DE DATOS ---
+  const [productos, setProductos] = useState([]);
+  const [pedidos, setPedidos] = useState([]);
+  const [farmacias, setFarmacias] = useState([]);
+  const [perfil, setPerfil] = useState(null);
+
+  // --- ESTADOS DE CONTROL ---
+  const [esFarmacia, setEsFarmacia] = useState(false);
+  const [cargando, setCargando] = useState(true);
+  const [enviando, setEnviando] = useState(false);
+  const [errorCarga, setErrorCarga] = useState(null);
+
+  // --- ESTADOS DE FILTROS (HISTORIAL) ---
+  const [mesFiltro, setMesFiltro] = useState("Todos");
+  const [ordenFiltro, setOrdenFiltro] = useState("recientes");
+
+  // --- ESTADOS DE UI ---
+  const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
+  const [carrito, setCarrito] = useState([]);
+  const [farmaciaSeleccionada, setFarmaciaSeleccionada] = useState("");
+
+  // --- CARGA DE DATOS INICIAL ---
+  const cargarDatos = async () => {
+    setCargando(true);
+    setErrorCarga(null);
+    try {
+      const token = localStorage.getItem("token");
+      const decoded = jwtDecode(token);
+      const roles = decoded.roles || [];
+      const soyFarmacia = roles.includes("ROLE_FARMACIA");
+      setEsFarmacia(soyFarmacia);
+
+      // 1. Peticiones base (Productos y Pedidos propios)
+      const [datosProds, datosPeds] = await Promise.all([
+        productosService.listarTodos(),
+        pedidosService.obtenerMisPedidos(),
+      ]);
+      setProductos(datosProds);
+      setPedidos(datosPeds);
+
+      // 2. LÃ³gica de Perfil segÃºn Rol
+      if (soyFarmacia) {
+        const miPerfilFarm = await farmaciaService.obtenerMiPerfil();
+        setPerfil(miPerfilFarm);
+        setFarmaciaSeleccionada(miPerfilFarm.id.toString());
+      } else {
+        const [miPerfilNutri, datosFarms] = await Promise.all([
+          nutricionistasService.obtenerMiPerfil(),
+          farmaciaService.listarTodas(),
+        ]);
+        setPerfil(miPerfilNutri);
+        setFarmacias(datosFarms);
+        if (datosFarms.length > 0) {
+          setFarmaciaSeleccionada(datosFarms[0].id.toString());
+        }
+      }
+    } catch (error) {
+      console.error("Error al cargar datos:", error);
+      setErrorCarga(
+        "No se pudieron cargar los datos. Por favor, revisa tu conexiÃ³n.",
+      );
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  // Limpiar carrito si una Nutricionista cambia de Farmacia destino
+  useEffect(() => {
+    if (!esFarmacia) {
+      setCarrito([]);
+    }
+  }, [farmaciaSeleccionada, esFarmacia]);
+
+  // --- CÃLCULOS DERIVADOS (LÃ“GICA DE NEGOCIO) ---
+  const farmaciaActual = esFarmacia
+    ? perfil
+    : farmacias.find((f) => f.id.toString() === farmaciaSeleccionada);
+
+  const saldoDisponibleInicial = farmaciaActual?.saldoVirtual || 0;
+
+  const totalReal = carrito
+    .filter((item) => !item.pagadoConSaldo)
+    .reduce((sum, item) => sum + item.cantidad * item.productoInfo.pvf, 0);
+
+  const totalVirtual = carrito
+    .filter((item) => item.pagadoConSaldo)
+    .reduce((sum, item) => sum + item.cantidad * item.productoInfo.pvf, 0);
+
+  const saldoRestante = saldoDisponibleInicial - totalVirtual;
+  const umbralAlcanzado = totalReal >= 80;
+
+  // --- FILTROS DE HISTORIAL ---
+  const mesesDisponibles = [
+    "Todos",
+    ...new Set(pedidos.map((p) => p.fechaPedido.substring(0, 7))),
+  ].sort((a, b) => b.localeCompare(a));
+
+  const pedidosFiltradosYOrdenados = pedidos
+    .filter((p) => mesFiltro === "Todos" || p.fechaPedido.startsWith(mesFiltro))
+    .sort((a, b) => {
+      if (ordenFiltro === "recientes")
+        return new Date(b.fechaPedido) - new Date(a.fechaPedido);
+      if (ordenFiltro === "antiguos")
+        return new Date(a.fechaPedido) - new Date(b.fechaPedido);
+      if (ordenFiltro === "precio_desc")
+        return (b.totalPedido || 0) - (a.totalPedido || 0);
+      if (ordenFiltro === "precio_asc")
+        return (a.totalPedido || 0) - (b.totalPedido || 0);
+      return 0;
+    });
+
+  // --- ALGORITMO DE BONIFICADOS ---
+  const calcularBonificados = (cantidad) => {
+    if (cantidad >= 100) return 30;
+    if (cantidad >= 20) return 5;
+    if (cantidad >= 10) return 2;
+    if (cantidad >= 6) return 1;
+    return 0;
+  };
+
+  // --- ACCIONES DEL CARRITO ---
+  const agregarAlCarrito = (producto, usarSaldo = false) => {
+    if (usarSaldo && !umbralAlcanzado) {
+      return alert(
+        "Debes alcanzar los 80â‚¬ en productos normales antes de usar el saldo virtual.",
+      );
+    }
+    if (usarSaldo && saldoRestante < producto.pvf) {
+      return alert("Saldo virtual insuficiente para este producto.");
+    }
+
+    setCarrito((prev) => {
+      const existeIndex = prev.findIndex(
+        (item) =>
+          item.productoId === producto.id && item.pagadoConSaldo === usarSaldo,
+      );
+
+      if (existeIndex >= 0) {
+        const nuevoCarrito = [...prev];
+        const nuevaCant = nuevoCarrito[existeIndex].cantidad + 1;
+        nuevoCarrito[existeIndex] = {
+          ...nuevoCarrito[existeIndex],
+          cantidad: nuevaCant,
+          bonificados: usarSaldo ? 0 : calcularBonificados(nuevaCant),
+        };
+        return nuevoCarrito;
+      }
+
+      return [
+        ...prev,
+        {
+          productoId: producto.id,
+          cantidad: 1,
+          bonificados: usarSaldo ? 0 : calcularBonificados(1),
+          productoInfo: producto,
+          pagadoConSaldo: usarSaldo,
+        },
+      ];
+    });
+  };
+
+  const modificarCantidad = (id, delta, pagadoConSaldo) => {
+    setCarrito((prev) => {
+      const nuevoCarrito = prev.map((item) => {
+        if (item.productoId === id && item.pagadoConSaldo === pagadoConSaldo) {
+          if (
+            pagadoConSaldo &&
+            delta > 0 &&
+            saldoRestante < item.productoInfo.pvf
+          ) {
+            alert("No queda saldo virtual suficiente.");
+            return item;
+          }
+          const nuevoValor = Math.max(0, item.cantidad + delta);
+          const itemActualizado = { ...item, cantidad: nuevoValor };
+          if (!pagadoConSaldo) {
+            itemActualizado.bonificados = calcularBonificados(nuevoValor);
+          }
+          return itemActualizado;
+        }
+        return item;
+      });
+      return nuevoCarrito.filter((item) => item.cantidad > 0);
+    });
+  };
+
+  const handleRealizarPedido = async () => {
+    if (carrito.length === 0) return alert("El carrito estÃ¡ vacÃ­o");
+    if (!farmaciaSeleccionada)
+      return alert("Selecciona una farmacia de destino");
+
+    setEnviando(true);
+    try {
+      const payload = {
+        farmaciaId: Number(farmaciaSeleccionada),
+        nutricionistaId: esFarmacia ? null : perfil.id,
+        fechaPedido: new Date().toISOString().split("T")[0],
+        lineas: carrito.map((item) => ({
+          productoId: item.productoId,
+          cantidad: item.cantidad,
+          bonificados: item.bonificados,
+          pagadoConSaldo: item.pagadoConSaldo,
+        })),
+      };
+
+      await pedidosService.crear(payload);
+      alert("Â¡Pedido realizado con Ã©xito!");
+      setCarrito([]);
+      cargarDatos();
+    } catch (e) {
+      alert(e.response?.data?.message || "Error al procesar el pedido.");
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  // --- RENDERIZADO CONDICIONAL DE CARGA/ERROR ---
+  if (cargando) {
+    return (
+      <div className="flex flex-col justify-center items-center h-[60vh] gap-4">
+        <Loader2 className="animate-spin text-sky-500" size={60} />
+        <p className="text-gray-500 font-bold animate-pulse">
+          Cargando catÃ¡logo y pedidos...
+        </p>
+      </div>
+    );
+  }
+
+  if (errorCarga) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-3xl p-10 text-center max-w-2xl mx-auto">
+        <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
+        <h3 className="text-xl font-bold text-red-800">Error de carga</h3>
+        <p className="text-red-600 mt-2">{errorCarga}</p>
+        <button
+          onClick={cargarDatos}
+          className="mt-6 bg-red-600 text-white px-6 py-2 rounded-xl font-bold"
+        >
+          Reintentar
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 animate-fade-in relative pb-10">
+      {/* ============================================================
+          MODAL DE DETALLES DEL PEDIDO
+      ============================================================ */}
+      {pedidoSeleccionado && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-md">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-2xl w-full overflow-hidden animate-scale-in">
+            <div className="bg-gradient-to-r from-sky-600 to-indigo-700 p-8 text-white flex justify-between items-center">
+              <div>
+                <span className="bg-white/20 text-xs font-black px-3 py-1 rounded-full uppercase tracking-widest">
+                  Detalle de OperaciÃ³n
+                </span>
+                <h3 className="text-2xl font-black mt-2">
+                  Pedido #{pedidoSeleccionado.id}
+                </h3>
+                <div className="flex items-center gap-3 mt-1 text-sky-100 text-sm">
+                  <p className="flex items-center gap-1">
+                    <Package size={14} />{" "}
+                    {pedidoSeleccionado.lineas?.length || 0} lÃ­neas
+                  </p>
+                  <span>â€¢</span>
+                  <p className="flex items-center gap-1">
+                    <History size={14} /> {pedidoSeleccionado.fechaPedido}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setPedidoSeleccionado(null)}
+                className="bg-white/10 p-2 rounded-full hover:bg-white/20 transition-colors"
+              >
+                <X size={28} />
+              </button>
+            </div>
+
+            <div className="p-8 max-h-[65vh] overflow-y-auto">
+              <div className="flex items-center gap-2 mb-6">
+                <div className="h-8 w-1 bg-sky-500 rounded-full"></div>
+                <h4 className="text-sm font-black text-gray-400 uppercase tracking-widest">
+                  Resumen de Cesta
+                </h4>
+              </div>
+
+              <div className="space-y-4">
+                {pedidoSeleccionado.lineas?.map((linea) => {
+                  const precioUnidad =
+                    linea.precioUnitario || linea.precioAplicado || 0;
+                  const subtotalCalculado =
+                    linea.subtotal || precioUnidad * linea.cantidad;
+
+                  return (
+                    <div
+                      key={linea.id}
+                      className="group bg-gray-50 rounded-2xl p-4 flex justify-between items-center border border-transparent hover:border-sky-100 hover:bg-white transition-all"
+                    >
+                      <div className="flex gap-4 items-center">
+                        <div
+                          className={`p-3 rounded-xl ${linea.pagadoConSaldo ? "bg-purple-100 text-purple-600" : "bg-sky-100 text-sky-600"}`}
+                        >
+                          <Package size={20} />
+                        </div>
+                        <div>
+                          <p className="font-bold text-gray-800">
+                            {linea.productoNombre}
+                          </p>
+                          <div className="flex items-center gap-2 text-xs font-bold text-gray-500 mt-0.5">
+                            <span>{linea.cantidad} unidades</span>
+                            <span>â€¢</span>
+                            <span>{precioUnidad.toFixed(2)}â‚¬/ud</span>
+                          </div>
+                          {linea.bonificados > 0 && (
+                            <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 text-[10px] px-2 py-0.5 rounded-md mt-2 font-black">
+                              ðŸŽ +{linea.bonificados} BONIFICADOS (GRATIS)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        {linea.pagadoConSaldo ? (
+                          <div className="text-right">
+                            <p className="text-purple-700 font-black text-lg">
+                              {subtotalCalculado.toFixed(2)}â‚¬
+                            </p>
+                            <p className="text-[10px] font-black text-purple-400 uppercase tracking-tighter">
+                              Liquidado con Saldo
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="text-gray-900 font-black text-lg">
+                            {subtotalCalculado.toFixed(2)}â‚¬
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-8 bg-gray-900 rounded-[2rem] p-8 text-white relative overflow-hidden">
+                <div className="relative z-10 flex justify-between items-center">
+                  <div>
+                    <p className="text-sky-400 text-xs font-black uppercase tracking-[0.2em] mb-1">
+                      Total abonado real
+                    </p>
+                    <p className="text-4xl font-black">
+                      {(pedidoSeleccionado.totalPedido || 0).toFixed(2)}
+                      <span className="text-xl ml-1 text-sky-300">â‚¬</span>
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-gray-400 text-xs font-bold mb-1">
+                      Estado de Pago
+                    </p>
+                    <span
+                      className={`px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest ${pedidoSeleccionado.estado === "LIQUIDADO" ? "bg-emerald-500" : "bg-amber-500"}`}
+                    >
+                      {pedidoSeleccionado.estado?.replace("_", " ") ||
+                        "PENDIENTE"}
+                    </span>
+                  </div>
+                </div>
+                <ShoppingCart
+                  size={150}
+                  className="absolute -right-10 -bottom-10 opacity-5"
+                />
+              </div>
+            </div>
+
+            <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end">
+              <button
+                onClick={() => setPedidoSeleccionado(null)}
+                className="px-8 py-3 bg-white border-2 border-gray-200 text-gray-600 font-black rounded-2xl hover:bg-gray-100 transition-colors"
+              >
+                Cerrar Detalle
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================
+          COLUMNA IZQUIERDA: CATÃLOGO DE PRODUCTOS
+      ============================================================ */}
+      <div className="xl:col-span-7 space-y-6">
+        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div className="flex items-center gap-4">
+              <div className="bg-sky-600 p-4 rounded-3xl text-white shadow-lg shadow-sky-200">
+                <ShoppingBag size={32} />
+              </div>
+              <div>
+                <h2 className="text-3xl font-black text-gray-800 tracking-tight">
+                  Hacer Pedido
+                </h2>
+                <p className="text-gray-500 font-medium mt-1">
+                  CatÃ¡logo para{" "}
+                  <span className="text-sky-600 font-black">
+                    {farmaciaActual?.nombre}
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            {!esFarmacia && (
+              <div className="w-full md:w-auto">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block ml-1">
+                  Seleccionar Destino
+                </label>
+                <div className="relative">
+                  <select
+                    value={farmaciaSeleccionada}
+                    onChange={(e) => setFarmaciaSeleccionada(e.target.value)}
+                    className="w-full md:w-64 pl-4 pr-10 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl text-sm font-bold text-gray-700 appearance-none focus:border-sky-500 focus:ring-0 transition-all outline-none"
+                  >
+                    {farmacias.map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.nombre}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronRight
+                    size={18}
+                    className="absolute right-4 top-4.5 text-gray-400 rotate-90"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* TARJETA MONEDERO DINÃMICA */}
+        <div
+          className={`relative overflow-hidden rounded-[2.5rem] p-8 text-white transition-all duration-500 shadow-xl ${umbralAlcanzado ? "bg-gradient-to-br from-purple-600 to-indigo-800" : "bg-gradient-to-br from-gray-700 to-gray-900 opacity-90"}`}
+        >
+          <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="flex items-center gap-5">
+              <div className="bg-white/20 p-4 rounded-[1.5rem] backdrop-blur-md">
+                <Wallet size={36} />
+              </div>
+              <div>
+                <p className="text-purple-100 text-xs font-black uppercase tracking-[0.2em] mb-1">
+                  Monedero Farmacia
+                </p>
+                <p className="text-5xl font-black tracking-tighter">
+                  {saldoRestante.toFixed(2)}
+                  <span className="text-2xl ml-1 opacity-60">â‚¬</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center md:items-end">
+              {umbralAlcanzado ? (
+                <div className="bg-emerald-500/20 border border-emerald-400/30 px-6 py-3 rounded-2xl backdrop-blur-sm flex items-center gap-3">
+                  <div className="bg-emerald-500 p-1 rounded-full">
+                    <Check size={14} />
+                  </div>
+                  <p className="text-sm font-black uppercase tracking-widest text-emerald-300">
+                    Saldo Desbloqueado
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center md:text-right">
+                  <div className="bg-white/10 px-6 py-3 rounded-2xl backdrop-blur-sm mb-2">
+                    <p className="text-xs font-bold text-purple-100">
+                      Faltan{" "}
+                      <span className="text-white font-black text-lg">
+                        {(80 - totalReal).toFixed(2)}â‚¬
+                      </span>{" "}
+                      para usar saldo
+                    </p>
+                  </div>
+                  <div className="w-full bg-white/10 h-1.5 rounded-full mt-2">
+                    <div
+                      className="bg-sky-400 h-full rounded-full transition-all duration-700"
+                      style={{
+                        width: `${Math.min(100, (totalReal / 80) * 100)}%`,
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          <Banknote
+            size={200}
+            className="absolute -right-10 -bottom-20 opacity-10 rotate-12"
+          />
+        </div>
+
+        {/* REJILLA DE PRODUCTOS */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {productos.map((prod) => (
+            <div
+              key={prod.id}
+              className="group bg-white border-2 border-gray-50 rounded-[2.5rem] p-6 shadow-sm hover:shadow-xl hover:border-sky-100 transition-all duration-300 flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex justify-between items-start mb-4">
+                  <span className="bg-sky-50 text-sky-600 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
+                    {prod.acronimo}
+                  </span>
+                  <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-emerald-500">
+                    <div className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse"></div>{" "}
+                    En Stock
+                  </div>
+                </div>
+                <h3 className="text-xl font-black text-gray-800 leading-tight group-hover:text-sky-600 transition-colors">
+                  {prod.nombreProducto}
+                </h3>
+                <p className="text-xs font-bold text-gray-400 mt-2 flex items-center gap-1">
+                  REF: <span className="text-gray-600">{prod.referencia}</span>
+                </p>
+                <div className="mt-4 flex items-baseline gap-1">
+                  <span className="text-3xl font-black text-gray-900">
+                    {prod.pvf.toFixed(2)}
+                  </span>
+                  <span className="text-lg font-bold text-gray-400">â‚¬</span>
+                </div>
+              </div>
+
+              <div className="mt-8 space-y-3">
+                <button
+                  onClick={() => agregarAlCarrito(prod, false)}
+                  className="w-full bg-gray-900 hover:bg-black text-white py-4 rounded-[1.25rem] font-black text-sm flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg shadow-gray-200"
+                >
+                  <Plus size={18} /> AÃ±adir a Cesta Real
+                </button>
+
+                {umbralAlcanzado && (
+                  <button
+                    onClick={() => agregarAlCarrito(prod, true)}
+                    disabled={saldoRestante < prod.pvf}
+                    className="w-full bg-purple-50 text-purple-700 border-2 border-purple-100 py-4 rounded-[1.25rem] font-black text-sm flex items-center justify-center gap-3 transition-all hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <Wallet size={18} /> Comprar con Saldo
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ============================================================
+          COLUMNA DERECHA: CARRITO Y RESUMEN FINANCIERO
+      ============================================================ */}
+      <div className="xl:col-span-5 space-y-8">
+        <div className="bg-white rounded-[3rem] shadow-xl border border-gray-100 p-8 sticky top-6">
+          <div className="flex items-center justify-between mb-8 pb-4 border-b border-gray-50">
+            <div className="flex items-center gap-3">
+              <div className="bg-sky-100 p-3 rounded-2xl text-sky-600">
+                <ShoppingCart size={24} />
+              </div>
+              <h3 className="text-xl font-black text-gray-800">
+                Mi Doble Cesta
+              </h3>
+            </div>
+            <span className="bg-gray-900 text-white text-xs font-black px-4 py-1.5 rounded-full">
+              {carrito.length} artÃ­culos
+            </span>
+          </div>
+
+          {/* LISTA DEL CARRITO */}
+          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-4 mb-8 custom-scrollbar">
+            {carrito.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-200">
+                <ShoppingCart size={48} className="text-gray-200 mb-4" />
+                <p className="text-gray-400 font-bold">
+                  Tu cesta estÃ¡ vacÃ­a.
+                  <br />
+                  Selecciona productos del catÃ¡logo.
+                </p>
+              </div>
+            ) : (
+              carrito.map((item) => (
+                <div
+                  key={`${item.productoId}-${item.pagadoConSaldo}`}
+                  className={`relative p-5 rounded-[1.5rem] border-2 transition-all ${item.pagadoConSaldo ? "bg-purple-50/50 border-purple-100" : "bg-gray-50/50 border-gray-100"}`}
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex-1 pr-4">
+                      <p className="font-black text-gray-800 leading-tight">
+                        {item.productoInfo.nombreProducto}
+                      </p>
+                      {item.pagadoConSaldo && (
+                        <span className="inline-block bg-purple-600 text-white text-[9px] font-black px-2 py-0.5 rounded-md mt-1 uppercase tracking-tighter">
+                          Pago con Monedero
+                        </span>
+                      )}
+                    </div>
+                    <p
+                      className={`font-black text-lg ${item.pagadoConSaldo ? "text-purple-700" : "text-gray-900"}`}
+                    >
+                      {(item.cantidad * item.productoInfo.pvf).toFixed(2)}â‚¬
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center bg-white rounded-xl p-1 border border-gray-200 shadow-sm">
+                      <button
+                        onClick={() =>
+                          modificarCantidad(
+                            item.productoId,
+                            -1,
+                            item.pagadoConSaldo,
+                          )
+                        }
+                        className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                      >
+                        <Minus size={18} />
+                      </button>
+                      <span className="w-10 text-center font-black text-gray-700">
+                        {item.cantidad}
+                      </span>
+                      <button
+                        onClick={() =>
+                          modificarCantidad(
+                            item.productoId,
+                            1,
+                            item.pagadoConSaldo,
+                          )
+                        }
+                        className="p-2 text-gray-400 hover:text-sky-600 transition-colors"
+                      >
+                        <Plus size={18} />
+                      </button>
+                    </div>
+
+                    {!item.pagadoConSaldo && item.bonificados > 0 && (
+                      <div className="flex items-center gap-1.5 bg-emerald-500 text-white px-3 py-1.5 rounded-xl animate-bounce-subtle">
+                        <span className="text-[10px] font-black uppercase tracking-tighter">
+                          BonificaciÃ³n: +{item.bonificados}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* TOTALES */}
+          <div className="bg-gray-50 rounded-[2rem] p-6 space-y-4 mb-8">
+            {totalVirtual > 0 && (
+              <div className="flex justify-between items-center text-purple-700 px-2">
+                <p className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                  <Wallet size={14} /> Saldo a descontar
+                </p>
+                <p className="font-black">-{totalVirtual.toFixed(2)}â‚¬</p>
+              </div>
+            )}
+            <div className="flex justify-between items-end border-t border-gray-200 pt-4 px-2">
+              <div>
+                <p className="text-xs font-black text-gray-400 uppercase tracking-widest">
+                  Total a pagar real
+                </p>
+                {!umbralAlcanzado && totalReal > 0 && (
+                  <p className="text-[10px] text-amber-600 font-bold mt-1 flex items-center gap-1">
+                    <Info size={10} /> Falta para el mÃ­nimo de liquidaciÃ³n
+                  </p>
+                )}
+              </div>
+              <p
+                className={`text-4xl font-black tracking-tighter ${umbralAlcanzado ? "text-sky-600" : "text-gray-800"}`}
+              >
+                {totalReal.toFixed(2)}
+                <span className="text-xl ml-1">â‚¬</span>
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleRealizarPedido}
+            disabled={
+              carrito.length === 0 ||
+              enviando ||
+              (!umbralAlcanzado && totalVirtual > 0)
+            }
+            className="w-full bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 text-white font-black py-5 rounded-[1.5rem] shadow-xl shadow-sky-100 disabled:from-gray-300 disabled:to-gray-400 disabled:shadow-none transition-all flex items-center justify-center gap-4 active:scale-[0.98]"
+          >
+            {enviando ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <>
+                <ShoppingBag size={24} /> Confirmar Pedido y Emitir
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* ============================================================
+            HISTORIAL AVANZADO DE PEDIDOS (CON FILTROS RESTAURADOS)
+        ============================================================ */}
+        <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <div className="bg-amber-100 p-2 rounded-xl text-amber-600">
+                <History size={20} />
+              </div>
+              <h3 className="text-lg font-black text-gray-800">
+                Mis Ãºltimos pedidos
+              </h3>
+            </div>
+            <span className="bg-amber-50 text-amber-700 text-[10px] font-black px-3 py-1 rounded-full uppercase">
+              {pedidosFiltradosYOrdenados.length} Registros
+            </span>
+          </div>
+
+          {/* CONTROLES DE FILTRO */}
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            <div className="relative">
+              <Filter
+                size={14}
+                className="absolute left-3.5 top-3.5 text-gray-400"
+              />
+              <select
+                value={mesFiltro}
+                onChange={(e) => setMesFiltro(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-gray-50 border-2 border-transparent rounded-2xl text-[11px] font-black text-gray-600 appearance-none focus:bg-white focus:border-sky-500 transition-all outline-none"
+              >
+                {mesesDisponibles.map((mes) => (
+                  <option key={mes} value={mes}>
+                    {mes === "Todos" ? "TODOS LOS MESES" : mes}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="relative">
+              <ArrowUpDown
+                size={14}
+                className="absolute left-3.5 top-3.5 text-gray-400"
+              />
+              <select
+                value={ordenFiltro}
+                onChange={(e) => setOrdenFiltro(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-gray-50 border-2 border-transparent rounded-2xl text-[11px] font-black text-gray-600 appearance-none focus:bg-white focus:border-sky-500 transition-all outline-none"
+              >
+                <option value="recientes">MÃS RECIENTES</option>
+                <option value="antiguos">MÃS ANTIGUOS</option>
+                <option value="precio_desc">MAYOR IMPORTE</option>
+                <option value="precio_asc">MENOR IMPORTE</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+            {pedidosFiltradosYOrdenados.length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-100">
+                <p className="text-gray-400 font-bold text-sm">
+                  No hay resultados para este filtro
+                </p>
+              </div>
+            ) : (
+              pedidosFiltradosYOrdenados.map((ped) => (
+                <div
+                  key={ped.id}
+                  className="group bg-gray-50 rounded-[1.5rem] p-5 border-2 border-transparent hover:bg-white hover:border-amber-100 transition-all duration-300"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <p className="font-black text-gray-800">
+                        Pedido #{ped.id}
+                      </p>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
+                        {ped.fechaPedido}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-black text-gray-900 text-lg">
+                        {(ped.totalPedido || 0).toFixed(2)}â‚¬
+                      </p>
+                      <span
+                        className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-tighter ${ped.estado === "LIQUIDADO" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}
+                      >
+                        {ped.estado?.replace("_", " ")}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setPedidoSeleccionado(ped)}
+                    className="w-full py-3 bg-white border border-gray-200 text-gray-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-900 hover:text-white hover:border-gray-900 transition-all"
+                  >
+                    Ver Informe Detallado
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default VistaPedidos;
+
+========================================
+FILE: VistaResumen.jsx
+========================================
+
+import React, { useState, useEffect } from "react";
+import {
+  TrendingUp,
+  Target,
+  Award,
+  Clock,
+  Loader2,
+  AlertCircle,
+  Check, // Â¡Asegurado de que estÃ¡ importado!
+} from "lucide-react";
+import { consultasService } from "../../services/consultasService";
+import { pedidosService } from "../../services/pedidosService";
+import { nutricionistasService } from "../../services/nutricionistasService";
+
+const VistaResumen = () => {
+  const [datosResumen, setDatosResumen] = useState(null);
+  const [perfil, setPerfil] = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [errorBackend, setErrorBackend] = useState(null); // <-- NUEVO ESTADO PARA ERRORES
+
+  // --- TABLA BASE DE OBJETIVOS (Para 40 Horas) ---
+  const METAS_BASE = {
+    OB1: { facturacion: 5000, productos: 800, incentivo: 200, exceso: 0 },
+    OB2: { facturacion: 6800, productos: 1000, incentivo: 400, exceso: 0.05 },
+    OB3: { facturacion: 8700, productos: 1200, incentivo: 600, exceso: 0.1 },
+  };
+
+  const cargarDatos = async () => {
+    try {
+      // LLAMAMOS A LOS NUEVOS ENDPOINTS SEGUROS (Solo mis datos)
+      const [miPerfil, misConsultas, misPedidos] = await Promise.all([
+        nutricionistasService.obtenerMiPerfil(),
+        consultasService.obtenerMisConsultas(),
+        pedidosService.obtenerMisPedidos(),
+      ]);
+
+      setPerfil(miPerfil);
+
+      // Filtramos solo el mes actual
+      const mesActual = new Date().toISOString().substring(0, 7); // "YYYY-MM"
+
+      const consultasMes = misConsultas.filter(
+        (c) => c.fecha.startsWith(mesActual) && c.estado === "CONFIRMADA",
+      );
+      const pedidosMes = misPedidos.filter(
+        (p) => p.fechaPedido.startsWith(mesActual) && p.estado !== "CANCELADO",
+      );
+
+      // 1. CÃ¡lculos de Consultas
+      const totalNuevas = consultasMes.reduce((sum, c) => sum + c.nuevas, 0);
+      const totalRevisiones = consultasMes.reduce(
+        (sum, c) => sum + c.revisiones,
+        0,
+      );
+      const facturacionConsultas = totalNuevas * 25 + totalRevisiones * 20;
+
+      // 2. CÃ¡lculos de Pedidos (Solo dinero real)
+      const facturacionProductos = pedidosMes.reduce(
+        (sum, p) => sum + p.totalPedido,
+        0,
+      );
+
+      // 3. Totales Globales
+      const facturacionTotal = facturacionConsultas + facturacionProductos;
+
+      setDatosResumen({
+        mes: mesActual,
+        totalNuevas,
+        totalRevisiones,
+        facturacionConsultas,
+        facturacionProductos,
+        facturacionTotal,
+      });
+    } catch (error) {
+      console.error("Error al cargar resumen:", error);
+      // CAPTURAMOS EL ERROR AQUÃ PARA EVITAR LA CARGA INFINITA
+      setErrorBackend(
+        "No se pudieron cargar tus datos. AsegÃºrate de tener permisos de Nutricionista.",
+      );
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  // --- LÃ“GICA DE RENDERIZADO (Evita el bucle infinito) ---
+  if (cargando) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="animate-spin text-sky-500" size={48} />
+      </div>
+    );
+  }
+
+  // SI HAY ERROR, MOSTRAMOS EL MENSAJE EN LUGAR DE ROMPER LA VISTA
+  if (errorBackend) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 bg-red-50 rounded-2xl border border-red-100 p-8 text-center animate-fade-in">
+        <AlertCircle size={48} className="text-red-400 mb-4" />
+        <h3 className="text-xl font-bold text-red-800 mb-2">Error de Acceso</h3>
+        <p className="text-red-600">{errorBackend}</p>
+      </div>
+    );
+  }
+
+  // ProtecciÃ³n extra por si los datos llegan vacÃ­os sin saltar el catch
+  if (!datosResumen || !perfil) return null;
+
+  // --- CÃLCULO DINÃMICO SEGÃšN CONTRATO ---
+  const horasContrato = perfil.horasContratoMensual || 40;
+  const factorJornada = horasContrato / 40;
+
+  const METAS = {
+    OB1: {
+      facturacion: METAS_BASE.OB1.facturacion * factorJornada,
+      productos: METAS_BASE.OB1.productos * factorJornada,
+      incentivo: METAS_BASE.OB1.incentivo * factorJornada,
+      exceso: METAS_BASE.OB1.exceso,
+    },
+    OB2: {
+      facturacion: METAS_BASE.OB2.facturacion * factorJornada,
+      productos: METAS_BASE.OB2.productos * factorJornada,
+      incentivo: METAS_BASE.OB2.incentivo * factorJornada,
+      exceso: METAS_BASE.OB2.exceso,
+    },
+    OB3: {
+      facturacion: METAS_BASE.OB3.facturacion * factorJornada,
+      productos: METAS_BASE.OB3.productos * factorJornada,
+      incentivo: METAS_BASE.OB3.incentivo * factorJornada,
+      exceso: METAS_BASE.OB3.exceso,
+    },
+  };
+
+  // --- MOTOR DE CÃLCULO DE COMISIONES ---
+  const { facturacionTotal, facturacionProductos } = datosResumen;
+
+  let nivelAlcanzado = "Ninguno";
+  let incentivoBase = 0;
+  let porcentajeExceso = 0;
+  let umbralExceso = 0;
+  let proximoObjetivo = METAS.OB1;
+  let nombreProximoObj = "OB1";
+
+  if (
+    facturacionTotal >= METAS.OB3.facturacion &&
+    facturacionProductos >= METAS.OB3.productos
+  ) {
+    nivelAlcanzado = "OB3";
+    incentivoBase = METAS.OB3.incentivo;
+    porcentajeExceso = METAS.OB3.exceso;
+    umbralExceso = METAS.OB3.facturacion;
+    proximoObjetivo = null;
+  } else if (
+    facturacionTotal >= METAS.OB2.facturacion &&
+    facturacionProductos >= METAS.OB2.productos
+  ) {
+    nivelAlcanzado = "OB2";
+    incentivoBase = METAS.OB2.incentivo;
+    porcentajeExceso = METAS.OB2.exceso;
+    umbralExceso = METAS.OB2.facturacion;
+    proximoObjetivo = METAS.OB3;
+    nombreProximoObj = "OB3";
+  } else if (
+    facturacionTotal >= METAS.OB1.facturacion &&
+    facturacionProductos >= METAS.OB1.productos
+  ) {
+    nivelAlcanzado = "OB1";
+    incentivoBase = METAS.OB1.incentivo;
+    proximoObjetivo = METAS.OB2;
+    nombreProximoObj = "OB2";
+  }
+
+  const dineroExceso =
+    umbralExceso > 0 && facturacionTotal > umbralExceso
+      ? facturacionTotal - umbralExceso
+      : 0;
+  const bonoExceso = dineroExceso * porcentajeExceso;
+  const comisionFinal = incentivoBase + bonoExceso;
+
+  const metaProgreso = proximoObjetivo
+    ? proximoObjetivo.facturacion
+    : METAS.OB3.facturacion;
+  const porcentajeLogrado = Math.min(
+    (facturacionTotal / metaProgreso) * 100,
+    100,
+  );
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* CABECERA Y RESUMEN RÃPIDO */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex-1 bg-gradient-to-r from-sky-600 to-indigo-600 rounded-3xl p-8 text-white shadow-lg relative overflow-hidden">
+          <div className="relative z-10">
+            <h2 className="text-3xl font-black mb-2 flex items-center gap-3">
+              <TrendingUp size={32} /> Hola, {perfil.nombre}
+            </h2>
+            <p className="text-sky-100 font-medium mb-8">
+              Tu rendimiento acumulado en {datosResumen.mes} (Contrato:{" "}
+              {horasContrato}h/semana)
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div>
+                <p className="text-sky-200 text-sm font-bold uppercase tracking-wide mb-1">
+                  Nuevas
+                </p>
+                <p className="text-3xl font-black">
+                  {datosResumen.totalNuevas}
+                </p>
+              </div>
+              <div>
+                <p className="text-sky-200 text-sm font-bold uppercase tracking-wide mb-1">
+                  Revisiones
+                </p>
+                <p className="text-3xl font-black">
+                  {datosResumen.totalRevisiones}
+                </p>
+              </div>
+              <div>
+                <p className="text-sky-200 text-sm font-bold uppercase tracking-wide mb-1">
+                  Servicios
+                </p>
+                <p className="text-3xl font-black">
+                  {datosResumen.facturacionConsultas.toFixed(2)}â‚¬
+                </p>
+              </div>
+              <div>
+                <p className="text-sky-200 text-sm font-bold uppercase tracking-wide mb-1">
+                  Productos
+                </p>
+                <p className="text-3xl font-black text-emerald-300">
+                  {datosResumen.facturacionProductos.toFixed(2)}â‚¬
+                </p>
+              </div>
+            </div>
+          </div>
+          <Target
+            size={200}
+            className="absolute -right-10 -bottom-10 text-white opacity-10"
+          />
+        </div>
+      </div>
+
+      {/* PANEL DE INCENTIVOS */}
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="bg-amber-100 p-2 rounded-xl text-amber-600">
+              <Award size={24} />
+            </div>
+            <h3 className="text-xl font-bold text-gray-800">
+              Tus Objetivos y Comisiones
+            </h3>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-gray-500 font-bold">
+              ComisiÃ³n Estimada (Mes)
+            </p>
+            <p className="text-3xl font-black text-amber-600">
+              {comisionFinal.toFixed(2)}â‚¬
+            </p>
+          </div>
+        </div>
+
+        <div className="p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-2 gap-10">
+          {/* COLUMNA IZQUIERDA: ESTADO ACTUAL */}
+          <div>
+            <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-6">
+              Estado Actual
+            </h4>
+
+            <div className="space-y-6">
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="font-bold text-gray-700">
+                    FacturaciÃ³n Total Generada
+                  </span>
+                  <span className="font-black text-gray-900">
+                    {facturacionTotal.toFixed(2)}â‚¬
+                  </span>
+                </div>
+                <div className="w-full bg-gray-100 h-4 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-1000 ${nivelAlcanzado !== "Ninguno" ? "bg-amber-500" : "bg-sky-500"}`}
+                    style={{ width: `${porcentajeLogrado}%` }}
+                  ></div>
+                </div>
+                {proximoObjetivo && (
+                  <p className="text-xs text-gray-500 mt-2 text-right">
+                    Meta para {nombreProximoObj}:{" "}
+                    {proximoObjetivo.facturacion.toFixed(2)}â‚¬
+                  </p>
+                )}
+              </div>
+
+              <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5">
+                <p className="text-sm font-bold text-gray-700 mb-3">
+                  Requisitos MÃ­nimos (Doble CondiciÃ³n)
+                </p>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 flex items-center gap-2">
+                      {proximoObjetivo &&
+                      facturacionTotal >= proximoObjetivo.facturacion ? (
+                        <Check size={16} className="text-emerald-500" />
+                      ) : (
+                        <Clock size={16} className="text-amber-500" />
+                      )}
+                      FacturaciÃ³n Total
+                    </span>
+                    <span className="font-bold text-sm">
+                      {facturacionTotal.toFixed(0)}â‚¬ /{" "}
+                      {proximoObjetivo
+                        ? proximoObjetivo.facturacion.toFixed(0)
+                        : METAS.OB3.facturacion.toFixed(0)}
+                      â‚¬
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 flex items-center gap-2">
+                      {proximoObjetivo &&
+                      facturacionProductos >= proximoObjetivo.productos ? (
+                        <Check size={16} className="text-emerald-500" />
+                      ) : (
+                        <AlertCircle size={16} className="text-amber-500" />
+                      )}
+                      Venta de Productos
+                    </span>
+                    <span className="font-bold text-sm">
+                      {facturacionProductos.toFixed(0)}â‚¬ /{" "}
+                      {proximoObjetivo
+                        ? proximoObjetivo.productos.toFixed(0)
+                        : METAS.OB3.productos.toFixed(0)}
+                      â‚¬
+                    </span>
+                  </div>
+                </div>
+
+                {proximoObjetivo &&
+                  facturacionTotal >= proximoObjetivo.facturacion &&
+                  facturacionProductos < proximoObjetivo.productos && (
+                    <div className="mt-4 bg-red-50 text-red-700 p-3 rounded-xl text-xs font-bold border border-red-100">
+                      âš ï¸ Has alcanzado la facturaciÃ³n total para el{" "}
+                      {nombreProximoObj}, pero te faltan{" "}
+                      {(
+                        proximoObjetivo.productos - facturacionProductos
+                      ).toFixed(2)}
+                      â‚¬ en venta de productos para desbloquear el incentivo.
+                    </div>
+                  )}
+              </div>
+            </div>
+          </div>
+
+          {/* COLUMNA DERECHA: LOS 3 TRAMOS */}
+          <div>
+            <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-6">
+              Tramos de Incentivos
+            </h4>
+            <div className="space-y-4">
+              <div
+                className={`p-4 rounded-2xl border-2 transition-all ${nivelAlcanzado === "OB1" ? "border-amber-400 bg-amber-50" : nivelAlcanzado === "OB2" || nivelAlcanzado === "OB3" ? "border-emerald-200 bg-emerald-50 opacity-60" : "border-gray-100 bg-white opacity-50"}`}
+              >
+                <div className="flex justify-between items-center mb-1">
+                  <span className="font-black text-lg">Objetivo 1</span>
+                  <span className="font-black text-lg text-amber-600">
+                    +{METAS.OB1.incentivo.toFixed(2)}â‚¬
+                  </span>
+                </div>
+                <p className="text-xs font-bold text-gray-500">
+                  Global: {METAS.OB1.facturacion.toFixed(0)}â‚¬ â€¢ Productos:{" "}
+                  {METAS.OB1.productos.toFixed(0)}â‚¬
+                </p>
+              </div>
+
+              <div
+                className={`p-4 rounded-2xl border-2 transition-all ${nivelAlcanzado === "OB2" ? "border-amber-400 bg-amber-50" : nivelAlcanzado === "OB3" ? "border-emerald-200 bg-emerald-50 opacity-60" : "border-gray-100 bg-white opacity-50"}`}
+              >
+                <div className="flex justify-between items-center mb-1">
+                  <span className="font-black text-lg">Objetivo 2</span>
+                  <span className="font-black text-lg text-amber-600">
+                    +{METAS.OB2.incentivo.toFixed(2)}â‚¬
+                  </span>
+                </div>
+                <p className="text-xs font-bold text-gray-500">
+                  Global: {METAS.OB2.facturacion.toFixed(0)}â‚¬ â€¢ Productos:{" "}
+                  {METAS.OB2.productos.toFixed(0)}â‚¬
+                </p>
+                <p className="text-xs font-bold text-emerald-600 mt-1">
+                  + {METAS.OB2.exceso * 100}% de comisiÃ³n sobre el exceso
+                </p>
+              </div>
+
+              <div
+                className={`p-4 rounded-2xl border-2 transition-all ${nivelAlcanzado === "OB3" ? "border-amber-400 bg-amber-50 shadow-md" : "border-gray-100 bg-white opacity-50"}`}
+              >
+                <div className="flex justify-between items-center mb-1">
+                  <span className="font-black text-lg flex items-center gap-2">
+                    Objetivo 3 <Award size={18} className="text-amber-500" />
+                  </span>
+                  <span className="font-black text-lg text-amber-600">
+                    +{METAS.OB3.incentivo.toFixed(2)}â‚¬
+                  </span>
+                </div>
+                <p className="text-xs font-bold text-gray-500">
+                  Global: {METAS.OB3.facturacion.toFixed(0)}â‚¬ â€¢ Productos:{" "}
+                  {METAS.OB3.productos.toFixed(0)}â‚¬
+                </p>
+                <p className="text-xs font-bold text-emerald-600 mt-1">
+                  + {METAS.OB3.exceso * 100}% de comisiÃ³n sobre el exceso
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default VistaResumen;
+
+========================================
+FILE: VistaResumenAdmin.jsx
+========================================
+
+import React, { useState, useEffect } from "react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import {
+  Calendar as CalendarIcon,
+  TrendingUp,
+  Loader2,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Package,
+  Stethoscope,
+} from "lucide-react";
+import { dashboardService } from "../../services/dashboardService";
+
+const VistaResumenAdmin = () => {
+  const fechaActual = new Date();
+  const [anio, setAnio] = useState(fechaActual.getFullYear());
+  const [mes, setMes] = useState(fechaActual.getMonth() + 1); // 1 = Ene, 12 = Dic
+
+  const [facturacion, setFacturacion] = useState([]);
+  const [eventos, setEventos] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
+
+  const cargarDatos = async () => {
+    setCargando(true);
+    try {
+      const [datosGrafica, datosCalendario] = await Promise.all([
+        dashboardService.obtenerFacturacionAdmin(anio),
+        dashboardService.obtenerCalendarioAdmin(anio, mes),
+      ]);
+      setFacturacion(datosGrafica);
+      setEventos(datosCalendario);
+    } catch (error) {
+      console.error("Error al cargar dashboard admin:", error);
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarDatos();
+  }, [anio, mes]);
+
+  // --- LÃ³gica del Calendario Visual ---
+  const diasMes = new Date(anio, mes, 0).getDate();
+  const primerDiaSemana = new Date(anio, mes - 1, 1).getDay(); // 0 = Domingo
+  const offset = primerDiaSemana === 0 ? 6 : primerDiaSemana - 1; // Ajuste para que Lunes sea 0
+
+  const cambiarMes = (delta) => {
+    let nuevoMes = mes + delta;
+    let nuevoAnio = anio;
+    if (nuevoMes > 12) {
+      nuevoMes = 1;
+      nuevoAnio++;
+    }
+    if (nuevoMes < 1) {
+      nuevoMes = 12;
+      nuevoAnio--;
+    }
+    setMes(nuevoMes);
+    setAnio(nuevoAnio);
+  };
+
+  const getEventosDelDia = (dia) => {
+    const fechaStr = `${anio}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
+    return eventos.filter((e) => e.fecha === fechaStr);
+  };
+
+  if (cargando && facturacion.length === 0)
+    return (
+      <div className="flex justify-center p-20">
+        <Loader2 className="animate-spin text-indigo-500" size={48} />
+      </div>
+    );
+
+  return (
+    <div className="space-y-8 animate-fade-in pb-10">
+      {/* MODAL DEL EVENTO */}
+      {eventoSeleccionado && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden animate-scale-in">
+            <div
+              className={`p-6 text-white flex justify-between items-center ${eventoSeleccionado.tipo === "PEDIDO" ? "bg-sky-600" : "bg-emerald-600"}`}
+            >
+              <div className="flex items-center gap-2">
+                {eventoSeleccionado.tipo === "PEDIDO" ? (
+                  <Package size={24} />
+                ) : (
+                  <Stethoscope size={24} />
+                )}
+                <h3 className="text-xl font-bold">{eventoSeleccionado.tipo}</h3>
+              </div>
+              <button
+                onClick={() => setEventoSeleccionado(null)}
+                className="text-white/70 hover:text-white"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                  Identificador
+                </p>
+                <p className="font-black text-gray-800 text-lg">
+                  {eventoSeleccionado.idUnico}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                  Asunto
+                </p>
+                <p className="font-bold text-gray-700">
+                  {eventoSeleccionado.titulo}
+                </p>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
+                  Detalles / Importe
+                </p>
+                <p className="font-black text-xl text-gray-900">
+                  {eventoSeleccionado.detalles}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
+                  Estado Operativo
+                </p>
+                <span className="bg-gray-200 text-gray-700 font-bold px-3 py-1 rounded-md text-xs uppercase">
+                  {eventoSeleccionado.estado}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BLOQUE 1: GRÃFICA DE FACTURACIÃ“N */}
+      <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+          <div className="flex items-center gap-4">
+            <div className="bg-indigo-100 p-3 rounded-2xl text-indigo-600">
+              <TrendingUp size={28} />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black text-gray-800">
+                FacturaciÃ³n Global
+              </h2>
+              <p className="text-gray-500 font-medium">
+                Ingresos por Consultas y Venta de Productos
+              </p>
+            </div>
+          </div>
+          <div className="bg-gray-50 px-4 py-2 rounded-xl flex items-center gap-4 border border-gray-200">
+            <button
+              onClick={() => setAnio(anio - 1)}
+              className="hover:text-indigo-600 font-bold"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <span className="font-black text-lg text-gray-800">{anio}</span>
+            <button
+              onClick={() => setAnio(anio + 1)}
+              className="hover:text-indigo-600 font-bold"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
+        </div>
+
+        <div className="h-[400px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={facturacion}
+              margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                vertical={false}
+                stroke="#f3f4f6"
+              />
+              <XAxis
+                dataKey="mesTexto"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: "#9ca3af", fontWeight: "bold" }}
+              />
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: "#9ca3af", fontWeight: "bold" }}
+                tickFormatter={(value) => `${value}â‚¬`}
+              />
+              <Tooltip
+                cursor={{ fill: "#f9fafb" }}
+                contentStyle={{
+                  borderRadius: "1rem",
+                  border: "none",
+                  boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
+                }}
+              />
+              <Legend
+                wrapperStyle={{ paddingTop: "20px", fontWeight: "bold" }}
+              />
+              <Bar
+                dataKey="ingresosConsultas"
+                name="Consultas (Servicios)"
+                stackId="a"
+                fill="#10b981"
+                radius={[0, 0, 4, 4]}
+              />
+              <Bar
+                dataKey="ingresosPedidos"
+                name="Venta Productos"
+                stackId="a"
+                fill="#3b82f6"
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* BLOQUE 2: CALENDARIO OPERATIVO */}
+      <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+          <div className="flex items-center gap-4">
+            <div className="bg-sky-100 p-3 rounded-2xl text-sky-600">
+              <CalendarIcon size={28} />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black text-gray-800">
+                Calendario Operativo
+              </h2>
+              <p className="text-gray-500 font-medium">
+                Registro de jornadas y pedidos confirmados
+              </p>
+            </div>
+          </div>
+          <div className="bg-gray-50 px-4 py-2 rounded-xl flex items-center gap-6 border border-gray-200">
+            <button
+              onClick={() => cambiarMes(-1)}
+              className="hover:text-sky-600 font-bold p-1 bg-white rounded-lg shadow-sm"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <span className="font-black text-lg text-gray-800 uppercase w-32 text-center">
+              {new Date(anio, mes - 1).toLocaleString("es-ES", {
+                month: "long",
+              })}{" "}
+              {anio}
+            </span>
+            <button
+              onClick={() => cambiarMes(1)}
+              className="hover:text-sky-600 font-bold p-1 bg-white rounded-lg shadow-sm"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Cabecera DÃ­as */}
+        <div className="grid grid-cols-7 gap-2 mb-2 text-center">
+          {["Lun", "Mar", "MiÃ©", "Jue", "Vie", "SÃ¡b", "Dom"].map((d) => (
+            <div
+              key={d}
+              className="text-xs font-black text-gray-400 uppercase tracking-widest"
+            >
+              {d}
+            </div>
+          ))}
+        </div>
+
+        {/* Grid DÃ­as */}
+        <div className="grid grid-cols-7 gap-2">
+          {Array.from({ length: offset }).map((_, i) => (
+            <div
+              key={`empty-${i}`}
+              className="h-24 md:h-32 bg-gray-50/50 rounded-2xl border border-gray-50"
+            ></div>
+          ))}
+          {Array.from({ length: diasMes }).map((_, i) => {
+            const dia = i + 1;
+            const eventosDia = getEventosDelDia(dia);
+            const esHoy =
+              dia === fechaActual.getDate() &&
+              mes === fechaActual.getMonth() + 1 &&
+              anio === fechaActual.getFullYear();
+
+            return (
+              <div
+                key={dia}
+                className={`h-24 md:h-32 p-2 flex flex-col rounded-2xl border transition-all ${esHoy ? "bg-sky-50 border-sky-200" : "bg-white border-gray-100 hover:border-sky-300"}`}
+              >
+                <span
+                  className={`text-sm font-black w-8 h-8 flex items-center justify-center rounded-full mb-1 ${esHoy ? "bg-sky-600 text-white shadow-md" : "text-gray-600"}`}
+                >
+                  {dia}
+                </span>
+                <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar pr-1">
+                  {eventosDia.map((ev) => (
+                    <div
+                      key={ev.idUnico}
+                      onClick={() => setEventoSeleccionado(ev)}
+                      className={`text-[10px] font-bold p-1.5 rounded-lg cursor-pointer truncate transition-colors ${ev.tipo === "PEDIDO" ? "bg-sky-100 text-sky-700 hover:bg-sky-200" : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"}`}
+                      title={ev.titulo}
+                    >
+                      {ev.tipo === "PEDIDO" ? "ðŸ“¦" : "ðŸ©º"} {ev.idUnico}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default VistaResumenAdmin;
+
+========================================
+FILE: VistaResumenFarmacia.jsx
+========================================
+
+import React, { useState, useEffect } from "react";
+import {
+  Wallet,
+  ShoppingBag,
+  Package,
+  Filter,
+  ArrowUpDown,
+  Loader2,
+  Calendar,
+  CheckCircle2,
+  AlertCircle,
+  RefreshCcw,
+} from "lucide-react";
+import { farmaciaService } from "../../services/farmaciaService";
+import { pedidosService } from "../../services/pedidosService";
+
+const VistaResumenFarmacia = ({ cambiarVista }) => {
+  const [perfil, setPerfil] = useState(null);
+  const [pedidos, setPedidos] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(false);
+
+  // Estados del Filtro del Historial
+  const [mesFiltro, setMesFiltro] = useState("Todos");
+  const [ordenFiltro, setOrdenFiltro] = useState("recientes");
+
+  const cargarDatos = async () => {
+    setCargando(true);
+    setError(false);
+    try {
+      const [miPerfil, misPedidos] = await Promise.all([
+        farmaciaService.obtenerMiPerfil(),
+        pedidosService.obtenerMisPedidos(),
+      ]);
+      setPerfil(miPerfil);
+      setPedidos(misPedidos);
+    } catch (err) {
+      console.error("Error al cargar el resumen de farmacia:", err);
+      setError(true);
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  // --- RENDERIZADO DE CARGA ---
+  if (cargando) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="animate-spin text-purple-500" size={48} />
+      </div>
+    );
+  }
+
+  // --- RENDERIZADO DE ERROR (Para evitar carga infinita) ---
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-100 rounded-3xl p-12 text-center flex flex-col items-center">
+        <AlertCircle size={48} className="text-red-400 mb-4" />
+        <h3 className="text-xl font-bold text-red-800 mb-2">
+          Error de conexiÃ³n
+        </h3>
+        <p className="text-red-600 mb-6 max-w-md">
+          No hemos podido recuperar los datos de tu farmacia. Por favor,
+          verifica tu conexiÃ³n o vuelve a intentarlo.
+        </p>
+        <button
+          onClick={cargarDatos}
+          className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-xl flex items-center gap-2 transition-colors"
+        >
+          <RefreshCcw size={18} /> Reintentar
+        </button>
+      </div>
+    );
+  }
+
+  if (!perfil) return null;
+
+  // --- LÃ“GICA DE FILTROS ---
+  const mesesDisponibles = [
+    "Todos",
+    ...new Set(pedidos.map((p) => p.fechaPedido.substring(0, 7))),
+  ].sort((a, b) => b.localeCompare(a));
+
+  const pedidosFiltradosYOrdenados = pedidos
+    .filter((p) => mesFiltro === "Todos" || p.fechaPedido.startsWith(mesFiltro))
+    .sort((a, b) => {
+      if (ordenFiltro === "recientes")
+        return new Date(b.fechaPedido) - new Date(a.fechaPedido);
+      if (ordenFiltro === "antiguos")
+        return new Date(a.fechaPedido) - new Date(b.fechaPedido);
+      if (ordenFiltro === "precio_desc") return b.totalPedido - a.totalPedido;
+      if (ordenFiltro === "precio_asc") return a.totalPedido - b.totalPedido;
+      return 0;
+    });
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* 1. TARJETA DE BIENVENIDA Y SALDO */}
+      <div className="bg-gradient-to-r from-purple-700 to-indigo-700 rounded-3xl p-8 text-white shadow-lg flex flex-col md:flex-row justify-between items-center gap-6 relative overflow-hidden">
+        <div className="relative z-10 w-full md:w-auto">
+          <h2 className="text-2xl font-black mb-1 opacity-90">Bienvenido,</h2>
+          <h3 className="text-3xl font-black mb-6">{perfil.nombre}</h3>
+
+          <p className="text-purple-200 text-sm font-bold uppercase tracking-wide mb-1 flex items-center gap-2">
+            <Wallet size={16} /> Saldo Virtual Disponible
+          </p>
+          <p className="text-5xl font-black text-white">
+            {(perfil.saldoVirtual || 0).toFixed(2)}â‚¬
+          </p>
+        </div>
+
+        <div className="relative z-10 w-full md:w-auto flex flex-col gap-3">
+          <button
+            onClick={() => cambiarVista("pedidos")}
+            className="bg-white text-purple-700 hover:bg-purple-50 font-black py-4 px-8 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-xl hover:scale-105"
+          >
+            <ShoppingBag size={24} />
+            Hacer Nuevo Pedido
+          </button>
+          <p className="text-center text-purple-200 text-xs font-medium">
+            Supera los 80â‚¬ para aplicar tu saldo
+          </p>
+        </div>
+
+        <Package
+          size={250}
+          className="absolute -right-10 -bottom-20 text-white opacity-10"
+        />
+      </div>
+
+      {/* 2. HISTORIAL DE PEDIDOS FILTRABLE */}
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden p-6 lg:p-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+          <div>
+            <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+              <Calendar className="text-purple-600" size={24} /> Mi Historial de
+              Pedidos
+            </h3>
+            <p className="text-sm text-gray-500 mt-1">
+              Consulta tus Ãºltimos movimientos y liquidaciones.
+            </p>
+          </div>
+
+          <div className="flex gap-2 w-full md:w-auto">
+            <div className="relative flex-1 md:w-40">
+              <Filter
+                size={16}
+                className="absolute left-3 top-3 text-gray-400"
+              />
+              <select
+                value={mesFiltro}
+                onChange={(e) => setMesFiltro(e.target.value)}
+                className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl text-gray-700 font-medium appearance-none bg-gray-50 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+              >
+                {mesesDisponibles.map((mes) => (
+                  <option key={mes} value={mes}>
+                    {mes === "Todos" ? "Todos los meses" : mes}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="relative flex-1 md:w-40">
+              <ArrowUpDown
+                size={16}
+                className="absolute left-3 top-3 text-gray-400"
+              />
+              <select
+                value={ordenFiltro}
+                onChange={(e) => setOrdenFiltro(e.target.value)}
+                className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl text-gray-700 font-medium appearance-none bg-gray-50 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+              >
+                <option value="recientes">MÃ¡s Recientes</option>
+                <option value="antiguos">MÃ¡s Antiguos</option>
+                <option value="precio_desc">Mayor Importe</option>
+                <option value="precio_asc">Menor Importe</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {pedidosFiltradosYOrdenados.length === 0 ? (
+            <div className="text-center py-12 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+              <Package size={48} className="mx-auto text-gray-300 mb-3" />
+              <p className="text-gray-500 font-medium">
+                No se encontraron pedidos con estos filtros.
+              </p>
+            </div>
+          ) : (
+            pedidosFiltradosYOrdenados.map((ped) => {
+              const saldoUsado =
+                ped.lineas
+                  ?.filter((l) => l.pagadoConSaldo)
+                  .reduce((acc, l) => {
+                    const totalLinea =
+                      l.subtotal ||
+                      (l.precioUnitario || l.precioAplicado || 0) * l.cantidad;
+                    return acc + totalLinea;
+                  }, 0) || 0;
+
+              return (
+                <div
+                  key={ped.id}
+                  className="border border-gray-100 rounded-2xl p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:bg-gray-50 transition-colors shadow-sm"
+                >
+                  <div>
+                    <div className="flex items-center gap-3 mb-1">
+                      <span className="font-black text-gray-800 text-lg">
+                        Pedido #{ped.id}
+                      </span>
+                      <span
+                        className={`text-xs font-bold px-2 py-1 rounded-md flex items-center gap-1 ${ped.estado === "LIQUIDADO" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}
+                      >
+                        {ped.estado === "LIQUIDADO" && (
+                          <CheckCircle2 size={12} />
+                        )}
+                        {ped.estado.replace("_", " ")}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-500">
+                      {ped.fechaPedido} â€¢ {ped.lineas?.length || 0} lÃ­neas de
+                      producto
+                    </p>
+                  </div>
+
+                  <div className="text-left md:text-right w-full md:w-auto bg-white md:bg-transparent p-3 md:p-0 rounded-xl border md:border-none border-gray-100">
+                    <p className="font-black text-2xl text-gray-900">
+                      {(ped.totalPedido || 0).toFixed(2)}â‚¬
+                    </p>
+                    {saldoUsado > 0 && (
+                      <p className="text-xs text-purple-600 font-bold mt-1 bg-purple-50 inline-block px-2 py-1 rounded-md">
+                        Saldo usado: -{saldoUsado.toFixed(2)}â‚¬
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default VistaResumenFarmacia;
+
+========================================
+FILE: VistaSuministros.jsx
+========================================
+
+import React, { useState, useEffect } from "react";
+import {
+  Package,
+  Send,
+  ClipboardList,
+  Clock,
+  Loader2,
+  CheckSquare,
+  AlertTriangle,
+  Filter,
+  ArrowUpDown,
+} from "lucide-react";
+import { suministrosService } from "../../services/suministrosService";
+
+const VistaSuministros = () => {
+  const [materiales, setMateriales] = useState([]);
+  const [peticiones, setPeticiones] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [enviando, setEnviando] = useState(false);
+
+  // Guardaremos un array con los IDs de los materiales que el usuario marque
+  const [seleccionados, setSeleccionados] = useState([]);
+
+  // --- ESTADOS DE FILTRO AÃ‘ADIDOS ---
+  const [mesFiltro, setMesFiltro] = useState("Todos");
+  const [ordenFiltro, setOrdenFiltro] = useState("recientes");
+  const [estadoFiltro, setEstadoFiltro] = useState("Todos");
+
+  const cargarDatos = async () => {
+    setCargando(true);
+    try {
+      const [datosMat, datosPet] = await Promise.all([
+        suministrosService.listarMateriales(),
+        suministrosService.obtenerMisPeticiones(), // Usamos la nueva ruta privada
+      ]);
+      setMateriales(datosMat);
+      setPeticiones(datosPet); // Ya viene filtrado y seguro desde el backend
+    } catch (error) {
+      console.error("Error al cargar suministros:", error);
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  const handleCheckbox = (id) => {
+    setSeleccionados((prev) =>
+      prev.includes(id)
+        ? prev.filter((itemId) => itemId !== id)
+        : [...prev, id],
+    );
+  };
+
+  const handleSolicitar = async () => {
+    if (seleccionados.length === 0)
+      return alert("Selecciona al menos un material.");
+
+    setEnviando(true);
+    try {
+      // El servicio ahora solo espera el array de IDs
+      await suministrosService.crearPeticion(seleccionados);
+      alert("PeticiÃ³n de suministros enviada correctamente.");
+      setSeleccionados([]); // Limpiamos el checklist
+      cargarDatos(); // Recargamos para actualizar el Historial y bloquear los materiales reciÃ©n pedidos
+    } catch (error) {
+      alert("Error al enviar la peticiÃ³n.");
+      console.error(error);
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  // --- LÃ“GICA DE FILTRADO Y ORDENACIÃ“N AÃ‘ADIDA ---
+  const mesesDisponibles = [
+    "Todos",
+    ...new Set(peticiones.map((p) => p.fechaPeticion.substring(0, 7))),
+  ].sort((a, b) => b.localeCompare(a));
+
+  const peticionesFiltradas = peticiones
+    .filter(
+      (p) => mesFiltro === "Todos" || p.fechaPeticion.startsWith(mesFiltro),
+    )
+    .filter((p) => estadoFiltro === "Todos" || p.estado === estadoFiltro)
+    .sort((a, b) => {
+      if (ordenFiltro === "recientes") {
+        return new Date(b.fechaPeticion) - new Date(a.fechaPeticion);
+      }
+      return new Date(a.fechaPeticion) - new Date(b.fechaPeticion);
+    });
+
+  if (cargando)
+    return (
+      <div className="flex justify-center p-8">
+        <Loader2 className="animate-spin text-sky-500" size={48} />
+      </div>
+    );
+
+  return (
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 animate-fade-in">
+      {/* IZQUIERDA: CHECKLIST DE MATERIALES */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
+          <div className="bg-sky-100 p-2 rounded-lg text-sky-600">
+            <CheckSquare size={24} />
+          </div>
+          <h2 className="text-xl font-bold text-gray-800">
+            Solicitar Material
+          </h2>
+        </div>
+
+        <p className="text-sm text-gray-500 mb-4">
+          Marca los materiales corporativos que necesitas reponer. La central te
+          enviarÃ¡ las cantidades estÃ¡ndar aprobadas.
+        </p>
+
+        <div className="space-y-3 mb-6">
+          {materiales.length === 0 ? (
+            <p className="text-sm text-gray-400">
+              No hay materiales en el catÃ¡logo.
+            </p>
+          ) : (
+            materiales.map((mat) => (
+              <label
+                key={mat.id}
+                className={`flex items-center p-4 border rounded-xl transition-all ${
+                  !mat.disponible
+                    ? "border-gray-200 bg-gray-100 cursor-not-allowed opacity-75" // Estilo bloqueado Anti-Spam
+                    : seleccionados.includes(mat.id)
+                      ? "border-sky-500 bg-sky-50 cursor-pointer"
+                      : "border-gray-200 hover:bg-gray-50 cursor-pointer"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={seleccionados.includes(mat.id)}
+                  onChange={() => handleCheckbox(mat.id)}
+                  disabled={!mat.disponible} // Bloqueo funcional
+                  className="w-5 h-5 text-sky-600 rounded border-gray-300 focus:ring-sky-500 disabled:opacity-50"
+                />
+                <div className="ml-3 flex-1 flex justify-between items-center">
+                  <div>
+                    <span className="block font-bold text-gray-800">
+                      {mat.nombre}
+                    </span>
+                    <span className="block text-xs text-gray-500">
+                      Cantidad estÃ¡ndar enviada: {mat.cantidadEstandar} uds.
+                    </span>
+                  </div>
+
+                  {/* Etiqueta visible si el material estÃ¡ bloqueado */}
+                  {!mat.disponible && (
+                    <span className="text-[10px] font-black bg-amber-100 text-amber-700 px-2 py-1 rounded-md uppercase flex items-center gap-1">
+                      <Clock size={10} /> En curso
+                    </span>
+                  )}
+                </div>
+              </label>
+            ))
+          )}
+        </div>
+
+        <button
+          onClick={handleSolicitar}
+          disabled={seleccionados.length === 0 || enviando}
+          className="w-full bg-sky-600 hover:bg-sky-700 disabled:bg-gray-300 text-white font-bold py-3 rounded-xl flex items-center justify-center transition-colors shadow-md shadow-sky-100"
+        >
+          {enviando ? (
+            <Loader2 className="animate-spin" size={20} />
+          ) : (
+            <>
+              <Send size={18} className="mr-2" /> Enviar PeticiÃ³n
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* DERECHA: HISTORIAL */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 h-fit">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-4 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="bg-gray-100 p-2 rounded-lg text-gray-600">
+              <ClipboardList size={24} />
+            </div>
+            <h2 className="text-xl font-bold text-gray-800">Mis Peticiones</h2>
+          </div>
+        </div>
+
+        {/* --- BLOQUE DE FILTROS AÃ‘ADIDO --- */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          <div className="relative flex-1 min-w-[120px]">
+            <Filter
+              size={14}
+              className="absolute left-2.5 top-3 text-gray-400"
+            />
+            <select
+              value={mesFiltro}
+              onChange={(e) => setMesFiltro(e.target.value)}
+              className="w-full pl-8 pr-2 py-2 text-xs border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-sky-500 transition-colors"
+            >
+              {mesesDisponibles.map((mes) => (
+                <option key={mes} value={mes}>
+                  {mes === "Todos" ? "Todos los meses" : mes}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="relative flex-1 min-w-[120px]">
+            <Filter
+              size={14}
+              className="absolute left-2.5 top-3 text-gray-400"
+            />
+            <select
+              value={estadoFiltro}
+              onChange={(e) => setEstadoFiltro(e.target.value)}
+              className="w-full pl-8 pr-2 py-2 text-xs border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-sky-500 transition-colors"
+            >
+              <option value="Todos">Todos los estados</option>
+              <option value="SOLICITADO">Solicitados</option>
+              <option value="APROBADO">Aprobados</option>
+              <option value="CANCELADO">Cancelados</option>
+            </select>
+          </div>
+
+          <div className="relative flex-1 min-w-[120px]">
+            <ArrowUpDown
+              size={14}
+              className="absolute left-2.5 top-3 text-gray-400"
+            />
+            <select
+              value={ordenFiltro}
+              onChange={(e) => setOrdenFiltro(e.target.value)}
+              className="w-full pl-8 pr-2 py-2 text-xs border border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-sky-500 transition-colors"
+            >
+              <option value="recientes">MÃ¡s Recientes</option>
+              <option value="antiguos">MÃ¡s Antiguos</option>
+            </select>
+          </div>
+        </div>
+
+        {/* --- LISTA RENDERIZANDO peticionesFiltradas --- */}
+        <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+          {peticionesFiltradas.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-8">
+              No se encontraron peticiones con estos filtros.
+            </p>
+          ) : (
+            peticionesFiltradas.map((pet) => (
+              <div
+                key={pet.id}
+                className="border border-gray-100 rounded-xl p-4 flex flex-col gap-2 hover:shadow-md transition-shadow"
+              >
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-bold flex items-center gap-1 text-gray-700">
+                    <Clock size={14} /> {pet.fechaPeticion}
+                  </span>
+                  <span
+                    className={`text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-widest ${
+                      pet.estado === "SOLICITADO"
+                        ? "bg-sky-100 text-sky-700"
+                        : pet.estado === "APROBADO"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-red-100 text-red-700"
+                    }`}
+                  >
+                    {pet.estado}
+                  </span>
+                </div>
+                <div className="text-sm text-gray-600 mt-2 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                  <strong className="text-xs uppercase tracking-wider text-gray-400">
+                    Materiales solicitados:
+                  </strong>
+                  <ul className="list-disc pl-5 mt-2 text-xs font-bold text-gray-700 space-y-1">
+                    {pet.materiales.map((m, idx) => (
+                      <li key={idx}>
+                        {m.nombre}{" "}
+                        <span className="text-gray-400 font-medium">
+                          ({m.cantidadEstandar} uds)
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default VistaSuministros;
+
+========================================
+FILE: VistaValidaciones.jsx
+========================================
+
+import React, { useState, useEffect } from "react";
+import {
+  CheckCircle,
+  Clock,
+  Package,
+  Stethoscope,
+  Loader2,
+  ShieldCheck,
+  XCircle,
+  FileBox,
+} from "lucide-react";
+import { consultasService } from "../../services/consultasService";
+import { pedidosService } from "../../services/pedidosService";
+import { suministrosService } from "../../services/suministrosService";
+
+const VistaValidaciones = () => {
+  const [pestaÃ±aActual, setPestaÃ±aActual] = useState("consultas"); // consultas | pedidos | suministros
+  const [datos, setDatos] = useState([]);
+  const [cargando, setCargando] = useState(false);
+
+  const cargarDatos = async () => {
+    setCargando(true);
+    try {
+      let resultado = [];
+      if (pestaÃ±aActual === "consultas") {
+        const todas = await consultasService.obtenerTodas();
+        // Filtramos solo las que esperan la aprobaciÃ³n de Paco
+        resultado = todas.filter((c) => c.estado === "PENDIENTE_VALIDACION");
+      } else if (pestaÃ±aActual === "pedidos") {
+        const todos = await pedidosService.obtenerTodos();
+        // Filtramos solo los pedidos reciÃ©n comprados
+        resultado = todos.filter((p) => p.estado === "PENDIENTE_ENVIO");
+      } else if (pestaÃ±aActual === "suministros") {
+        const todos = await suministrosService.listarPeticionesAdmin();
+        // Filtramos las peticiones de material nuevas
+        resultado = todos.filter((s) => s.estado === "PENDIENTE");
+      }
+      setDatos(resultado);
+    } catch (error) {
+      console.error(`Error al cargar ${pestaÃ±aActual}:`, error);
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarDatos();
+  }, [pestaÃ±aActual]);
+
+  // --- Funciones de AprobaciÃ³n ---
+  const handleValidarConsulta = async (id) => {
+    if (!window.confirm("Â¿Validar consulta y generar comisiÃ³n a la farmacia?"))
+      return;
+    try {
+      await consultasService.validarTurnoAdmin(id);
+      cargarDatos(); // Recarga la lista para que desaparezca
+    } catch (error) {
+      console.error("Error detallado al validar:", error); // <-- AQUÃ USAMOS LA VARIABLE
+      alert("Error al validar");
+    }
+  };
+
+  const handleEnviarPedido = async (id) => {
+    if (!window.confirm("Â¿Marcar este pedido como Enviado por mensajerÃ­a?"))
+      return;
+    try {
+      await pedidosService.marcarComoEnviadoAdmin(id);
+      cargarDatos();
+    } catch (error) {
+      console.error("Error detallado al enviar:", error); // <-- AQUÃ USAMOS LA VARIABLE
+      alert("Error al enviar");
+    }
+  };
+
+  const handleEstadoSuministro = async (id, estado) => {
+    if (!window.confirm(`Â¿Seguro que quieres ${estado} esta peticiÃ³n?`)) return;
+    try {
+      await suministrosService.cambiarEstadoPeticion(id, estado);
+      cargarDatos();
+    } catch (error) {
+      console.error("Error detallado al actualizar suministro:", error); // <-- AQUÃ USAMOS LA VARIABLE
+      alert("Error al actualizar suministro");
+    }
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in pb-10">
+      {/* CABECERA */}
+      <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex items-center gap-6">
+        <div className="bg-indigo-600 p-4 rounded-3xl text-white shadow-lg shadow-indigo-100">
+          <ShieldCheck size={32} />
+        </div>
+        <div>
+          <h2 className="text-2xl font-black text-gray-800">
+            Centro de Validaciones
+          </h2>
+          <p className="text-gray-500 font-medium">
+            Bandeja de entrada para control de calidad y despachos.
+          </p>
+        </div>
+      </div>
+
+      {/* PESTAÃ‘AS (TABS) */}
+      <div className="flex flex-wrap gap-2 p-2 bg-white rounded-3xl border border-gray-100 shadow-sm w-fit">
+        <button
+          onClick={() => setPestaÃ±aActual("consultas")}
+          className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all ${pestaÃ±aActual === "consultas" ? "bg-indigo-50 text-indigo-700" : "text-gray-500 hover:bg-gray-50"}`}
+        >
+          <Stethoscope size={18} /> Consultas Jornada
+        </button>
+        <button
+          onClick={() => setPestaÃ±aActual("pedidos")}
+          className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all ${pestaÃ±aActual === "pedidos" ? "bg-sky-50 text-sky-700" : "text-gray-500 hover:bg-gray-50"}`}
+        >
+          <Package size={18} /> Pedidos Productos
+        </button>
+        <button
+          onClick={() => setPestaÃ±aActual("suministros")}
+          className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all ${pestaÃ±aActual === "suministros" ? "bg-emerald-50 text-emerald-700" : "text-gray-500 hover:bg-gray-50"}`}
+        >
+          <FileBox size={18} /> Material Corporativo
+        </button>
+      </div>
+
+      {/* CONTENIDO PRINCIPAL */}
+      {cargando ? (
+        <div className="flex justify-center py-20">
+          <Loader2 className="animate-spin text-indigo-500" size={48} />
+        </div>
+      ) : datos.length === 0 ? (
+        <div className="bg-white p-20 rounded-[3rem] border border-gray-100 shadow-sm text-center">
+          <CheckCircle size={64} className="mx-auto text-emerald-400 mb-6" />
+          <h3 className="text-2xl font-black text-gray-800 mb-2">
+            Bandeja VacÃ­a
+          </h3>
+          <p className="text-gray-500 font-medium">
+            No hay elementos pendientes de validaciÃ³n en esta secciÃ³n. Â¡Buen
+            trabajo!
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* RENDERIZADO CONDICIONAL SEGÃšN PESTAÃ‘A */}
+          {pestaÃ±aActual === "consultas" &&
+            datos.map((c) => (
+              <div
+                key={c.id}
+                className="bg-white p-6 rounded-[2rem] border-2 border-dashed border-indigo-100 hover:border-indigo-300 transition-all group"
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-3 py-1 rounded-full uppercase flex items-center gap-1">
+                    <Clock size={12} /> Pendiente RevisiÃ³n
+                  </span>
+                  <span className="text-xs font-bold text-gray-400">
+                    {c.fecha}
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-gray-800 mb-1">
+                  {c.nutricionistaNombre}
+                </h3>
+                <p className="text-sm font-bold text-indigo-600 mb-6">
+                  ðŸ“ {c.farmaciaNombre}
+                </p>
+
+                <div className="flex justify-between items-center bg-gray-50 p-3 rounded-xl mb-6">
+                  <div className="text-center">
+                    <p className="text-[10px] font-black text-gray-400 uppercase">
+                      Nuevas
+                    </p>
+                    <p className="font-black text-gray-700">{c.nuevas}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[10px] font-black text-gray-400 uppercase">
+                      Revisiones
+                    </p>
+                    <p className="font-black text-gray-700">{c.revisiones}</p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => handleValidarConsulta(c.id)}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl flex justify-center items-center gap-2 transition-colors"
+                >
+                  <ShieldCheck size={18} /> Validar y Computar
+                </button>
+              </div>
+            ))}
+
+          {pestaÃ±aActual === "pedidos" &&
+            datos.map((p) => (
+              <div
+                key={p.id}
+                className="bg-white p-6 rounded-[2rem] border-2 border-dashed border-sky-100 hover:border-sky-300 transition-all"
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-3 py-1 rounded-full uppercase flex items-center gap-1">
+                    <Clock size={12} /> Preparar EnvÃ­o
+                  </span>
+                  <span className="text-xs font-bold text-gray-400">
+                    {p.fechaPedido}
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-gray-800 mb-1">
+                  Pedido #{p.id}
+                </h3>
+                <p className="text-sm font-bold text-sky-600 mb-4">
+                  Farmacia: {p.farmaciaNombre}
+                </p>
+                <div className="bg-gray-50 p-4 rounded-xl mb-6 flex justify-between items-center">
+                  <span className="text-xs font-black text-gray-400 uppercase">
+                    Total Venta
+                  </span>
+                  <span className="text-xl font-black text-gray-800">
+                    {(p.totalReal || 0).toFixed(2)}â‚¬
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleEnviarPedido(p.id)}
+                  className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 rounded-xl flex justify-center items-center gap-2 transition-colors"
+                >
+                  <Package size={18} /> Marcar como Enviado
+                </button>
+              </div>
+            ))}
+
+          {pestaÃ±aActual === "suministros" &&
+            datos.map((s) => (
+              <div
+                key={s.id}
+                className="bg-white p-6 rounded-[2rem] border-2 border-dashed border-emerald-100 hover:border-emerald-300 transition-all"
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-3 py-1 rounded-full uppercase flex items-center gap-1">
+                    <Clock size={12} /> Solicitud Material
+                  </span>
+                  <span className="text-xs font-bold text-gray-400">
+                    {new Date(s.fechaPeticion).toLocaleDateString()}
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-gray-800 mb-1">
+                  {s.nutricionistaNombre}
+                </h3>
+                <p className="text-sm font-bold text-gray-500 mb-6">
+                  {s.detalles}
+                </p>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleEstadoSuministro(s.id, "APROBADO")}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl flex justify-center items-center gap-2 transition-colors"
+                  >
+                    <CheckCircle size={18} /> Aprobar
+                  </button>
+                  <button
+                    onClick={() => handleEstadoSuministro(s.id, "RECHAZADO")}
+                    className="px-4 bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl flex justify-center items-center transition-colors"
+                  >
+                    <XCircle size={18} />
+                  </button>
+                </div>
+              </div>
+            ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default VistaValidaciones;
+
+========================================
+FILE: Dashboard.jsx
+========================================
+
+import React, { useEffect, useState } from "react";
+import {
+  LogOut,
+  Activity,
+  BarChart3,
+  ShoppingCart,
+  Stethoscope,
+  Package,
+  FileText,
+  ShieldCheck,
+  Users,
+  Menu,
+  History, // <-- AÃ‘ADIDO
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
+
+// ImportaciÃ³n de Vistas
+import VistaResumen from "./vistas/VistaResumen";
+import VistaResumenFarmacia from "./vistas/VistaResumenFarmacia";
+import VistaConsultas from "./vistas/VistaConsultas";
+import VistaPedidos from "./vistas/VistaPedidos";
+import VistaSuministros from "./vistas/VistaSuministros";
+import VistaAdminSuministros from "./vistas/VistaAdminSuministros";
+import VistaDocumentacion from "./vistas/VistaDocumentacion";
+import VistaValidaciones from "./vistas/VistaValidaciones";
+import VistaEmpleados from "./vistas/VistaEmpleados";
+import VistaHistorialFarmacia from "./vistas/VistaHistorialFarmacia"; // <-- YA IMPORTADO
+import VistaResumenAdmin from "./vistas/VistaResumenAdmin";
+
+const Dashboard = () => {
+  const navigate = useNavigate();
+
+  // 1. ESTADOS
+  const [usuario] = useState(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return null;
+    try {
+      const decoded = jwtDecode(token);
+      return { email: decoded.sub, roles: decoded.roles || [] };
+    } catch {
+      return null;
+    }
+  });
+
+  // Estado para controlar quÃ© mÃ³dulo se ve al arrancar
+  const [vistaActual, setVistaActual] = useState(() => {
+    // 1. Si es el Jefe (Admin), lo mandamos directo a su nuevo panel grÃ¡fico y calendario.
+    // Ya no importa si tambiÃ©n es Nutricionista, su vista principal es la de mando.
+    if (usuario && usuario.roles.includes("ROLE_ADMIN")) {
+      return "resumen-admin";
+    }
+
+    // 2. Si es Farmacia, lo mandamos directo a su historial de consultas.
+    if (usuario && usuario.roles.includes("ROLE_FARMACIA")) {
+      return "historial-farmacia";
+    }
+
+    // 3. Por defecto (para las Nutricionistas base), a su resumen operativo.
+    return "resumen";
+  });
+
+  const [menuAbierto, setMenuAbierto] = useState(false);
+
+  // 2. PROTECCIÃ“N DE RUTA
+  useEffect(() => {
+    if (!usuario) {
+      localStorage.removeItem("token");
+      navigate("/");
+    }
+  }, [usuario, navigate]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    navigate("/");
+  };
+
+  if (!usuario) return null;
+
+  // 3. CONTROL DE ROLES
+  const isAdmin = usuario.roles.includes("ROLE_ADMIN");
+  const isNutricionista = usuario.roles.includes("ROLE_NUTRICIONISTA");
+  const isFarmacia = usuario.roles.includes("ROLE_FARMACIA");
+
+  // 4. GENERACIÃ“N DEL MENÃš DINÃMICO
+  const generarMenu = () => {
+    const items = [];
+
+    // MÃ³dulos de Nutricionista
+    if (isNutricionista) {
+      items.push({
+        id: "resumen",
+        label: "Resumen Operativo",
+        icon: BarChart3,
+      });
+      items.push({
+        id: "pedidos",
+        label: "Pedidos y LiquidaciÃ³n",
+        icon: ShoppingCart,
+      });
+      items.push({
+        id: "consultas",
+        label: "Mis Consultas",
+        icon: Stethoscope,
+      });
+      items.push({
+        id: "suministros",
+        label: "PeticiÃ³n Suministros",
+        icon: Package,
+      });
+    }
+
+    // MÃ³dulos de Farmacia
+    if (isFarmacia) {
+      // Usamos .some para no duplicar botones si el usuario tuviera perfiles raros
+      if (!items.some((i) => i.id === "resumen"))
+        items.push({ id: "resumen", label: "Mi Resumen", icon: BarChart3 });
+      if (!items.some((i) => i.id === "pedidos"))
+        items.push({
+          id: "pedidos",
+          label: "Hacer Pedido",
+          icon: ShoppingCart,
+        });
+      items.push({
+        id: "historial-farmacia",
+        label: "Historial Consultas",
+        icon: History,
+      });
+    }
+
+    // MÃ³dulos Exclusivos del Admin (Paco)
+    if (isAdmin) {
+      items.push({
+        id: "resumen-admin",
+        label: "Dashboard General",
+        icon: BarChart3,
+      });
+      items.push({
+        id: "validaciones",
+        label: "Centro Validaciones",
+        icon: ShieldCheck,
+      });
+      items.push({ id: "usuarios", label: "GestiÃ³n Empleados", icon: Users });
+    }
+
+    // El mÃ³dulo de DocumentaciÃ³n es para todos, asÃ­ que lo empujamos una sola vez al final
+    items.push({
+      id: "documentacion",
+      label: "GestiÃ³n Documental",
+      icon: FileText,
+    });
+
+    return items;
+  };
+
+  const menuItems = generarMenu();
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex font-sans">
+      {/* SIDEBAR */}
+      <button
+        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-sky-600 text-white rounded-lg"
+        onClick={() => setMenuAbierto(!menuAbierto)}
+      >
+        <Menu size={24} />
+      </button>
+
+      <aside
+        className={`
+          fixed md:static inset-y-0 left-0 z-40 w-72 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out flex flex-col
+          ${menuAbierto ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+        `}
+      >
+        <div className="h-20 flex items-center px-8 border-b border-gray-100 bg-sky-600 text-white">
+          <Activity size={28} className="mr-3" />
+          <h1 className="text-2xl font-bold tracking-tight">NutriPharma</h1>
+        </div>
+
+        <div className="p-6 border-b border-gray-100 bg-sky-50">
+          <p className="text-xs text-sky-600 font-bold uppercase tracking-wider mb-1">
+            Conectado como
+          </p>
+          <p
+            className="text-sm font-medium text-gray-800 truncate"
+            title={usuario.email}
+          >
+            {usuario.email}
+          </p>
+          <div className="flex gap-2 mt-2">
+            {isNutricionista && (
+              <span className="bg-emerald-100 text-emerald-700 text-xs px-2 py-1 rounded-md font-bold">
+                Nutricionista
+              </span>
+            )}
+            {isFarmacia && (
+              <span className="bg-amber-100 text-amber-700 text-xs px-2 py-1 rounded-md font-bold">
+                Farmacia
+              </span>
+            )}
+            {isAdmin && (
+              <span className="bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded-md font-bold">
+                Admin
+              </span>
+            )}
+          </div>
+        </div>
+
+        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+          {menuItems.map((item) => {
+            const Icono = item.icon;
+            const activo = vistaActual === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setVistaActual(item.id);
+                  setMenuAbierto(false);
+                }}
+                className={`w-full flex items-center px-4 py-3 rounded-xl transition-all duration-200 ${
+                  activo
+                    ? "bg-sky-100 text-sky-700 font-bold shadow-sm"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium"
+                }`}
+              >
+                <Icono
+                  size={20}
+                  className={`mr-3 ${activo ? "text-sky-600" : "text-gray-400"}`}
+                />
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="p-4 border-t border-gray-100">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center px-4 py-3 text-red-600 bg-red-50 hover:bg-red-100 rounded-xl font-bold transition-colors"
+          >
+            <LogOut size={20} className="mr-2" />
+            Cerrar SesiÃ³n
+          </button>
+        </div>
+      </aside>
+
+      {/* MAIN CONTENT */}
+      <main className="flex-1 flex flex-col min-h-screen overflow-hidden">
+        <header className="h-20 bg-white border-b border-gray-200 flex items-center px-8 hidden md:flex">
+          <h2 className="text-2xl font-bold text-gray-800 capitalize">
+            {vistaActual.replace("-", " ")}
+          </h2>
+        </header>
+
+        <div className="flex-1 overflow-auto p-4 md:p-8">
+          {/* ðŸ‘‡ AQUÃ INSERTAMOS LA VISTA DEL ADMIN ðŸ‘‡ */}
+          {vistaActual === "resumen-admin" ? (
+            <VistaResumenAdmin />
+          ) : vistaActual === "resumen" ? (
+            isFarmacia ? (
+              <VistaResumenFarmacia cambiarVista={setVistaActual} />
+            ) : (
+              <VistaResumen />
+            )
+          ) : vistaActual === "consultas" ? (
+            <VistaConsultas />
+          ) : vistaActual === "pedidos" ? (
+            <VistaPedidos />
+          ) : vistaActual === "suministros" ? (
+            <VistaSuministros />
+          ) : vistaActual === "documentacion" ? (
+            <VistaDocumentacion />
+          ) : vistaActual === "validaciones" ? (
+            <VistaValidaciones />
+          ) : vistaActual === "admin-suministros" ? (
+            <VistaAdminSuministros />
+          ) : vistaActual === "historial-farmacia" ? (
+            <VistaHistorialFarmacia />
+          ) : vistaActual === "usuarios" ? (
+            <VistaEmpleados />
+          ) : (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 min-h-[500px] flex items-center justify-center">
+              <div className="text-center">
+                <Activity size={48} className="mx-auto text-sky-300 mb-4" />
+                <h3 className="text-xl font-bold text-gray-700">
+                  MÃ³dulo en construcciÃ³n
+                </h3>
+                <p className="text-gray-500 mt-2">
+                  EstÃ¡s en la vista:{" "}
+                  <span className="font-bold text-sky-600">{vistaActual}</span>
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {menuAbierto && (
+        <div
+          className="fixed inset-0 bg-gray-800/50 z-30 md:hidden"
+          onClick={() => setMenuAbierto(false)}
+        />
+      )}
+    </div>
+  );
+};
+
+export default Dashboard;
+
+========================================
+FILE: Login.jsx
+========================================
+
+import React, { useState } from "react";
+import { Lock, User, ArrowRight, Activity, Loader2 } from "lucide-react";
+import { authService } from "../services/authService";
+import { useNavigate } from "react-router-dom";
+
+/**
+ * Componente Login: Puerta de entrada a la aplicaciÃ³n.
+ * Maneja la captura de credenciales, la comunicaciÃ³n con el servicio de autenticaciÃ³n
+ * y la redirecciÃ³n al panel principal tras un inicio de sesiÃ³n exitoso.
+ */
+const Login = () => {
+  // Hook de navegaciÃ³n para movernos entre pantallas sin recargar la pÃ¡gina.
+  const navigate = useNavigate();
+
+  // ESTADOS DEL COMPONENTE
+  // 1. credenciales: Almacena los datos del formulario de forma controlada.
+  const [credenciales, setCredenciales] = useState({
+    username: "",
+    password: "",
+  });
+
+  // 2. error: Gestiona los mensajes de feedback negativo (ej. credenciales invÃ¡lidas).
+  const [error, setError] = useState("");
+
+  // 3. cargando: Bloquea la UI para evitar mÃºltiples peticiones simultÃ¡neas.
+  const [cargando, setCargando] = useState(false);
+
+  /**
+   * Manejador de eventos para los inputs.
+   * Actualiza el estado 'credenciales' dinÃ¡micamente usando el atributo 'name' del input.
+   * AdemÃ¡s, limpia cualquier mensaje de error previo para mejorar la experiencia de usuario.
+   */
+  const handleChange = (e) => {
+    setCredenciales({ ...credenciales, [e.target.name]: e.target.value });
+    setError("");
+  };
+
+  /**
+   * Orquestador principal del proceso de inicio de sesiÃ³n.
+   * Se ejecuta al enviar el formulario (onSubmit).
+   */
+  const handleSubmit = async (e) => {
+    e.preventDefault(); // Previene el comportamiento por defecto de recarga del navegador.
+
+    // Iniciamos estado de carga y limpiamos errores anteriores.
+    setCargando(true);
+    setError("");
+
+    try {
+      // 1. PeticiÃ³n HTTP: Delegamos la lÃ³gica de red al authService.
+      const data = await authService.login(
+        credenciales.username,
+        credenciales.password,
+      );
+
+      // 2. Persistencia: Almacenamos el JWT recibido en el localStorage.
+      // NOTA: Para mayor seguridad en el futuro, evaluar el uso de cookies HttpOnly.
+      localStorage.setItem("token", data.token);
+
+      // 3. NavegaciÃ³n: Redirigimos al usuario al panel principal.
+      navigate("/dashboard");
+    } catch (err) {
+      // Manejo de errores de red o credenciales invÃ¡lidas.
+      console.error("Error en la autenticaciÃ³n:", err);
+      setError("Credenciales incorrectas o servidor no disponible.");
+    } finally {
+      // Garantizamos que la UI se desbloquee independientemente del resultado de la peticiÃ³n.
+      setCargando(false);
+    }
+  };
+
+  return (
+    // CONTENEDOR PRINCIPAL: Centrado absoluto en pantalla con fondo claro.
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4 font-sans">
+      {/* TARJETA DE LOGIN: DiseÃ±o contenedor principal */}
+      <div className="max-w-md w-full bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
+        {/* SECCIÃ“N VISUAL: Cabecera Azul con branding */}
+        <div className="bg-sky-500 p-8 text-center">
+          <div className="inline-flex items-center justify-center bg-white/20 p-3 rounded-full mb-4">
+            <Activity className="text-white" size={32} />
+          </div>
+          <h2 className="text-3xl font-bold text-white tracking-tight">
+            NutriPharma
+          </h2>
+          <p className="text-sky-100 mt-2 text-sm">Panel de Acceso ClÃ­nico</p>
+        </div>
+
+        {/* SECCIÃ“N FUNCIONAL: Ãrea del Formulario */}
+        <div className="p-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* RENDERIZADO CONDICIONAL: Mensaje de Error Visual */}
+            {/* Solo se dibuja en el DOM si el estado 'error' tiene contenido */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm text-center font-medium">
+                {error}
+              </div>
+            )}
+
+            {/* CAMPO DE ENTRADA: Usuario / DNI */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Usuario / DNI
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <User className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  name="username"
+                  required
+                  value={credenciales.username}
+                  onChange={handleChange}
+                  disabled={cargando} // Bloquea el input durante la peticiÃ³n
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-colors outline-none disabled:bg-gray-100"
+                  placeholder="Introduce tu usuario"
+                />
+              </div>
+            </div>
+
+            {/* CAMPO DE ENTRADA: ContraseÃ±a */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                ContraseÃ±a
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="password"
+                  name="password"
+                  required
+                  value={credenciales.password}
+                  onChange={handleChange}
+                  disabled={cargando} // Bloquea el input durante la peticiÃ³n
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-colors outline-none disabled:bg-gray-100"
+                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                />
+              </div>
+            </div>
+
+            {/* BOTÃ“N DE ACCIÃ“N: Submit con estado de carga interactivo */}
+            <button
+              type="submit"
+              disabled={cargando}
+              // Tailwind: Aplicamos estilos condicionales usando la pseudo-clase 'disabled:'
+              className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-sky-500 hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors mt-4 disabled:bg-sky-300 disabled:cursor-not-allowed"
+            >
+              {/* RENDERIZADO CONDICIONAL: Cambiamos el contenido del botÃ³n segÃºn el estado */}
+              {cargando ? (
+                <>
+                  <Loader2 className="animate-spin mr-2 h-5 w-5" />
+                  Conectando...
+                </>
+              ) : (
+                <>
+                  Iniciar SesiÃ³n
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Login;
+
+========================================
+FILE: ProtectedRoute.jsx
+========================================
+
+import React from "react";
+import { Navigate } from "react-router-dom";
+
+/**
+ * Componente GuardiÃ¡n (Route Guard)
+ * Envuelve a cualquier componente que requiera autenticaciÃ³n.
+ * Si el usuario no tiene token, lo expulsa al Login.
+ */
+const ProtectedRoute = ({ children }) => {
+  // Buscamos si existe el token en el bolsillo del navegador
+  const token = localStorage.getItem("token");
+
+  // Si no hay token, lo redirigimos a la ruta raÃ­z ("/") que es el Login.
+  // El 'replace' borra el historial para que no pueda volver atrÃ¡s con la flecha del navegador.
+  if (!token) {
+    return <Navigate to="/" replace />;
+  }
+
+  // Si hay token, renderizamos el componente hijo (ej. el Dashboard)
+  return children;
+};
+
+export default ProtectedRoute;
+
+========================================
+FILE: authService.js
+========================================
+
+import axios from "axios";
+
+// AÃ±adimos /api a la URL base
+const API_URL = "http://localhost:8080/api";
+
+export const authService = {
+  login: async (username, password) => {
+    // Esto llamarÃ¡ a http://localhost:8080/api/auth/login
+    const response = await axios.post(`${API_URL}/auth/login`, {
+      username,
+      password,
+    });
+    return response.data;
+  },
+};
+
+========================================
+FILE: consultasService.js
+========================================
+
+import axios from "axios";
+
+const API_URL = "http://localhost:8080/api/consultas";
+const getConfig = () => ({
+  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+});
+
+export const consultasService = {
+  listarTodas: async () => {
+    const response = await axios.get(API_URL, getConfig());
+    return response.data;
+  },
+  obtenerMisConsultas: async () => {
+    const response = await axios.get(`${API_URL}/mis-consultas`, getConfig());
+    return response.data;
+  },
+  // AQUÃ ESTÃN LOS NOMBRES QUE ESPERA TU COMPONENTE
+  crear: async (datos) => {
+    const response = await axios.post(API_URL, datos, getConfig());
+    return response.data;
+  },
+  confirmar: async (id) => {
+    const response = await axios.put(
+      `${API_URL}/${id}/confirmar`,
+      {},
+      getConfig(),
+    );
+    return response.data;
+  },
+  abrirIncidencia: async (id, mensaje) => {
+    const response = await axios.put(`${API_URL}/${id}/incidencia`, mensaje, {
+      headers: { ...getConfig().headers, "Content-Type": "text/plain" },
+    });
+    return response.data;
+  },
+  obtenerHistorialFarmacia: async () => {
+    const response = await axios.get(
+      `${API_URL}/historial-farmacia`,
+      getConfig(),
+    );
+    return response.data;
+  },
+  obtenerTodas: async () => {
+    const response = await axios.get(API_URL, getConfig());
+    return response.data;
+  },
+  validarTurnoAdmin: async (id) => {
+    const response = await axios.put(
+      `${API_URL}/${id}/validar`,
+      {},
+      getConfig(),
+    );
+    return response.data;
+  },
+};
+
+========================================
+FILE: dashboardService.js
+========================================
+
+import axios from "axios";
+
+const API_URL = "http://localhost:8080/api";
+
+const getConfig = () => {
+  const token = localStorage.getItem("token");
+  return {
+    headers: { Authorization: `Bearer ${token}` },
+  };
+};
+
+export const dashboardService = {
+  // Para los Nutricionistas
+  obtenerResumenNutricionista: async (id, anio, mes) => {
+    const response = await axios.get(
+      `${API_URL}/dashboard/nutricionistas/${id}/resumen?anio=${anio}&mes=${mes}`,
+      getConfig(),
+    );
+    return response.data;
+  },
+
+  // ðŸ‘‡ NUEVO PARA EL ADMIN ðŸ‘‡
+  obtenerFacturacionAdmin: async (anio) => {
+    const response = await axios.get(
+      `${API_URL}/dashboard/admin/facturacion?anio=${anio}`,
+      getConfig(),
+    );
+    return response.data;
+  },
+
+  obtenerCalendarioAdmin: async (anio, mes) => {
+    const response = await axios.get(
+      `${API_URL}/dashboard/admin/calendario?anio=${anio}&mes=${mes}`,
+      getConfig(),
+    );
+    return response.data;
+  },
+};
+
+========================================
+FILE: documentosService.js
+========================================
+
+import axios from "axios";
+
+const API_URL = "http://localhost:8080/api/documentos";
+
+const getConfig = () => ({
+  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+});
+
+export const documentosService = {
+  listar: async () => {
+    const response = await axios.get(API_URL, getConfig());
+    return response.data;
+  },
+
+  // Nueva ruta para el desplegable de usuarios
+  obtenerDestinatarios: async () => {
+    const response = await axios.get(`${API_URL}/destinatarios`, getConfig());
+    return response.data;
+  },
+
+  subir: async (formData) => {
+    const response = await axios.post(API_URL, formData, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+        // Dejamos que Axios ponga el Content-Type y el Boundary automÃ¡ticamente
+      },
+    });
+    return response.data;
+  },
+
+  descargar: async (id, nombreOriginal) => {
+    const response = await axios.get(`${API_URL}/${id}/descargar`, {
+      ...getConfig(),
+      responseType: "blob",
+    });
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", nombreOriginal);
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode.removeChild(link);
+  },
+
+  // Nueva ruta para eliminar documentos definitamente
+  eliminar: async (id) => {
+    // Es vital pasar el getConfig() para que Spring Security sepa que eres ADMIN
+    const response = await axios.delete(`${API_URL}/${id}`, getConfig());
+    return response.data;
+  },
+};
+
+========================================
+FILE: farmaciaService.js
+========================================
+
+import axios from "axios";
+
+const API_URL = "http://localhost:8080/api";
+
+const getConfig = () => ({
+  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+});
+
+export const farmaciaService = {
+  listarTodas: async () => {
+    const response = await axios.get(`${API_URL}/farmacias`, getConfig());
+    return response.data;
+  },
+
+  // Â¡AQUÃ ESTÃ LA FUNCIÃ“N QUE FALTABA!
+  crear: async (farmaciaData) => {
+    const response = await axios.post(
+      `${API_URL}/farmacias`,
+      farmaciaData,
+      getConfig(),
+    );
+    return response.data;
+  },
+  obtenerMiPerfil: async () => {
+    const response = await axios.get(
+      `${API_URL}/farmacias/perfil/me`,
+      getConfig(),
+    );
+    return response.data;
+  },
+};
+
+========================================
+FILE: nutricionistasService.js
+========================================
+
+import axios from "axios";
+
+const API_URL = "http://localhost:8080/api/nutricionistas";
+const getConfig = () => ({
+  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+});
+
+export const nutricionistasService = {
+  listarTodas: async () => {
+    const response = await axios.get(API_URL, getConfig());
+    return response.data;
+  },
+  crear: async (datos) => {
+    // Los datos que le pasamos deben coincidir EXACTAMENTE con tu NutricionistaRequest de Java
+    const response = await axios.post(API_URL, datos, getConfig());
+    return response.data;
+  },
+  obtenerMiPerfil: async () => {
+    // FÃ­jate que ahora dice /perfil/me
+    const response = await axios.get(
+      "http://localhost:8080/api/nutricionistas/perfil/me",
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      },
+    );
+    return response.data;
+  },
+};
+
+========================================
+FILE: pedidosService.js
+========================================
+
+import axios from "axios";
+
+const API_URL = "http://localhost:8080/api/pedidos";
+
+const getConfig = () => ({
+  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+});
+
+export const pedidosService = {
+  // Lista absolutamente todos (solo para Admin)
+  listarTodos: async () => {
+    const response = await axios.get(API_URL, getConfig());
+    return response.data;
+  },
+
+  // Crea un nuevo pedido
+  crear: async (datos) => {
+    const response = await axios.post(API_URL, datos, getConfig());
+    return response.data;
+  },
+
+  // Liquida un pedido existente
+  liquidar: async (id) => {
+    const response = await axios.put(
+      `${API_URL}/${id}/liquidar`,
+      {},
+      getConfig(),
+    );
+    return response.data;
+  },
+
+  // Obtiene solo los pedidos del usuario conectado (Nutri o Farmacia)
+  obtenerMisPedidos: async () => {
+    const response = await axios.get(`${API_URL}/mis-pedidos`, getConfig());
+    return response.data;
+  },
+  obtenerTodos: async () => {
+    const response = await axios.get(API_URL, getConfig());
+    return response.data;
+  },
+  marcarComoEnviadoAdmin: async (id) => {
+    const response = await axios.put(
+      `${API_URL}/${id}/enviar`,
+      {},
+      getConfig(),
+    );
+    return response.data;
+  },
+};
+
+========================================
+FILE: productosService.js
+========================================
+
+import axios from "axios";
+
+const API_URL = "http://localhost:8080/api";
+const getConfig = () => ({
+  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+});
+
+export const productosService = {
+  listarTodos: async () => {
+    const response = await axios.get(`${API_URL}/productos`, getConfig());
+    return response.data;
+  },
+};
+
+========================================
+FILE: suministrosService.js
+========================================
+
+import axios from "axios";
+
+// Ajustamos la URL base al nuevo controlador
+const API_URL = "http://localhost:8080/api/suministros";
+
+const getConfig = () => ({
+  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+});
+
+export const suministrosService = {
+  listarMateriales: async () => {
+    const response = await axios.get(`${API_URL}/materiales`, getConfig());
+    return response.data;
+  },
+
+  // Cambiamos listarPeticiones a la ruta personalizada
+  obtenerMisPeticiones: async () => {
+    const response = await axios.get(`${API_URL}/mis-peticiones`, getConfig());
+    return response.data;
+  },
+
+  // Enviamos directamente el array de IDs en un objeto { materialIds: [...] }
+  crearPeticion: async (materialIds) => {
+    const response = await axios.post(
+      `${API_URL}/peticiones`,
+      { materialIds },
+      getConfig(),
+    );
+    return response.data;
+  },
+  // --- MÃ‰TODOS PARA EL ADMIN ---
+  listarPeticionesAdmin: async () => {
+    const response = await axios.get(
+      `${API_URL}/peticiones-admin`,
+      getConfig(),
+    );
+    return response.data;
+  },
+
+  cambiarEstado: async (id, estado) => {
+    // Usamos params para enviar el estado en la URL: ?estado=APROBADO
+    const response = await axios.put(
+      `${API_URL}/peticiones/${id}/estado`,
+      null,
+      {
+        ...getConfig(),
+        params: { estado },
+      },
+    );
+    return response.data;
+  },
+};
+
+========================================
+FILE: App.jsx
+========================================
+
+import React from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Login from "./components/Login";
+import Dashboard from "./components/Dashboard";
+import ProtectedRoute from "./components/ProtectedRoute"; // <-- Importamos al portero
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Ruta pÃºblica */}
+        <Route path="/" element={<Login />} />
+
+        {/* Ruta PRIVADA: Envolvemos el Dashboard con el ProtectedRoute */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;
+
+========================================
+FILE: main.jsx
+========================================
+
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import './index.css'
+import App from './App.jsx'
+
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+)

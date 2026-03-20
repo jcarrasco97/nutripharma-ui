@@ -21,13 +21,29 @@ export const pedidosService = {
 
   // Liquida un pedido existente
   liquidar: async (id) => {
-    const response = await axios.put(`${API_URL}/${id}/liquidar`, {}, getConfig());
+    const response = await axios.put(
+      `${API_URL}/${id}/liquidar`,
+      {},
+      getConfig(),
+    );
     return response.data;
   },
 
   // Obtiene solo los pedidos del usuario conectado (Nutri o Farmacia)
   obtenerMisPedidos: async () => {
     const response = await axios.get(`${API_URL}/mis-pedidos`, getConfig());
+    return response.data;
+  },
+  obtenerTodos: async () => {
+    const response = await axios.get(API_URL, getConfig());
+    return response.data;
+  },
+  marcarComoEnviadoAdmin: async (id) => {
+    const response = await axios.put(
+      `${API_URL}/${id}/enviar`,
+      {},
+      getConfig(),
+    );
     return response.data;
   },
 };

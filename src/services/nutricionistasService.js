@@ -25,4 +25,13 @@ export const nutricionistasService = {
     );
     return response.data;
   },
+  // Añade esto:
+  actualizar: async (id, data) => {
+    const response = await axios.put(`${API_URL}/${id}`, data, getConfig());
+    return response.data;
+  },
+  eliminar: async (id) => {
+    const response = await axios.delete(`${API_URL}/${id}`, getConfig());
+    return response.data;
+  },
 };
