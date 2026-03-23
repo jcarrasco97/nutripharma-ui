@@ -10,7 +10,7 @@ import {
   Filter,
   ArrowUpDown,
 } from "lucide-react";
-import { suministrosService } from "../../services/suministrosService";
+import { suministrosService } from "../../features/suministros/suministrosService";
 
 const VistaSuministros = () => {
   const [materiales, setMateriales] = useState([]);

@@ -11,7 +11,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { jwtDecode } from "jwt-decode";
-import { documentosService } from "../../services/documentosService";
+import { documentosService } from "./documentosService";
 
 const VistaDocumentacion = () => {
   const [documentos, setDocumentos] = useState([]);

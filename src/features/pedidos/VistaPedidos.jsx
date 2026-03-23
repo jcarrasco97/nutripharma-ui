@@ -18,35 +18,30 @@ import {
   ChevronRight,
   History,
 } from "lucide-react";
-import { productosService } from "../../services/productosService";
-import { pedidosService } from "../../services/pedidosService";
-import { farmaciaService } from "../../services/farmaciaService";
-import { nutricionistasService } from "../../services/nutricionistasService";
+import { productosService } from "../../features/pedidos/productosService";
+import { pedidosService } from "../../features/pedidos/pedidosService";
+import { farmaciaService } from "../admin/farmaciaService";
+import { nutricionistasService } from "../admin/nutricionistasService";
 import { jwtDecode } from "jwt-decode";
 
 const VistaPedidos = () => {
-  // --- ESTADOS DE DATOS ---
   const [productos, setProductos] = useState([]);
   const [pedidos, setPedidos] = useState([]);
   const [farmacias, setFarmacias] = useState([]);
   const [perfil, setPerfil] = useState(null);
 
-  // --- ESTADOS DE CONTROL ---
   const [esFarmacia, setEsFarmacia] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [errorCarga, setErrorCarga] = useState(null);
 
-  // --- ESTADOS DE FILTROS (HISTORIAL) ---
   const [mesFiltro, setMesFiltro] = useState("Todos");
   const [ordenFiltro, setOrdenFiltro] = useState("recientes");
 
-  // --- ESTADOS DE UI ---
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
   const [carrito, setCarrito] = useState([]);
   const [farmaciaSeleccionada, setFarmaciaSeleccionada] = useState("");
 
-  // --- CARGA DE DATOS INICIAL ---
   const cargarDatos = async () => {
     setCargando(true);
     setErrorCarga(null);
@@ -57,7 +52,6 @@ const VistaPedidos = () => {
       const soyFarmacia = roles.includes("ROLE_FARMACIA");
       setEsFarmacia(soyFarmacia);
 
-      // 1. Peticiones base (Productos y Pedidos propios)
       const [datosProds, datosPeds] = await Promise.all([
         productosService.listarTodos(),
         pedidosService.obtenerMisPedidos(),
@@ -65,20 +59,27 @@ const VistaPedidos = () => {
       setProductos(datosProds);
       setPedidos(datosPeds);
 
-      // 2. Lógica de Perfil según Rol
       if (soyFarmacia) {
         const miPerfilFarm = await farmaciaService.obtenerMiPerfil();
         setPerfil(miPerfilFarm);
         setFarmaciaSeleccionada(miPerfilFarm.id.toString());
       } else {
-        const [miPerfilNutri, datosFarms] = await Promise.all([
+        const [miPerfilNutri, todasLasFarmacias] = await Promise.all([
           nutricionistasService.obtenerMiPerfil(),
           farmaciaService.listarTodas(),
         ]);
         setPerfil(miPerfilNutri);
-        setFarmacias(datosFarms);
-        if (datosFarms.length > 0) {
-          setFarmaciaSeleccionada(datosFarms[0].id.toString());
+
+        // --- NUEVA LÓGICA DE AISLAMIENTO (N:M) ---
+        const misFarmacias = todasLasFarmacias.filter((f) =>
+          miPerfilNutri.asignaciones?.some(
+            (asignacion) => asignacion.farmaciaId === f.id,
+          ),
+        );
+        setFarmacias(misFarmacias);
+
+        if (misFarmacias.length > 0) {
+          setFarmaciaSeleccionada(misFarmacias[0].id.toString());
         }
       }
     } catch (error) {
@@ -95,32 +96,47 @@ const VistaPedidos = () => {
     cargarDatos();
   }, []);
 
-  // Limpiar carrito si una Nutricionista cambia de Farmacia destino
+  // Limpiar carrito si una Nutricionista cambia de Farmacia destino (Evita problemas de cálculo de precios cruzados)
   useEffect(() => {
     if (!esFarmacia) {
       setCarrito([]);
     }
   }, [farmaciaSeleccionada, esFarmacia]);
 
-  // --- CÁLCULOS DERIVADOS (LÓGICA DE NEGOCIO) ---
+  // Identificamos la farmacia destino seleccionada
   const farmaciaActual = esFarmacia
     ? perfil
     : farmacias.find((f) => f.id.toString() === farmaciaSeleccionada);
 
+  // --- MOTOR DE PRECIOS GEOGRÁFICOS ---
+  // Retorna PVF si es de Almería, o PVP si es de fuera.
+  const getPrecioAplicado = (producto) => {
+    if (!farmaciaActual || farmaciaActual.esProvinciaLocal !== false) {
+      return producto.pvf;
+    }
+    return producto.pvp;
+  };
+
   const saldoDisponibleInicial = farmaciaActual?.saldoVirtual || 0;
 
+  // Los totales ahora se calculan usando el Motor de Precios Dinámico
   const totalReal = carrito
     .filter((item) => !item.pagadoConSaldo)
-    .reduce((sum, item) => sum + item.cantidad * item.productoInfo.pvf, 0);
+    .reduce(
+      (sum, item) => sum + item.cantidad * getPrecioAplicado(item.productoInfo),
+      0,
+    );
 
   const totalVirtual = carrito
     .filter((item) => item.pagadoConSaldo)
-    .reduce((sum, item) => sum + item.cantidad * item.productoInfo.pvf, 0);
+    .reduce(
+      (sum, item) => sum + item.cantidad * getPrecioAplicado(item.productoInfo),
+      0,
+    );
 
   const saldoRestante = saldoDisponibleInicial - totalVirtual;
   const umbralAlcanzado = totalReal >= 80;
 
-  // --- FILTROS DE HISTORIAL ---
   const mesesDisponibles = [
     "Todos",
     ...new Set(pedidos.map((p) => p.fechaPedido.substring(0, 7))),
@@ -140,23 +156,21 @@ const VistaPedidos = () => {
       return 0;
     });
 
-  // --- ALGORITMO DE BONIFICADOS ---
   const calcularBonificados = (cantidad) => {
-    if (cantidad >= 100) return 30;
+    if (cantidad >= 100) return 20; // Corregido: antes tenías 30 en tu código original, el PRD dice 20
     if (cantidad >= 20) return 5;
     if (cantidad >= 10) return 2;
     if (cantidad >= 6) return 1;
     return 0;
   };
 
-  // --- ACCIONES DEL CARRITO ---
   const agregarAlCarrito = (producto, usarSaldo = false) => {
     if (usarSaldo && !umbralAlcanzado) {
       return alert(
-        "Debes alcanzar los 80€ en productos normales antes de usar el saldo virtual.",
+        "Debes alcanzar los 80€ en dinero real antes de usar el saldo virtual.",
       );
     }
-    if (usarSaldo && saldoRestante < producto.pvf) {
+    if (usarSaldo && saldoRestante < getPrecioAplicado(producto)) {
       return alert("Saldo virtual insuficiente para este producto.");
     }
 
@@ -197,7 +211,7 @@ const VistaPedidos = () => {
           if (
             pagadoConSaldo &&
             delta > 0 &&
-            saldoRestante < item.productoInfo.pvf
+            saldoRestante < getPrecioAplicado(item.productoInfo)
           ) {
             alert("No queda saldo virtual suficiente.");
             return item;
@@ -232,8 +246,8 @@ const VistaPedidos = () => {
           bonificados: item.bonificados,
           pagadoConSaldo: item.pagadoConSaldo,
         })),
+        creadoPorAdmin: false, // Desde esta vista, no es el admin haciendo de proxy
       };
-
       await pedidosService.crear(payload);
       alert("¡Pedido realizado con éxito!");
       setCarrito([]);
@@ -245,7 +259,6 @@ const VistaPedidos = () => {
     }
   };
 
-  // --- RENDERIZADO CONDICIONAL DE CARGA/ERROR ---
   if (cargando) {
     return (
       <div className="flex flex-col justify-center items-center h-[60vh] gap-4">
@@ -275,9 +288,7 @@ const VistaPedidos = () => {
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 animate-fade-in relative pb-10">
-      {/* ============================================================
-          MODAL DE DETALLES DEL PEDIDO
-      ============================================================ */}
+      {/* MODAL DETALLES DEL PEDIDO */}
       {pedidoSeleccionado && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-md">
           <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-2xl w-full overflow-hidden animate-scale-in">
@@ -413,9 +424,7 @@ const VistaPedidos = () => {
         </div>
       )}
 
-      {/* ============================================================
-          COLUMNA IZQUIERDA: CATÁLOGO DE PRODUCTOS
-      ============================================================ */}
+      {/* CATÁLOGO DE PRODUCTOS */}
       <div className="xl:col-span-7 space-y-6">
         <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -430,7 +439,7 @@ const VistaPedidos = () => {
                 <p className="text-gray-500 font-medium mt-1">
                   Catálogo para{" "}
                   <span className="text-sky-600 font-black">
-                    {farmaciaActual?.nombre}
+                    {farmaciaActual?.nombre || "..."}
                   </span>
                 </p>
               </div>
@@ -441,29 +450,35 @@ const VistaPedidos = () => {
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block ml-1">
                   Seleccionar Destino
                 </label>
-                <div className="relative">
-                  <select
-                    value={farmaciaSeleccionada}
-                    onChange={(e) => setFarmaciaSeleccionada(e.target.value)}
-                    className="w-full md:w-64 pl-4 pr-10 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl text-sm font-bold text-gray-700 appearance-none focus:border-sky-500 focus:ring-0 transition-all outline-none"
-                  >
-                    {farmacias.map((f) => (
-                      <option key={f.id} value={f.id}>
-                        {f.nombre}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronRight
-                    size={18}
-                    className="absolute right-4 top-4.5 text-gray-400 rotate-90"
-                  />
-                </div>
+                {farmacias.length === 0 ? (
+                  <div className="p-3 bg-red-50 text-red-600 border border-red-100 rounded-xl text-sm font-bold flex items-center gap-2">
+                    <AlertCircle size={16} /> Sin farmacias asignadas
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <select
+                      value={farmaciaSeleccionada}
+                      onChange={(e) => setFarmaciaSeleccionada(e.target.value)}
+                      className="w-full md:w-64 pl-4 pr-10 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl text-sm font-bold text-gray-700 appearance-none focus:border-sky-500 focus:ring-0 transition-all outline-none"
+                    >
+                      {farmacias.map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {f.nombre}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronRight
+                      size={18}
+                      className="absolute right-4 top-4.5 text-gray-400 rotate-90"
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
 
-        {/* TARJETA MONEDERO DINÁMICA */}
+        {/* TARJETA MONEDERO */}
         <div
           className={`relative overflow-hidden rounded-[2.5rem] p-8 text-white transition-all duration-500 shadow-xl ${umbralAlcanzado ? "bg-gradient-to-br from-purple-600 to-indigo-800" : "bg-gradient-to-br from-gray-700 to-gray-900 opacity-90"}`}
         >
@@ -522,7 +537,7 @@ const VistaPedidos = () => {
           />
         </div>
 
-        {/* REJILLA DE PRODUCTOS */}
+        {/* REJILLA PRODUCTOS */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {productos.map((prod) => (
             <div
@@ -546,17 +561,24 @@ const VistaPedidos = () => {
                   REF: <span className="text-gray-600">{prod.referencia}</span>
                 </p>
                 <div className="mt-4 flex items-baseline gap-1">
+                  {/* NUEVO: Mostramos el precio dinámicamente según la ubicación de la farmacia */}
                   <span className="text-3xl font-black text-gray-900">
-                    {prod.pvf.toFixed(2)}
+                    {getPrecioAplicado(prod).toFixed(2)}
                   </span>
                   <span className="text-lg font-bold text-gray-400">€</span>
+                  <span className="ml-2 bg-gray-100 text-gray-500 text-[10px] font-bold px-2 py-1 rounded">
+                    {farmaciaActual?.esProvinciaLocal !== false
+                      ? "Tarifa Local"
+                      : "Tarifa Externa"}
+                  </span>
                 </div>
               </div>
 
               <div className="mt-8 space-y-3">
                 <button
                   onClick={() => agregarAlCarrito(prod, false)}
-                  className="w-full bg-gray-900 hover:bg-black text-white py-4 rounded-[1.25rem] font-black text-sm flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg shadow-gray-200"
+                  disabled={!farmaciaSeleccionada}
+                  className="w-full bg-gray-900 hover:bg-black disabled:bg-gray-300 text-white py-4 rounded-[1.25rem] font-black text-sm flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg shadow-gray-200"
                 >
                   <Plus size={18} /> Añadir a Cesta Real
                 </button>
@@ -564,7 +586,7 @@ const VistaPedidos = () => {
                 {umbralAlcanzado && (
                   <button
                     onClick={() => agregarAlCarrito(prod, true)}
-                    disabled={saldoRestante < prod.pvf}
+                    disabled={saldoRestante < getPrecioAplicado(prod)}
                     className="w-full bg-purple-50 text-purple-700 border-2 border-purple-100 py-4 rounded-[1.25rem] font-black text-sm flex items-center justify-center gap-3 transition-all hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Wallet size={18} /> Comprar con Saldo
@@ -576,9 +598,7 @@ const VistaPedidos = () => {
         </div>
       </div>
 
-      {/* ============================================================
-          COLUMNA DERECHA: CARRITO Y RESUMEN FINANCIERO
-      ============================================================ */}
+      {/* CARRITO Y RESUMEN FINANCIERO */}
       <div className="xl:col-span-5 space-y-8">
         <div className="bg-white rounded-[3rem] shadow-xl border border-gray-100 p-8 sticky top-6">
           <div className="flex items-center justify-between mb-8 pb-4 border-b border-gray-50">
@@ -595,7 +615,6 @@ const VistaPedidos = () => {
             </span>
           </div>
 
-          {/* LISTA DEL CARRITO */}
           <div className="space-y-4 max-h-[400px] overflow-y-auto pr-4 mb-8 custom-scrollbar">
             {carrito.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-200">
@@ -603,7 +622,7 @@ const VistaPedidos = () => {
                 <p className="text-gray-400 font-bold">
                   Tu cesta está vacía.
                   <br />
-                  Selecciona productos del catálogo.
+                  Selecciona productos.
                 </p>
               </div>
             ) : (
@@ -626,7 +645,10 @@ const VistaPedidos = () => {
                     <p
                       className={`font-black text-lg ${item.pagadoConSaldo ? "text-purple-700" : "text-gray-900"}`}
                     >
-                      {(item.cantidad * item.productoInfo.pvf).toFixed(2)}€
+                      {(
+                        item.cantidad * getPrecioAplicado(item.productoInfo)
+                      ).toFixed(2)}
+                      €
                     </p>
                   </div>
 
@@ -674,7 +696,6 @@ const VistaPedidos = () => {
             )}
           </div>
 
-          {/* TOTALES */}
           <div className="bg-gray-50 rounded-[2rem] p-6 space-y-4 mb-8">
             {totalVirtual > 0 && (
               <div className="flex justify-between items-center text-purple-700 px-2">
@@ -691,7 +712,7 @@ const VistaPedidos = () => {
                 </p>
                 {!umbralAlcanzado && totalReal > 0 && (
                   <p className="text-[10px] text-amber-600 font-bold mt-1 flex items-center gap-1">
-                    <Info size={10} /> Falta para el mínimo de liquidación
+                    <Info size={10} /> Falta para el mínimo
                   </p>
                 )}
               </div>
@@ -709,7 +730,8 @@ const VistaPedidos = () => {
             disabled={
               carrito.length === 0 ||
               enviando ||
-              (!umbralAlcanzado && totalVirtual > 0)
+              (!umbralAlcanzado && totalVirtual > 0) ||
+              !farmaciaSeleccionada
             }
             className="w-full bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 text-white font-black py-5 rounded-[1.5rem] shadow-xl shadow-sky-100 disabled:from-gray-300 disabled:to-gray-400 disabled:shadow-none transition-all flex items-center justify-center gap-4 active:scale-[0.98]"
           >
@@ -717,15 +739,13 @@ const VistaPedidos = () => {
               <Loader2 className="animate-spin" />
             ) : (
               <>
-                <ShoppingBag size={24} /> Confirmar Pedido y Emitir
+                <ShoppingBag size={24} /> Confirmar Pedido
               </>
             )}
           </button>
         </div>
 
-        {/* ============================================================
-            HISTORIAL AVANZADO DE PEDIDOS (CON FILTROS RESTAURADOS)
-        ============================================================ */}
+        {/* HISTORIAL DE PEDIDOS */}
         <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
@@ -741,7 +761,6 @@ const VistaPedidos = () => {
             </span>
           </div>
 
-          {/* CONTROLES DE FILTRO */}
           <div className="grid grid-cols-2 gap-3 mb-6">
             <div className="relative">
               <Filter

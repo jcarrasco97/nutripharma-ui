@@ -10,12 +10,12 @@ import {
   X,
   Filter,
   ArrowUpDown,
-  Search, // <-- Asegúrate de que esto está
-  Calendar, // <-- ¡AQUÍ ESTABA EL FALLO DEL RENDERIZADO!
+  Search,
+  Calendar,
 } from "lucide-react";
-import { consultasService } from "../../services/consultasService";
-import { farmaciaService } from "../../services/farmaciaService";
-import { nutricionistasService } from "../../services/nutricionistasService";
+import { consultasService } from "./consultasService";
+import { farmaciaService } from "../admin/farmaciaService";
+import { nutricionistasService } from "../admin/nutricionistasService";
 
 const VistaConsultas = () => {
   const [consultas, setConsultas] = useState([]);
@@ -23,7 +23,6 @@ const VistaConsultas = () => {
   const [perfil, setPerfil] = useState(null);
   const [cargando, setCargando] = useState(true);
 
-  // ESTADOS DE FILTRO
   const [mesFiltro, setMesFiltro] = useState("Todos");
   const [ordenFiltro, setOrdenFiltro] = useState("recientes");
   const [busqueda, setBusqueda] = useState("");
@@ -47,20 +46,30 @@ const VistaConsultas = () => {
   const cargarDatos = async () => {
     setCargando(true);
     try {
-      const [datosConsultas, datosFarmacias, miPerfil] = await Promise.all([
+      const [datosConsultas, todasLasFarmacias, miPerfil] = await Promise.all([
         consultasService.obtenerMisConsultas(),
         farmaciaService.listarTodas(),
         nutricionistasService.obtenerMiPerfil(),
       ]);
       setConsultas(datosConsultas);
-      setFarmacias(datosFarmacias);
       setPerfil(miPerfil);
 
-      if (datosFarmacias.length > 0) {
+      // --- NUEVA LÓGICA DE AISLAMIENTO (N:M) ---
+      // Filtramos la lista global para dejar solo las asignadas a este nutricionista
+      const misFarmacias = todasLasFarmacias.filter((f) =>
+        miPerfil.asignaciones?.some(
+          (asignacion) => asignacion.farmaciaId === f.id,
+        ),
+      );
+      setFarmacias(misFarmacias);
+
+      if (misFarmacias.length > 0) {
         setFormulario((prev) => ({
           ...prev,
-          farmaciaId: datosFarmacias[0].id,
+          farmaciaId: misFarmacias[0].id,
         }));
+      } else {
+        setFormulario((prev) => ({ ...prev, farmaciaId: "" }));
       }
     } catch (error) {
       console.error("Error cargando datos:", error);
@@ -73,7 +82,6 @@ const VistaConsultas = () => {
     cargarDatos();
   }, []);
 
-  // --- LÓGICA DE FILTRADO Y ORDENACIÓN ---
   const mesesDisponibles = [
     "Todos",
     ...new Set(consultas.map((c) => c.fecha.substring(0, 7))),
@@ -104,15 +112,15 @@ const VistaConsultas = () => {
     setMostrarModal(true);
   };
 
-  // --- CORRECCIÓN CLAVE: Uso de .crear() y .confirmar() ---
   const confirmarYGuardar = async () => {
-    if (!perfil)
-      return alert("El perfil del usuario no ha cargado correctamente.");
+    if (!perfil) return alert("El perfil no ha cargado correctamente.");
+    if (!formulario.farmaciaId) return alert("Debes seleccionar una farmacia.");
+
     setGuardando(true);
     try {
       const payload = {
         ...formulario,
-        nutricionistaId: perfil.id, // Sincronizado dinámicamente
+        nutricionistaId: perfil.id,
         farmaciaId: Number(formulario.farmaciaId),
         horaInicio:
           formulario.horaInicio.length === 5
@@ -139,17 +147,13 @@ const VistaConsultas = () => {
         observacionesJornada: "",
       }));
     } catch (err) {
-      console.error("Error al guardar:", err); // Chivato para la consola de React (F12)
-      alert(
-        "Error al registrar el turno: " +
-          (err.response?.data?.message || err.message),
-      );
+      console.error("Error al guardar:", err);
+      alert("Error al registrar el turno.");
     } finally {
       setGuardando(false);
     }
   };
 
-  // --- CORRECCIÓN CLAVE: Uso de .abrirIncidencia() ---
   const handleIncidencia = async (id) => {
     const mensaje = window.prompt("Escribe el motivo de la incidencia:");
     if (!mensaje) return;
@@ -162,7 +166,6 @@ const VistaConsultas = () => {
     }
   };
 
-  // --- CORRECCIÓN CLAVE: Uso de .confirmar() ---
   const handleConfirmarAntiguo = async (id) => {
     if (!window.confirm("¿Seguro que quieres confirmar?")) return;
     try {
@@ -271,19 +274,25 @@ const VistaConsultas = () => {
             <label className="block text-sm font-bold text-gray-700 mb-1">
               Farmacia
             </label>
-            <select
-              name="farmaciaId"
-              value={formulario.farmaciaId}
-              onChange={handleChange}
-              className="w-full border-gray-200 rounded-xl text-sm"
-              required
-            >
-              {farmacias.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.nombre}
-                </option>
-              ))}
-            </select>
+            {farmacias.length === 0 ? (
+              <div className="p-3 bg-red-50 text-red-600 border border-red-100 rounded-xl text-sm font-bold flex items-center gap-2">
+                <AlertTriangle size={16} /> No tienes farmacias asignadas.
+              </div>
+            ) : (
+              <select
+                name="farmaciaId"
+                value={formulario.farmaciaId}
+                onChange={handleChange}
+                className="w-full border-gray-200 rounded-xl text-sm"
+                required
+              >
+                {farmacias.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.nombre}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -346,7 +355,6 @@ const VistaConsultas = () => {
             </div>
           </div>
 
-          {/* MÉTRICAS DE ACTIVIDAD */}
           <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
             <div>
               <label className="block text-xs font-bold text-gray-500 mb-1">
@@ -417,7 +425,8 @@ const VistaConsultas = () => {
 
           <button
             type="submit"
-            className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 rounded-xl transition-colors shadow-md"
+            disabled={farmacias.length === 0}
+            className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 rounded-xl transition-colors shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
             <CheckCircle size={18} className="mr-2" /> Revisar y Registrar
           </button>
@@ -466,7 +475,6 @@ const VistaConsultas = () => {
           </div>
         </div>
 
-        {/* Buscador de farmacias */}
         <div className="relative mb-4">
           <Search size={16} className="absolute left-3 top-3 text-gray-400" />
           <input
@@ -491,11 +499,7 @@ const VistaConsultas = () => {
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <span
-                    className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide
-                    ${c.estado === "BORRADOR" ? "bg-gray-100 text-gray-600" : ""}
-                    ${c.estado === "CONFIRMADA" ? "bg-emerald-100 text-emerald-700" : ""}
-                    ${c.estado === "CON_INCIDENCIA" ? "bg-amber-100 text-amber-700" : ""}
-                  `}
+                    className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${c.estado === "BORRADOR" ? "bg-gray-100 text-gray-600" : ""} ${c.estado === "CONFIRMADA" ? "bg-emerald-100 text-emerald-700" : ""} ${c.estado === "CON_INCIDENCIA" ? "bg-amber-100 text-amber-700" : ""}`}
                   >
                     {c.estado.replace("_", " ")}
                   </span>

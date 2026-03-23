@@ -11,8 +11,8 @@ import {
   AlertCircle,
   RefreshCcw,
 } from "lucide-react";
-import { farmaciaService } from "../../services/farmaciaService";
-import { pedidosService } from "../../services/pedidosService";
+import { farmaciaService } from "../admin/farmaciaService";
+import { pedidosService } from "../pedidos/pedidosService";
 
 const VistaResumenFarmacia = ({ cambiarVista }) => {
   const [perfil, setPerfil] = useState(null);

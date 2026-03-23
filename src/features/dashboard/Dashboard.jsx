@@ -15,18 +15,27 @@ import {
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 
-// Importación de Vistas
-import VistaResumen from "./vistas/VistaResumen";
-import VistaResumenFarmacia from "./vistas/VistaResumenFarmacia";
-import VistaConsultas from "./vistas/VistaConsultas";
-import VistaPedidos from "./vistas/VistaPedidos";
-import VistaSuministros from "./vistas/VistaSuministros";
-import VistaAdminSuministros from "./vistas/VistaAdminSuministros";
-import VistaDocumentacion from "./vistas/VistaDocumentacion";
-import VistaValidaciones from "./vistas/VistaValidaciones";
-import VistaEmpleados from "./vistas/VistaAdministracion";
-import VistaHistorialFarmacia from "./vistas/VistaHistorialFarmacia"; // <-- YA IMPORTADO
-import VistaResumenAdmin from "./vistas/VistaResumenAdmin";
+// Importación de Vistas (NUEVA ARQUITECTURA FEATURE-BASED)
+
+// 1. Vistas del propio módulo Dashboard (Misma carpeta: ./)
+import VistaResumen from "./VistaResumen";
+import VistaResumenFarmacia from "./VistaResumenFarmacia";
+import VistaResumenAdmin from "./VistaResumenAdmin";
+
+// 2. Vistas de otros módulos (Subimos un nivel: ../)
+import VistaConsultas from "../consultas/VistaConsultas";
+import VistaHistorialFarmacia from "../consultas/VistaHistorialFarmacia";
+
+import VistaPedidos from "../pedidos/VistaPedidos";
+
+import VistaSuministros from "../suministros/VistaSuministros";
+import VistaAdminSuministros from "../suministros/VistaAdminSuministros";
+
+import VistaDocumentacion from "../documentacion/VistaDocumentacion";
+
+// 3. Vistas de Administración
+import VistaValidaciones from "../admin/VistaValidaciones";
+import VistaAdministracion from "../admin/VistaAdministracion"; // Nota: si le cambiaste el nombre al archivo por VistaAdministracion.jsx, asegúrate de que el nombre del archivo coincida aquí
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -51,9 +60,9 @@ const Dashboard = () => {
       return "resumen-admin";
     }
 
-    // 2. Si es Farmacia, lo mandamos directo a su historial de consultas.
+    // 2. Si es Farmacia, lo mandamos directo a su resumen.
     if (usuario && usuario.roles.includes("ROLE_FARMACIA")) {
-      return "historial-farmacia";
+      return "resumen"; // <--- NUEVO VALOR
     }
 
     // 3. Por defecto (para las Nutricionistas base), a su resumen operativo.
@@ -140,7 +149,7 @@ const Dashboard = () => {
         label: "Centro Validaciones",
         icon: ShieldCheck,
       });
-      items.push({ id: "usuarios", label: "Gestión Empleados", icon: Users });
+      items.push({ id: "usuarios", label: "Administración", icon: Users });
     }
 
     // El módulo de Documentación es para todos, así que lo empujamos una sola vez al final
@@ -276,7 +285,7 @@ const Dashboard = () => {
           ) : vistaActual === "historial-farmacia" ? (
             <VistaHistorialFarmacia />
           ) : vistaActual === "usuarios" ? (
-            <VistaEmpleados />
+            <VistaAdministracion />
           ) : (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 min-h-[500px] flex items-center justify-center">
               <div className="text-center">

@@ -6,19 +6,19 @@ import {
   Clock,
   Loader2,
   AlertCircle,
-  Check, // ¡Asegurado de que está importado!
+  Check,
+  Car, // <-- NUEVO ICONO PARA KILÓMETROS
 } from "lucide-react";
-import { consultasService } from "../../services/consultasService";
-import { pedidosService } from "../../services/pedidosService";
-import { nutricionistasService } from "../../services/nutricionistasService";
+import { consultasService } from "../consultas/consultasService";
+import { pedidosService } from "../pedidos/pedidosService";
+import { nutricionistasService } from "../admin/nutricionistasService";
 
 const VistaResumen = () => {
   const [datosResumen, setDatosResumen] = useState(null);
   const [perfil, setPerfil] = useState(null);
   const [cargando, setCargando] = useState(true);
-  const [errorBackend, setErrorBackend] = useState(null); // <-- NUEVO ESTADO PARA ERRORES
+  const [errorBackend, setErrorBackend] = useState(null);
 
-  // --- TABLA BASE DE OBJETIVOS (Para 40 Horas) ---
   const METAS_BASE = {
     OB1: { facturacion: 5000, productos: 800, incentivo: 200, exceso: 0 },
     OB2: { facturacion: 6800, productos: 1000, incentivo: 400, exceso: 0.05 },
@@ -27,23 +27,26 @@ const VistaResumen = () => {
 
   const cargarDatos = async () => {
     try {
-      // LLAMAMOS A LOS NUEVOS ENDPOINTS SEGUROS (Solo mis datos)
       const [miPerfil, misConsultas, misPedidos] = await Promise.all([
         nutricionistasService.obtenerMiPerfil(),
         consultasService.obtenerMisConsultas(),
         pedidosService.obtenerMisPedidos(),
       ]);
-
       setPerfil(miPerfil);
 
-      // Filtramos solo el mes actual
-      const mesActual = new Date().toISOString().substring(0, 7); // "YYYY-MM"
+      const mesActual = new Date().toISOString().substring(0, 7);
 
+      // POR ESTO (El filtro Anti-Trampas):
       const consultasMes = misConsultas.filter(
-        (c) => c.fecha.startsWith(mesActual) && c.estado === "CONFIRMADA",
+        (c) => c.fecha.startsWith(mesActual) && c.estado === "VALIDADA",
+        // Nota: Si en tu backend el estado de validación se llama distinto
+        // (ej. "APROBADA"), cámbialo aquí.
       );
+
       const pedidosMes = misPedidos.filter(
-        (p) => p.fechaPedido.startsWith(mesActual) && p.estado !== "CANCELADO",
+        (p) =>
+          p.fechaPedido.startsWith(mesActual) &&
+          (p.estado === "ENVIADO" || p.estado === "LIQUIDADO"),
       );
 
       // 1. Cálculos de Consultas
@@ -54,7 +57,7 @@ const VistaResumen = () => {
       );
       const facturacionConsultas = totalNuevas * 25 + totalRevisiones * 20;
 
-      // 2. Cálculos de Pedidos (Solo dinero real)
+      // 2. Cálculos de Pedidos
       const facturacionProductos = pedidosMes.reduce(
         (sum, p) => sum + p.totalPedido,
         0,
@@ -63,6 +66,18 @@ const VistaResumen = () => {
       // 3. Totales Globales
       const facturacionTotal = facturacionConsultas + facturacionProductos;
 
+      // 4. --- NUEVO: CÁLCULO DE KILOMETRAJE MENSUAL ---
+      const totalKilometros = consultasMes.reduce((sum, consulta) => {
+        // Buscamos la asignación coincidiendo por ID (asegurando que ambos son números) o por el Nombre de la Farmacia
+        const asignacion = miPerfil.asignaciones?.find(
+          (a) =>
+            Number(a.farmaciaId) === Number(consulta.farmaciaId) ||
+            a.farmaciaNombre === consulta.farmaciaNombre,
+        );
+        const kmViaje = asignacion ? asignacion.kilometros : 0;
+        return sum + kmViaje;
+      }, 0);
+
       setDatosResumen({
         mes: mesActual,
         totalNuevas,
@@ -70,12 +85,12 @@ const VistaResumen = () => {
         facturacionConsultas,
         facturacionProductos,
         facturacionTotal,
+        totalKilometros, // <-- Guardamos la nueva métrica
       });
     } catch (error) {
       console.error("Error al cargar resumen:", error);
-      // CAPTURAMOS EL ERROR AQUÍ PARA EVITAR LA CARGA INFINITA
       setErrorBackend(
-        "No se pudieron cargar tus datos. Asegúrate de tener permisos de Nutricionista.",
+        "No se pudieron cargar tus datos. Asegúrate de tener permisos.",
       );
     } finally {
       setCargando(false);
@@ -86,7 +101,6 @@ const VistaResumen = () => {
     cargarDatos();
   }, []);
 
-  // --- LÓGICA DE RENDERIZADO (Evita el bucle infinito) ---
   if (cargando) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -95,7 +109,6 @@ const VistaResumen = () => {
     );
   }
 
-  // SI HAY ERROR, MOSTRAMOS EL MENSAJE EN LUGAR DE ROMPER LA VISTA
   if (errorBackend) {
     return (
       <div className="flex flex-col items-center justify-center h-64 bg-red-50 rounded-2xl border border-red-100 p-8 text-center animate-fade-in">
@@ -106,10 +119,8 @@ const VistaResumen = () => {
     );
   }
 
-  // Protección extra por si los datos llegan vacíos sin saltar el catch
   if (!datosResumen || !perfil) return null;
 
-  // --- CÁLCULO DINÁMICO SEGÚN CONTRATO ---
   const horasContrato = perfil.horasContratoMensual || 40;
   const factorJornada = horasContrato / 40;
 
@@ -134,7 +145,6 @@ const VistaResumen = () => {
     },
   };
 
-  // --- MOTOR DE CÁLCULO DE COMISIONES ---
   const { facturacionTotal, facturacionProductos } = datosResumen;
 
   let nivelAlcanzado = "Ninguno";
@@ -201,9 +211,9 @@ const VistaResumen = () => {
               Tu rendimiento acumulado en {datosResumen.mes} (Contrato:{" "}
               {horasContrato}h/semana)
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
               <div>
-                <p className="text-sky-200 text-sm font-bold uppercase tracking-wide mb-1">
+                <p className="text-sky-200 text-xs font-bold uppercase tracking-wide mb-1">
                   Nuevas
                 </p>
                 <p className="text-3xl font-black">
@@ -211,7 +221,7 @@ const VistaResumen = () => {
                 </p>
               </div>
               <div>
-                <p className="text-sky-200 text-sm font-bold uppercase tracking-wide mb-1">
+                <p className="text-sky-200 text-xs font-bold uppercase tracking-wide mb-1">
                   Revisiones
                 </p>
                 <p className="text-3xl font-black">
@@ -219,7 +229,7 @@ const VistaResumen = () => {
                 </p>
               </div>
               <div>
-                <p className="text-sky-200 text-sm font-bold uppercase tracking-wide mb-1">
+                <p className="text-sky-200 text-xs font-bold uppercase tracking-wide mb-1">
                   Servicios
                 </p>
                 <p className="text-3xl font-black">
@@ -227,11 +237,22 @@ const VistaResumen = () => {
                 </p>
               </div>
               <div>
-                <p className="text-sky-200 text-sm font-bold uppercase tracking-wide mb-1">
+                <p className="text-sky-200 text-xs font-bold uppercase tracking-wide mb-1">
                   Productos
                 </p>
                 <p className="text-3xl font-black text-emerald-300">
                   {datosResumen.facturacionProductos.toFixed(2)}€
+                </p>
+              </div>
+
+              {/* --- NUEVA TARJETA DE KILOMETRAJE --- */}
+              <div className="bg-white/10 p-3 rounded-2xl border border-white/20 backdrop-blur-sm">
+                <p className="text-sky-100 text-xs font-black uppercase tracking-widest mb-1 flex items-center gap-1">
+                  <Car size={14} /> Distancia
+                </p>
+                <p className="text-3xl font-black text-white">
+                  {datosResumen.totalKilometros}{" "}
+                  <span className="text-lg font-bold opacity-70">km</span>
                 </p>
               </div>
             </div>
@@ -265,12 +286,11 @@ const VistaResumen = () => {
         </div>
 
         <div className="p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-2 gap-10">
-          {/* COLUMNA IZQUIERDA: ESTADO ACTUAL */}
+          {/* ESTADO ACTUAL */}
           <div>
             <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-6">
               Estado Actual
             </h4>
-
             <div className="space-y-6">
               <div>
                 <div className="flex justify-between text-sm mb-2">
@@ -299,7 +319,6 @@ const VistaResumen = () => {
                 <p className="text-sm font-bold text-gray-700 mb-3">
                   Requisitos Mínimos (Doble Condición)
                 </p>
-
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600 flex items-center gap-2">
@@ -319,7 +338,6 @@ const VistaResumen = () => {
                       €
                     </span>
                   </div>
-
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600 flex items-center gap-2">
                       {proximoObjetivo &&
@@ -356,7 +374,7 @@ const VistaResumen = () => {
             </div>
           </div>
 
-          {/* COLUMNA DERECHA: LOS 3 TRAMOS */}
+          {/* TRAMOS */}
           <div>
             <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-6">
               Tramos de Incentivos

@@ -15,10 +15,12 @@ import {
   Trash2,
   X,
   Save,
+  MapPin,
+  Car, // <-- Nuevo icono
 } from "lucide-react";
-import { farmaciaService } from "../../services/farmaciaService";
-import { nutricionistasService } from "../../services/nutricionistasService";
-import { productosService } from "../../services/productosService";
+import { farmaciaService } from "./farmaciaService";
+import { nutricionistasService } from "./nutricionistasService";
+import { productosService } from "../pedidos/productosService";
 
 const VistaAdministracion = () => {
   const [pestana, setPestana] = useState("nutricionistas");
@@ -28,10 +30,8 @@ const VistaAdministracion = () => {
   const [cargando, setCargando] = useState(true);
   const [enviando, setEnviando] = useState(false);
 
-  // --- ESTADO DEL MODAL DE EDICIÓN ---
   const [itemEditando, setItemEditando] = useState(null);
 
-  // Formulario para altas
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -42,13 +42,14 @@ const VistaAdministracion = () => {
     cif: "",
     direccion: "",
     telefono: "",
-    // Campos de Producto
     nombreProducto: "",
     acronimo: "",
     categoria: "PEQUENO",
     referencia: "",
     pvf: "",
     pvp: "",
+    asignaciones: [], // <-- NUEVA ESTRUCTURA: [{ farmaciaId: 1, kilometros: 15 }]
+    esProvinciaLocal: true,
   });
 
   const cargarDatos = async () => {
@@ -77,10 +78,46 @@ const VistaAdministracion = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // --- LÓGICA DE CREACIÓN ---
+  // --- MANEJADORES DE ASIGNACIONES (N:M con Kilómetros) ---
+  const handleToggleFarmacia = (farmaciaId, checked, esEdicion = false) => {
+    const setTarget = esEdicion ? setItemEditando : setFormData;
+
+    setTarget((prev) => {
+      const actuales = prev.asignaciones || [];
+      if (checked) {
+        // Añadimos la farmacia con 0 km por defecto
+        return {
+          ...prev,
+          asignaciones: [...actuales, { farmaciaId, kilometros: 0 }],
+        };
+      } else {
+        // La quitamos de la lista
+        return {
+          ...prev,
+          asignaciones: actuales.filter((a) => a.farmaciaId !== farmaciaId),
+        };
+      }
+    });
+  };
+
+  const handleCambiarKilometros = (farmaciaId, kms, esEdicion = false) => {
+    const setTarget = esEdicion ? setItemEditando : setFormData;
+
+    setTarget((prev) => {
+      const actuales = prev.asignaciones || [];
+      return {
+        ...prev,
+        asignaciones: actuales.map((a) =>
+          a.farmaciaId === farmaciaId ? { ...a, kilometros: Number(kms) } : a,
+        ),
+      };
+    });
+  };
+
   const handleCrear = async (e) => {
     e.preventDefault();
     setEnviando(true);
+
     try {
       if (pestana === "nutricionistas") {
         await nutricionistasService.crear({
@@ -90,6 +127,7 @@ const VistaAdministracion = () => {
           apellidos: formData.apellidos,
           dni: formData.dni,
           horasContratoMensual: Number(formData.horasContratoMensual),
+          asignaciones: formData.asignaciones, // <-- ENVIAMOS LA ESTRUCTURA COMPLEJA
         });
         alert("Nutricionista creada con éxito.");
       } else if (pestana === "farmacias") {
@@ -99,6 +137,7 @@ const VistaAdministracion = () => {
           nombre: formData.nombre,
           cif: formData.cif,
           direccion: formData.direccion,
+          esProvinciaLocal: formData.esProvinciaLocal,
         });
         alert("Farmacia registrada con éxito.");
       } else if (pestana === "productos") {
@@ -129,7 +168,10 @@ const VistaAdministracion = () => {
         referencia: "",
         pvf: "",
         pvp: "",
+        asignaciones: [],
+        esProvinciaLocal: true,
       });
+
       cargarDatos();
     } catch (error) {
       alert(error.response?.data?.message || "Error al realizar la operación.");
@@ -138,7 +180,6 @@ const VistaAdministracion = () => {
     }
   };
 
-  // --- LÓGICA DE ELIMINACIÓN ---
   const handleEliminar = async (id, tipo) => {
     if (
       !window.confirm(
@@ -152,27 +193,39 @@ const VistaAdministracion = () => {
       if (tipo === "producto") await productosService.eliminar(id);
       cargarDatos();
     } catch (error) {
-      console.error(`Error al eliminar ${tipo}:`, error); // <-- AQUÍ USAMOS LA VARIABLE
+      console.error(`Error al eliminar ${tipo}:`, error);
       alert("Error al eliminar. Puede que tenga datos asociados.");
     }
   };
 
-  // --- LÓGICA DE ACTUALIZACIÓN ---
   const handleActualizar = async (e) => {
     e.preventDefault();
     try {
-      if (pestana === "nutricionistas")
-        await nutricionistasService.actualizar(itemEditando.id, itemEditando);
-      if (pestana === "farmacias")
-        await farmaciaService.actualizar(itemEditando.id, itemEditando);
-      if (pestana === "productos")
+      if (pestana === "nutricionistas") {
+        await nutricionistasService.actualizar(itemEditando.id, {
+          nombre: itemEditando.nombre,
+          apellidos: itemEditando.apellidos,
+          horasContratoMensual: Number(itemEditando.horasContratoMensual),
+          asignaciones: itemEditando.asignaciones || [], // <-- ENVIAMOS ESTRUCTURA COMPLEJA
+        });
+      }
+      if (pestana === "farmacias") {
+        await farmaciaService.actualizar(itemEditando.id, {
+          nombre: itemEditando.nombre,
+          cif: itemEditando.cif,
+          direccion: itemEditando.direccion,
+          esProvinciaLocal: itemEditando.esProvinciaLocal,
+        });
+      }
+      if (pestana === "productos") {
         await productosService.actualizar(itemEditando.id, itemEditando);
+      }
 
       alert("Datos actualizados correctamente.");
       setItemEditando(null);
       cargarDatos();
     } catch (error) {
-      console.error("Error al actualizar:", error); // <-- AQUÍ USAMOS LA VARIABLE
+      console.error("Error al actualizar:", error);
       alert("Error al actualizar los datos.");
     }
   };
@@ -186,7 +239,7 @@ const VistaAdministracion = () => {
 
   return (
     <div className="space-y-8 animate-fade-in pb-10 relative">
-      {/* MODAL DE EDICIÓN FLOTANTE */}
+      {/* MODAL DE EDICIÓN */}
       {itemEditando && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/70 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-scale-in">
@@ -201,7 +254,10 @@ const VistaAdministracion = () => {
                 <X size={24} />
               </button>
             </div>
-            <form onSubmit={handleActualizar} className="p-6 space-y-4">
+            <form
+              onSubmit={handleActualizar}
+              className="p-6 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar"
+            >
               {pestana === "nutricionistas" && (
                 <>
                   <input
@@ -243,6 +299,75 @@ const VistaAdministracion = () => {
                     placeholder="Horas mensuales"
                     required
                   />
+
+                  <div className="pt-2 border-t border-gray-100">
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      Asignación y Kilometraje (Ida y Vuelta)
+                    </label>
+                    <div className="max-h-56 overflow-y-auto space-y-2 p-3 border rounded-xl bg-gray-50 custom-scrollbar">
+                      {farmacias.map((farmacia) => {
+                        const asignacionInfo = itemEditando.asignaciones?.find(
+                          (a) => a.farmaciaId === farmacia.id,
+                        );
+                        const isChecked = !!asignacionInfo;
+
+                        return (
+                          <div
+                            key={farmacia.id}
+                            className={`flex flex-col p-3 rounded-lg border transition-all ${isChecked ? "bg-white border-indigo-200 shadow-sm" : "bg-transparent border-transparent hover:bg-gray-100"}`}
+                          >
+                            <label className="flex items-center gap-3 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) =>
+                                  handleToggleFarmacia(
+                                    farmacia.id,
+                                    e.target.checked,
+                                    true,
+                                  )
+                                }
+                                className="w-4 h-4 text-indigo-600 rounded border-gray-300"
+                              />
+                              <span className="text-sm font-bold text-gray-700">
+                                {farmacia.nombre}
+                              </span>
+                            </label>
+
+                            {/* Input condicional de Kilómetros */}
+                            {isChecked && (
+                              <div className="mt-2 pl-7 flex items-center gap-2 animate-fade-in">
+                                <Car size={14} className="text-gray-400" />
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={asignacionInfo.kilometros}
+                                  onChange={(e) =>
+                                    handleCambiarKilometros(
+                                      farmacia.id,
+                                      e.target.value,
+                                      true,
+                                    )
+                                  }
+                                  className="w-20 p-1 text-sm border rounded-md focus:ring-indigo-500"
+                                  placeholder="Km"
+                                  required
+                                />
+                                <span className="text-xs font-bold text-gray-400">
+                                  Km totales
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {farmacias.length === 0 && (
+                        <p className="text-xs text-gray-500 text-center">
+                          No hay farmacias.
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </>
               )}
 
@@ -284,6 +409,25 @@ const VistaAdministracion = () => {
                     placeholder="Dirección"
                     required
                   />
+
+                  <label className="flex items-center gap-3 p-4 bg-sky-50 border border-sky-100 rounded-xl cursor-pointer mt-2">
+                    <input
+                      type="checkbox"
+                      checked={itemEditando.esProvinciaLocal !== false}
+                      onChange={(e) =>
+                        setItemEditando({
+                          ...itemEditando,
+                          esProvinciaLocal: e.target.checked,
+                        })
+                      }
+                      className="w-5 h-5 text-sky-600 rounded"
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-gray-800">
+                        Provincia de Almería (Aplica PVF)
+                      </span>
+                    </div>
+                  </label>
                 </>
               )}
 
@@ -337,7 +481,7 @@ const VistaAdministracion = () => {
 
               <button
                 type="submit"
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 mt-4"
               >
                 <Save size={18} /> Guardar Cambios
               </button>
@@ -347,22 +491,22 @@ const VistaAdministracion = () => {
       )}
 
       {/* CABECERA Y PESTAÑAS */}
-      <div className="flex gap-4 border-b border-gray-200 pb-4">
+      <div className="flex gap-4 border-b border-gray-200 pb-4 overflow-x-auto custom-scrollbar">
         <button
           onClick={() => setPestana("nutricionistas")}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${pestana === "nutricionistas" ? "bg-indigo-600 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100"}`}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${pestana === "nutricionistas" ? "bg-indigo-600 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100"}`}
         >
           <Users size={20} /> Plantilla Nutricionistas
         </button>
         <button
           onClick={() => setPestana("farmacias")}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${pestana === "farmacias" ? "bg-indigo-600 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100"}`}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${pestana === "farmacias" ? "bg-indigo-600 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100"}`}
         >
           <Store size={20} /> Red de Farmacias
         </button>
         <button
           onClick={() => setPestana("productos")}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${pestana === "productos" ? "bg-indigo-600 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100"}`}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${pestana === "productos" ? "bg-indigo-600 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100"}`}
         >
           <PackagePlus size={20} /> Catálogo Productos
         </button>
@@ -382,10 +526,10 @@ const VistaAdministracion = () => {
                   nutricionistas.map((n) => (
                     <div
                       key={n.id}
-                      className="p-4 flex justify-between items-center hover:bg-gray-50 group"
+                      className="p-4 flex justify-between items-start md:items-center hover:bg-gray-50 group flex-col md:flex-row gap-4"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="bg-indigo-100 text-indigo-600 w-10 h-10 rounded-full flex items-center justify-center font-bold">
+                        <div className="bg-indigo-100 text-indigo-600 w-10 h-10 rounded-full flex items-center justify-center font-bold shrink-0">
                           {n.nombre.charAt(0)}
                           {n.apellidos ? n.apellidos.charAt(0) : ""}
                         </div>
@@ -393,12 +537,24 @@ const VistaAdministracion = () => {
                           <p className="font-bold text-gray-800">
                             {n.nombre} {n.apellidos}
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-gray-500 mb-1">
                             {n.email} • DNI: {n.dni}
                           </p>
+
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {n.asignaciones?.length > 0 ? (
+                              <span className="bg-indigo-50 text-indigo-600 text-[10px] font-black px-2 py-0.5 rounded-md uppercase">
+                                {n.asignaciones.length} Farmacias Asignadas
+                              </span>
+                            ) : (
+                              <span className="bg-red-50 text-red-500 text-[10px] font-black px-2 py-0.5 rounded-md uppercase">
+                                Sin Asignaciones
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-3 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity w-full md:w-auto justify-end">
                         <button
                           onClick={() => setItemEditando(n)}
                           className="p-2 text-sky-600 bg-sky-50 rounded-lg hover:bg-sky-100"
@@ -428,20 +584,29 @@ const VistaAdministracion = () => {
                   farmacias.map((f) => (
                     <div
                       key={f.id}
-                      className="p-4 flex justify-between items-center hover:bg-gray-50 group"
+                      className="p-4 flex justify-between items-start md:items-center hover:bg-gray-50 group flex-col md:flex-row gap-4"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="bg-emerald-100 text-emerald-600 p-2 rounded-lg">
+                        <div className="bg-emerald-100 text-emerald-600 p-3 rounded-xl shrink-0">
                           <Store size={24} />
                         </div>
                         <div>
-                          <p className="font-bold text-gray-800">{f.nombre}</p>
-                          <p className="text-xs text-gray-500">
+                          <p className="font-bold text-gray-800 flex items-center gap-2">
+                            {f.nombre}
+                            <span
+                              className={`text-[9px] px-2 py-0.5 rounded uppercase font-black ${f.esProvinciaLocal ? "bg-sky-100 text-sky-700" : "bg-purple-100 text-purple-700"}`}
+                            >
+                              {f.esProvinciaLocal
+                                ? "Almería (PVF)"
+                                : "Externa (PVP)"}
+                            </span>
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
                             {f.direccion} • CIF: {f.cif}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-3 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity w-full md:w-auto justify-end">
                         <button
                           onClick={() => setItemEditando(f)}
                           className="p-2 text-sky-600 bg-sky-50 rounded-lg hover:bg-sky-100"
@@ -471,10 +636,10 @@ const VistaAdministracion = () => {
                   productos.map((p) => (
                     <div
                       key={p.id}
-                      className="p-4 flex justify-between items-center hover:bg-gray-50 group"
+                      className="p-4 flex justify-between items-start md:items-center hover:bg-gray-50 group flex-col md:flex-row gap-4"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="bg-sky-100 text-sky-600 p-2 rounded-lg">
+                        <div className="bg-sky-100 text-sky-600 p-3 rounded-xl shrink-0">
                           <PackagePlus size={24} />
                         </div>
                         <div>
@@ -484,12 +649,12 @@ const VistaAdministracion = () => {
                               {p.referencia}
                             </span>
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-gray-500 mt-1">
                             PVF: {p.pvf}€ • PVP: {p.pvp}€
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-3 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity w-full md:w-auto justify-end">
                         <button
                           onClick={() => setItemEditando(p)}
                           className="p-2 text-sky-600 bg-sky-50 rounded-lg hover:bg-sky-100"
@@ -511,8 +676,8 @@ const VistaAdministracion = () => {
           </div>
         </div>
 
-        {/* COLUMNA DERECHA: EL FORMULARIO ORIGINAL (Adaptado a productos) */}
-        <div className="bg-gray-900 rounded-3xl p-6 text-white shadow-xl h-fit sticky top-6">
+        {/* COLUMNA DERECHA: FORMULARIO CREACIÓN */}
+        <div className="bg-gray-900 rounded-3xl p-6 text-white shadow-xl h-fit xl:sticky xl:top-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="bg-indigo-500 p-2 rounded-xl">
               <Plus size={20} className="text-white" />
@@ -521,7 +686,6 @@ const VistaAdministracion = () => {
           </div>
 
           <form onSubmit={handleCrear} className="space-y-4">
-            {/* Si NO son productos, pedimos las credenciales de Usuario */}
             {pestana !== "productos" && (
               <div className="space-y-3">
                 <h4 className="text-xs font-bold text-gray-400 uppercase border-b border-gray-700 pb-2">
@@ -567,7 +731,6 @@ const VistaAdministracion = () => {
                   : "2. Perfil Laboral"}
               </h4>
 
-              {/* CAMPOS COMUNES NUTRI/FARMACIA */}
               {pestana !== "productos" && (
                 <div className="relative">
                   <User
@@ -633,6 +796,75 @@ const VistaAdministracion = () => {
                       className="w-full bg-gray-800 border-none rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
                     />
                   </div>
+
+                  <div className="space-y-3 mt-4">
+                    <h4 className="text-xs font-bold text-sky-400 uppercase border-b border-gray-700 pb-2">
+                      3. Asignación y Distancia
+                    </h4>
+                    <div className="max-h-56 overflow-y-auto space-y-2 p-2 bg-gray-800/50 rounded-xl custom-scrollbar border border-gray-700">
+                      {farmacias.map((farmacia) => {
+                        const asignacionInfo = formData.asignaciones.find(
+                          (a) => a.farmaciaId === farmacia.id,
+                        );
+                        const isChecked = !!asignacionInfo;
+
+                        return (
+                          <div
+                            key={farmacia.id}
+                            className={`flex flex-col p-2 rounded-lg transition-colors ${isChecked ? "bg-gray-700 border border-gray-600" : "bg-transparent border border-transparent"}`}
+                          >
+                            <label className="flex items-center gap-3 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) =>
+                                  handleToggleFarmacia(
+                                    farmacia.id,
+                                    e.target.checked,
+                                    false,
+                                  )
+                                }
+                                className="w-4 h-4 rounded text-sky-500 bg-gray-900 border-gray-600 focus:ring-sky-500"
+                              />
+                              <span className="text-sm font-medium text-gray-200">
+                                {farmacia.nombre}
+                              </span>
+                            </label>
+
+                            {/* Input condicional de Kilómetros */}
+                            {isChecked && (
+                              <div className="mt-2 pl-7 flex items-center gap-2 animate-fade-in">
+                                <Car size={14} className="text-gray-400" />
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={asignacionInfo.kilometros}
+                                  onChange={(e) =>
+                                    handleCambiarKilometros(
+                                      farmacia.id,
+                                      e.target.value,
+                                      false,
+                                    )
+                                  }
+                                  className="w-16 p-1 text-sm bg-gray-900 text-white border border-gray-600 rounded-md focus:ring-sky-500 outline-none text-center"
+                                  placeholder="Km"
+                                  required
+                                />
+                                <span className="text-xs text-gray-400 font-bold">
+                                  Km totales (Ida/Vuelta)
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {farmacias.length === 0 && (
+                        <p className="text-xs text-gray-500 text-center py-2">
+                          No hay farmacias
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </>
               )}
 
@@ -662,10 +894,30 @@ const VistaAdministracion = () => {
                     placeholder="Dirección completa"
                     className="w-full bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
                   />
+
+                  <div className="pt-4">
+                    <label className="flex items-center gap-3 p-4 bg-sky-900/30 border border-sky-500/30 rounded-xl cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.esProvinciaLocal}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            esProvinciaLocal: e.target.checked,
+                          })
+                        }
+                        className="w-5 h-5 rounded text-sky-500"
+                      />
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-sky-100 flex items-center gap-2">
+                          <MapPin size={14} /> Almería (PVF)
+                        </span>
+                      </div>
+                    </label>
+                  </div>
                 </>
               )}
 
-              {/* CAMPOS DE PRODUCTO */}
               {pestana === "productos" && (
                 <>
                   <input
@@ -675,7 +927,7 @@ const VistaAdministracion = () => {
                     onChange={handleChange}
                     required
                     placeholder="Nombre (Ej: Batido Vainilla)"
-                    className="w-full bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white outline-none"
                   />
                   <div className="flex gap-2">
                     <input
@@ -685,13 +937,13 @@ const VistaAdministracion = () => {
                       onChange={handleChange}
                       required
                       placeholder="Acrónimo"
-                      className="w-1/2 bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                      className="w-1/2 bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white outline-none"
                     />
                     <select
                       name="categoria"
                       value={formData.categoria}
                       onChange={handleChange}
-                      className="w-1/2 bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                      className="w-1/2 bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white outline-none"
                     >
                       <option value="PEQUENO">PEQUEÑO</option>
                       <option value="GRANDE">GRANDE</option>
@@ -703,8 +955,8 @@ const VistaAdministracion = () => {
                     value={formData.referencia}
                     onChange={handleChange}
                     required
-                    placeholder="Referencia / SKU (Única)"
-                    className="w-full bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                    placeholder="Referencia / SKU"
+                    className="w-full bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white outline-none"
                   />
                   <div className="flex gap-2">
                     <input
@@ -715,7 +967,7 @@ const VistaAdministracion = () => {
                       onChange={handleChange}
                       required
                       placeholder="PVF (€)"
-                      className="w-1/2 bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                      className="w-1/2 bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white outline-none"
                     />
                     <input
                       type="number"
@@ -725,7 +977,7 @@ const VistaAdministracion = () => {
                       onChange={handleChange}
                       required
                       placeholder="PVP (€)"
-                      className="w-1/2 bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                      className="w-1/2 bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white outline-none"
                     />
                   </div>
                 </>
@@ -735,7 +987,7 @@ const VistaAdministracion = () => {
             <button
               type="submit"
               disabled={enviando}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl mt-4 transition-colors flex justify-center items-center shadow-lg shadow-indigo-500/30"
+              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl mt-4 flex justify-center items-center shadow-lg"
             >
               {enviando ? (
                 <Loader2 className="animate-spin" size={20} />

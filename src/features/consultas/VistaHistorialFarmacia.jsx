@@ -10,7 +10,7 @@ import {
   Filter,
   Loader2,
 } from "lucide-react";
-import { consultasService } from "../../services/consultasService";
+import { consultasService } from "./consultasService";
 
 const VistaHistorialFarmacia = () => {
   const [consultas, setConsultas] = useState([]);

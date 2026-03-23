@@ -8,7 +8,7 @@ import {
   Filter,
   Search,
 } from "lucide-react";
-import { suministrosService } from "../../services/suministrosService";
+import { suministrosService } from "../../features/suministros/suministrosService";
 
 const VistaAdminSuministros = () => {
   const [peticiones, setPeticiones] = useState([]);

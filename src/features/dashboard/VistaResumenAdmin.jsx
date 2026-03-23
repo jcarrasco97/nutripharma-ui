@@ -19,7 +19,7 @@ import {
   Package,
   Stethoscope,
 } from "lucide-react";
-import { dashboardService } from "../../services/dashboardService";
+import { dashboardService } from "./dashboardService";
 
 const VistaResumenAdmin = () => {
   const fechaActual = new Date();

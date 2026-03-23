@@ -1,206 +1,118 @@
 # 📋 Especificación de Requisitos de Negocio (PRD) - NutriPharma MVP
 
-**Versión:** 1.1 (Actualizado con lógica de Turnos, Bonus y Vistas Específicas)
-**Módulo:** Portal de Nutricionistas y Farmacias
-
-## 1. MATRIZ DE ROLES Y ACCESOS (Frontend Menu)
-
-El sistema presenta un menú lateral dinámico condicionado por el rol del usuario autenticado (JWT).
-
-| Apartado                      |       Rol: Nutricionista        |        Rol: Farmacia        |
-| :---------------------------- | :-----------------------------: | :-------------------------: |
-| **1. Resumen**                | ✅ Acceso (Vista Nutricionista) | ✅ Acceso (Vista Farmacia)  |
-| **2. Pedidos y Liquidación**  |   ✅ Acceso (Multi-farmacia)    | ✅ Acceso (Farmacia Propia) |
-| **3. Turnos y Consultas**     |         ✅ Acceso Total         |        ❌ Bloqueado         |
-| **4. Suministros/Materiales** |         ✅ Acceso Total         |        ❌ Bloqueado         |
-| **5. Documentación**          |         ✅ Acceso Total         |       ✅ Acceso Total       |
+**Versión:** 2.0 (Consolidada: Arquitectura N:M, Gatekeeper, RBAC y Reglas Geográficas)
+**Objetivo:** Servir de fuente de verdad absoluta para el desarrollo, justificando el porqué de las decisiones técnicas y de negocio (alineado con BITACORA.md).
 
 ---
 
-## 2. DESGLOSE DE FUNCIONALIDADES (Features)
+## 1. ARQUITECTURA DE ENTIDADES Y ACCESOS
 
-### 2.1. Módulo: Resumen (Dashboard Operativo)
+### 1.1. Relación Base del Negocio 🆕 [NUEVO 23/03/2026]
 
-**Vista Exclusiva Nutricionista:**
+El sistema abandona la relación 1:N simple para adoptar una arquitectura Bidireccional (N:M) entre Nutricionistas y Farmacias. La relación N:M incluye atributos propios, como la distancia en Kilómetros entre la residencia del empleado y el local comercial.
 
-- **Filtro Temporal:** Selector de Mes/Año.
-- **Control Horario (Bolsa de Horas):** \* Se calcula sumando las horas exactas registradas en los turnos de trabajo confirmados.
-  - Comparativa contra "Horas por Contrato". Genera saldo a favor (positivo) o en contra (negativo).
-- **Objetivos y Bonus:**
-  - Algoritmo de cálculo basado en 3 variables: Volumen de ventas en pedidos (cantidad x precio), Horas de contrato y Cantidad de consultas realizadas.
-- **Kilometraje:** Compensación económica por desplazamientos.
-- **Resumen Anual:** Tabla histórica con el total de consultas y horas trabajadas por año.
+- **Asignación Manual:** El Administrador asigna explícitamente en qué Farmacia(s) opera cada Nutricionista.
+- **Aislamiento de Datos:** Un Nutricionista solo puede interactuar (pedidos, consultas) con las farmacias que tenga en su perfil.
+- **Caso de Uso Contemplado:** Aunque es raro, una misma farmacia puede tener asociadas a dos o más nutricionistas simultáneamente, lo que impacta en el motor de comisiones (ver sección 4.3).
 
-**Vista Exclusiva Farmacia:**
+### 1.2. Matriz de Roles y Vistas (RBAC)
 
-- **Gráfica de Compras:** Evolución visual mensual del volumen de productos comprados.
-- **Estado de Liquidación:** Indicador claro del dinero que debe liquidar actualmente la farmacia al administrador.
+El menú y los componentes de React mutan dinámicamente según el JWT del usuario.
 
-### 2.2. Módulo: Pedidos y Liquidaciones
+| Módulo / Funcionalidad    |             Rol: ADMIN             |      Rol: NUTRICIONISTA      |         Rol: FARMACIA          |
+| :------------------------ | :--------------------------------: | :--------------------------: | :----------------------------: |
+| **Dashboard (Resumen)**   | ✅ Gráficas Generales y Calendario | ✅ KPIs, Bonus y Bolsa Horas |   ✅ Saldo Virtual y Compras   |
+| **Consultas (Registro)**  |  ❌ (Solo lectura en Gatekeeper)   |    ✅ Registro y Edición     |          ❌ Bloqueado          |
+| **Consultas (Historial)** |       ✅ Acceso Total Global       |     ✅ Historial Propio      | ✅ Historial Local (Auditoría) |
+| **Pedidos (Catálogo)**    |   ✅ Proxy (En nombre de otros)    | ✅ Selecciona Farmacia (N:M) |     ✅ Automático (Propia)     |
+| **Suministros**           |     ✅ Aprobación (Gatekeeper)     |         ✅ Solicitud         |          ❌ Bloqueado          |
+| **Documentación**         |    ✅ Subida y Borrado (Drive)     |    ✅ Lectura / Descarga     |     ✅ Lectura / Descarga      |
+| **Admin Maestro (CRUD)**  |          ✅ Gestión Total          |         ❌ Bloqueado         |          ❌ Bloqueado          |
 
-**A. Formulario de Pedidos:**
+---
 
-- **Asignación de Autoría:** Si un Nutricionista hace el pedido, queda registrado como el "Vendedor" para su cálculo de bonus.
-- **Destino (Farmacia):** \* _Nutricionista:_ Ve un desplegable para elegir a qué farmacia va el pedido.
-  - _Farmacia:_ El sistema autoselecciona su propia entidad (sin desplegable).
-- **Fecha Real de Pedido:** Selector manual de fecha para trazabilidad del Administrador.
-- **Líneas de Producto:** Producto, Unidades compradas, Unidades bonificadas (gratis) y Precio aplicado.
+## 2. MÓDULOS OPERATIVOS (Features)
 
-**B. Subapartado: Liquidación:**
+### 2.1. Módulo: Administración y Gatekeeper (Control de Flujo)
 
-- Solo se contabilizan las unidades reales pagadas.
-- **Regla de Bloqueo (Umbral Mínimo):** No se permite la liquidación si el valor del pedido es `< 80€`. Este valor base residirá en configuración de Base de Datos para ser modificable por el Admin.
+- **El "Gatekeeper" (Centro de Validaciones):** Bandeja de entrada centralizada. Los pedidos y consultas no afectan a las finanzas ni a los objetivos hasta que el Admin los valida manualmente. Actúa como filtro antifraude y de calidad.
+- **Administración Maestro:** CRUD completo para gestionar Farmacias (Fiscal, Dirección), Nutricionistas (Contratos) y Productos (Catálogo, PVP, PVF). El borrado debe ser atómico y en cascada para no dejar datos huérfanos.
 
-### 2.3. Módulo: Turnos y Consultas (Solo Nutricionistas)
+### 2.2. Módulo: Turnos y Consultas (Motor de Datos Médicos)
 
-_Registro de jornada laboral y actividad clínica._
+- **Estructura Diaria:** Se permite registrar "Turno Mañana" y/o "Turno Tarde".
+- **KPIs Recolectados:** Nuevas, Revisiones, Promo (Gratis), Personal Farmacia (Gratis).
+- **Máquina de Estados:**
+  1. **Borrador:** Editable por el creador.
+  2. **Confirmada:** Bloqueada. Pasa al Gatekeeper del Admin.
+  3. **Con Incidencia:** El nutricionista reporta un error; solo el Admin puede desbloquear/corregir.
 
-- **Estructura Diaria:** El usuario puede registrar un "Turno de Mañana" y/o un "Turno de Tarde". No son excluyentes ni obligatorios ambos.
-- **Datos del Turno:**
-  - Farmacia donde se prestó el servicio.
-  - Rango Horario (Hora Inicio - Hora Fin), el cual delimita la jornada.
-- **Métricas Agrupadas por Turno (Numérico):**
-  - Pacientes Nuevos.
-  - Revisiones.
-  - Personal de Farmacia (Staff atendido).
-  - Promocionales / Captaciones.
-- **Flujo de Estados (Máquina de Estados):**
-  1. _Pendiente/Borrador:_ El nutricionista está rellenando los datos.
-  2. _Confirmado (Bloqueado):_ El nutricionista envía el turno. A partir de aquí, **no puede editarlo**.
-  3. _Incidencia Abierta:_ Si el nutricionista nota un error tras confirmar, pulsa "Abrir Incidencia". Esto notifica al Admin, quien es el único con poder para corregir los datos o desbloquear el turno.
+### 2.3. Módulo: Suministros y Material corporativo
 
-### 2.4. Módulo: Suministros y Materiales (Solo Nutricionistas)
+- Catálogo de consumibles (folletos, bolígrafos) con cantidades predefinidas por central.
+- **Máquina de Estados:** `SOLICITADO` ➔ `APROBADO` (Admin) ➔ `CANCELADO`.
+- **Regla Anti-Spam:** Si un ítem está "Solicitado", desaparece del catálogo del usuario hasta que el Admin resuelva la petición, evitando duplicidades.
 
-- Checklist predefinido en Base de Datos (ej. "Necesito Folletos", "Necesito Bolígrafos").
-- Cantidades estandarizadas por la empresa, el usuario solo marca el _check_ de necesidad.
-- Registro histórico para auditoría administrativa (evitar abusos).
+---
 
-### 2.5. Módulo: Documentación
+## 3. MÓDULO COMERCIAL Y PEDIDOS B2B
 
-- Repositorio de lectura y descarga de PDFs/Manuales para Nutricionistas y Farmacias.
-- Gestión de subida/borrado exclusiva para el Administrador.
+### 3.1. Delegación Administrativa (Pedidos Proxy) 🆕 [NUEVO 23/03/2026]
 
-## APÉNDICE A: Modelo Financiero y Normativa Legal (Andalucía)
+- El Administrador puede suplantar la acción de compra realizando pedidos telefónicos en nombre de una Farmacia.
+- **Trazabilidad:** La Base de Datos registra la autoría real (`creadoPorAdmin: true/false`). Las comisiones generadas por este pedido proxy van igualmente destinadas a las nutricionistas de esa farmacia.
 
-### A.1. Contexto Legal (Servicios Externos)
+### 3.2. Política de Precios Geográfica 🆕 [NUEVO 23/03/2026]
 
-Debido a la normativa vigente en Andalucía, las farmacias no pueden ofrecer servicios de nutrición directa y facturarlos como propios. Por tanto, NutriPharma actúa como una **empresa de servicios externos**. Las nutricionistas son empleadas de NutriPharma que se desplazan a la farmacia (que actúa únicamente como espacio físico cedido).
+- **PVF vs PVP:** Los productos tienen dos tarifas. El sistema decide cuál aplicar en el carrito en tiempo real basándose en la ubicación de la Farmacia.
+- **Regla:** Farmacias ubicadas en "Almería" ➔ Aplica **P.V.F.**. Farmacias fuera de Almería ➔ Aplica **P.V.P.**
 
-### A.2. Tarifario de Consultas
+### 3.3. La "Doble Cesta" y Regla de los 80€ (Legalidad Andaluza)
 
-Cada vez que una nutricionista registra un turno (cierra una consulta), el sistema debe calcular el dinero generado basándose en el siguiente tarifario fijo a cobrar al paciente:
+Por normativa, NutriPharma (Servicio Externo) no puede transferir comisiones en efectivo a la Farmacia, sino en especie (Saldo Virtual).
 
-- **Consulta Nueva:** 25,00 €
-- **Revisión:** 20,00 €
-- **Promocional:** 0,00 € (Gratuita)
-- **Personal de Farmacia:** 0,00 € (Gratuita)
+1. **Cesta Principal (Pago Real):** Productos pagados en euros. Solo estos computan para el bonus de la nutricionista.
+2. **Desbloqueo (Umbral Mínimo):** Si la Cesta Principal es `< 80€`, el sistema bloquea el uso del monedero. Al superar los 80€, se habilita la segunda cesta.
+3. **Cesta de Liquidación (Pago con Saldo):** Productos adquiridos gratis descontando su valor del "Saldo Virtual" de la farmacia. Estos no suman bonus a la nutricionista.
 
-### A.3. Reparto de Beneficios (Modelo 70/30)
+### 3.4. Regla Comercial de Unidades Bonificadas
 
-El dinero generado en la farmacia durante el turno se divide por contrato:
+Algoritmo automático en la Cesta Principal para proteger márgenes (sobrescribible por el Admin):
 
-- **70% para NutriPharma:** Beneficio directo de la empresa por el servicio prestado.
-- **30% para la Farmacia:** Comisión por la cesión del espacio físico y la captación del cliente.
+- 100 uds ➔ 20 gratis | 20 uds ➔ 5 gratis | 10 uds ➔ 2 gratis | 6 uds ➔ 1 gratis.
 
-### A.4. El "Monedero Virtual" de la Farmacia (Liquidación Legal)
+---
 
-Por restricciones legales, NutriPharma **no puede ingresar directamente el 30%** en efectivo o transferencia a la cuenta de la farmacia.
+## 4. MODELO FINANCIERO Y COMISIONES (Repartos y Nóminas)
 
-- **Regla de Negocio:** Ese 30% se acumula en el sistema como un **"Saldo Virtual"** a favor de la farmacia.
-- **Uso del Saldo:** La farmacia solo puede canjear este saldo virtual obteniendo productos físicos gratuitos de NutriPharma.
-- **Condición de Desbloqueo (Regla de los 80€):** Para que una farmacia pueda aplicar su "Saldo Virtual" y llevarse productos gratis, está obligada a realizar un **pedido mínimo al por mayor de 80,00 €** (dinero real que pagan a NutriPharma). Si el pedido supera los 80€, pueden añadir productos extra y pagarlos con su saldo virtual.
-- _Beneficio final de la Farmacia:_ Vender esos productos conseguidos "gratis" a sus pacientes a Precio de Venta al Público (PVP), obteniendo así su comisión de forma legal (en especie).
+### 4.1. Generación Económica en Consultas
 
-### A.5. Sistema de Incentivos de Nutricionistas (Complementos Salariales)
+El servicio médico a pacientes genera dinero directo a repartir:
 
-El salario de las nutricionistas no es únicamente fijo. Su panel de "Resumen" debe reflejar dos métricas que afectan a su nómina a final de mes:
+- **Tarifario:** Consulta Nueva (25€), Revisión (20€).
+- **Modelo 70/30:** 70% íntegro para NutriPharma. 30% se transforma en Saldo Virtual para la Farmacia por cesión de espacio.
 
-1.  **Bolsa de Horas:** Comparativa de horas reales trabajadas en los turnos vs. las horas estipuladas en su contrato.
-2.  **Comisiones por Ventas:** Un porcentaje (bonus) asignado a la nutricionista en función del volumen en euros de los pedidos al por mayor que la farmacia donde ella trabaja realiza a NutriPharma. _(Fórmula exacta y porcentajes a definir en siguientes fases)._
+### 4.2. Sistema de Incentivos de Nutricionistas (Bonus)
 
-### A.7. Reglas de Bonificación de Productos (Cesta Principal)
+El salario se complementa mediante cálculos basados en una jornada estándar de 40h (se aplica un multiplicador según horas reales de contrato).
 
-Los productos "bonificados" (unidades gratuitas entregadas a la farmacia) no se eligen manualmente por el personal en su panel, sino que responden a una regla estricta de escalado por volumen de compra en la cesta principal:
+- **Facturación Computable:** (Consultas Nuevas + Revisiones) + Ventas B2B de Cesta Principal.
+- **Tramos de Bonus (Base 40h):**
+  - **OB1:** Meta 5.000€ (Mín. Prod 800€) ➔ Bono 200€
+  - **OB2:** Meta 6.800€ (Mín. Prod 1.000€) ➔ Bono 400€ + 5% del exceso.
+  - **OB3:** Meta 8.700€ (Mín. Prod 1.200€) ➔ Bono 600€ + 10% del exceso.
 
-- **Escala de tramos:**
-  - Por cada **6** unidades compradas ➔ **1** bonificado.
-  - Por cada **10** unidades compradas ➔ **2** bonificados.
-  - Por cada **20** unidades compradas ➔ **5** bonificados.
-  - Por cada **100** unidades compradas ➔ **20** bonificados.
-- **Excepción (Acuerdos Comerciales):** El rol `ADMIN` tendrá, en su panel exclusivo, la capacidad de sobrescribir esta regla y asignar cantidades bonificadas manuales para cerrar acuerdos telefónicos o personales con las farmacias.
+### 4.3. Motor de Comisiones por Ventas B2B 🆕 [NUEVO 23/03/2026]
 
-### A.8. Historial de Pedidos y Trazabilidad
+Cuando una Farmacia (o el Admin como Proxy) compra productos (Cesta Principal), se genera una comisión para el Nutricionista.
 
-El historial de pedidos debe ofrecer herramientas de trazabilidad para el usuario:
+- **Escenario Normal (1 Nutricionista):** El 100% de la comisión asignada a esa farmacia se imputa automáticamente al nutricionista vinculado.
+- **Escenario Complejo (2+ Nutricionistas en la misma Farmacia):** El sistema intercepta el pedido (sea hecho por la Farmacia o por el Admin) y obliga mediante un Modal a establecer manualmente el porcentaje de reparto (Ej. 50-50, 70-30) entre los profesionales asociados a ese local para ese pedido en concreto.
 
-- **Ordenación por defecto:** Siempre debe mostrar los pedidos más recientes primero (orden cronológico inverso), no por orden de inserción en la base de datos.
-- **Filtros requeridos:**
-  1. **Por Mes:** Selector para filtrar los pedidos de un mes específico.
-  2. **Por Criterio:** Una vez filtrado el mes, debe permitir ordenar por precio (Ascendente / Descendente) y por fecha (Más recientes / Más antiguos).
+### 4.4. Compensación por Desplazamiento (Kilometraje) 🆕 [NUEVO]
 
-### A.9. Sistema de Incentivos de Nutricionistas (Pendiente)
+El sistema debe llevar un registro automático del desgaste por desplazamiento para su posterior compensación económica extra-plataforma.
 
-### A.9. Sistema de Incentivos de Nutricionistas (Modelo Proporcional)
-
-El cálculo de nóminas y comisiones se rige por una tabla base de 40 horas semanales. El sistema multiplicará estos valores por el factor de jornada de la nutricionista (ej. 32h = factor 0.8).
-
-- **Facturación Computable:** Se suma el importe de las Consultas Nuevas (25€), Revisiones (20€) y Pedidos B2B (Solo Cesta Principal; los productos pagados con Monedero Virtual no computan).
-- **Tramos Base (40h):**
-  - **OB1:** Meta 5.000€ (Mín. Prod 800€) ➔ Bono Fijo 200€
-  - **OB2:** Meta 6.800€ (Mín. Prod 1.000€) ➔ Bono Fijo 400€ + 5% del exceso.
-  - **OB3:** Meta 8.700€ (Mín. Prod 1.200€) ➔ Bono Fijo 600€ + 10% del exceso.
-
-### 2.4. Módulo: Suministros y Materiales (Solo Nutricionistas)
-
-Gestión y solicitud de material corporativo y de trabajo necesario para las consultas.
-
-- **Catálogo Estandarizado:** Los materiales (ej. Folletos, Bolígrafos, Cintas métricas) y sus cantidades a enviar están estandarizados por la empresa en la base de datos. La nutricionista no elige cantidad, simplemente añade a su cesta _qué_ necesita.
-- **Máquina de Estados de Peticiones:** Las solicitudes pasan por los siguientes estados:
-  1. `SOLICITADO`: La petición se ha enviado a central y está pendiente de revisión.
-  2. `APROBADO`: Central ha dado el visto bueno y el material está en preparación/envío.
-  3. `CANCELADO`: La petición ha sido denegada (ej. solicitud abusiva o falta de stock temporal).
-- **Regla Antispam (Bloqueo Activo):** \* Si un material se encuentra actualmente en una petición con estado `SOLICITADO` por una nutricionista, el sistema bloquea y oculta/deshabilita ese material en su catálogo para evitar solicitudes duplicadas del mismo ítem.
-  - Una vez la petición pasa a `APROBADO` o `CANCELADO`, el material vuelve a liberarse en el catálogo para futuras necesidades.
-- **Privacidad:** El historial de peticiones es estrictamente individual por nutricionista.
-
-## 6. Evolución del Rol Administrador y Panel de Control
-
-### 6.1. Dualidad de Rol (Super-Admin)
-
-- Se implementará una lógica de "Cambio de Modo" para usuarios con doble rol (Admin + Nutricionista).
-- El usuario podrá alternar entre la interfaz operativa (Consultas/Suministros) y la interfaz gerencial (Administración) para evitar la saturación de información en pantalla.
-
-### 6.2. Vista: Resumen Gerencial (Dashboard Admin)
-
-- **Analítica de Facturación:** Gráfico dinámico de facturación global por productos.
-  - Filtros por Año y Mes.
-  - Desglose de ingresos mensuales.
-- **Calendario Operativo:** Interfaz visual estilo calendario (iOS/Windows) que centralice:
-  - Fechas de consultas programadas/realizadas.
-  - Fechas de pedidos realizados.
-  - **Interactividad:** Sistema de pop-ups (modales) al hacer clic en un evento para visualizar el detalle completo de la consulta o el pedido sin salir de la vista.
-
-### 6.3. Vista: Centro de Validaciones (Control de Flujo)
-
-Punto único de aprobación manual para garantizar la veracidad de los datos antes de afectar al saldo:
-
-- **Pedidos:** Cambio de estado de "Pendiente de Envío" a "Enviado" tras comprobación logística.
-- **Consultas:** Validación de jornadas realizadas. La validación del Admin es el desencadenante (trigger) para:
-  - El ingreso efectivo de comisiones en el saldo virtual de la farmacia.
-  - El cómputo de la jornada para los objetivos del nutricionista.
-- **Suministros:** Aprobación y gestión de envío de peticiones de materiales corporativos.
-
-### 6.4. Vista: Administración Maestro (CRUD)
-
-- Gestión integral (Alta, Baja, Modificación y Listado optimizado) de las entidades principales:
-  - **Farmacias:** Datos fiscales, direcciones y saldos.
-  - **Nutricionistas:** Datos personales, contratos y asignaciones.
-  - **Productos:** Gestión de catálogo, PVP y PVF.
-
-### 6.5. Gestión Documental
-
-- Acceso exclusivo del Admin para la subida masiva o individual de documentación técnica, legal o comercial hacia la nube corporativa (Google Drive).
-
-### 6.6. Política de UX para Admin
-
-- Se priorizará la segregación de funciones en sub-vistas para mantener una interfaz limpia y escalable, evitando dashboards sobrecargados.
+- **Atributo Relacional:** La distancia (en kilómetros) se define de forma única para cada par `[Nutricionista ↔ Farmacia]`. El Administrador debe especificar este valor numérico en el momento de asignar una farmacia al perfil de la nutricionista.
+- **Cálculo de Acumulación Mensual:** Cada vez que una nutricionista registra un turno (consulta) con estado `CONFIRMADA` en una farmacia, el sistema computa un "Viaje" (Ida y Vuelta).
+- **Visibilidad:** El "Resumen Operativo" de la Nutricionista debe mostrar el Total de Kilómetros Acumulados en el mes en curso, calculado como: `Σ (Consultas Confirmadas en Farmacia X * Distancia a Farmacia X)`. La aplicación no calcula euros por gasolina, solo acumula la métrica de distancia bruta.

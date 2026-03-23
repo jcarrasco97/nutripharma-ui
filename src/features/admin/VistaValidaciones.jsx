@@ -12,10 +12,13 @@ import {
   Eye,
   Wallet,
   Banknote,
+  PieChart,
+  Scale,
 } from "lucide-react";
-import { consultasService } from "../../services/consultasService";
-import { pedidosService } from "../../services/pedidosService";
-import { suministrosService } from "../../services/suministrosService";
+import { consultasService } from "../consultas/consultasService";
+import { pedidosService } from "../pedidos/pedidosService";
+import { suministrosService } from "../suministros/suministrosService";
+import { nutricionistasService } from "../admin/nutricionistasService";
 
 const VistaValidaciones = () => {
   const [pestañaActual, setPestañaActual] = useState("consultas");
@@ -26,6 +29,13 @@ const VistaValidaciones = () => {
   const [busqueda, setBusqueda] = useState("");
 
   const [detalleSeleccionado, setDetalleSeleccionado] = useState(null);
+  const [listaNutrisGlobal, setListaNutrisGlobal] = useState([]); // <-- Para cruzar datos de comisiones
+
+  // --- ESTADO DEL MODAL MULTICAPA ---
+  const [mostrarModalReparto, setMostrarModalReparto] = useState(false);
+  const [repartosActuales, setRepartosActuales] = useState([]);
+  const [pedidoEnProceso, setPedidoEnProceso] = useState(null);
+  const [enviando, setEnviando] = useState(false);
 
   const cargarDatos = async () => {
     setCargando(true);
@@ -40,9 +50,13 @@ const VistaValidaciones = () => {
           ),
         );
       } else if (pestañaActual === "pedidos") {
-        const todos = await pedidosService.obtenerTodos();
+        const [todos, nutris] = await Promise.all([
+          pedidosService.obtenerTodos(),
+          nutricionistasService.listarTodas(), // El admin tiene permiso total
+        ]);
         setPendientes(todos.filter((p) => p.estado === "PENDIENTE_ENVIO"));
         setHistorial(todos.filter((p) => p.estado !== "PENDIENTE_ENVIO"));
+        setListaNutrisGlobal(nutris);
       } else if (pestañaActual === "suministros") {
         const todos = await suministrosService.listarPeticionesAdmin();
         setPendientes(todos.filter((s) => s.estado === "SOLICITADO"));
@@ -72,17 +86,89 @@ const VistaValidaciones = () => {
     }
   };
 
-  const handleEnviarPedido = async (id) => {
+  // =========================================================================
+  // LÓGICA DE INTERCEPCIÓN DEL PEDIDO (MULTICAPA PARA ADMIN)
+  // =========================================================================
+  const iniciarProcesoEnvio = (pedido) => {
+    setPedidoEnProceso(pedido);
+
+    // Buscamos cuántas chicas trabajan en la farmacia de este pedido
+    const nutrisDeEstaFarmacia = listaNutrisGlobal.filter((n) =>
+      n.asignaciones?.some((a) => a.farmaciaNombre === pedido.farmaciaNombre),
+    );
+
+    // Si hay 2 o más, interceptamos y abrimos el Modal.
+    if (nutrisDeEstaFarmacia.length > 1) {
+      const porcBase = Math.floor(100 / nutrisDeEstaFarmacia.length);
+      let resto = 100 - porcBase * nutrisDeEstaFarmacia.length;
+
+      const repartoEquitativo = nutrisDeEstaFarmacia.map((n, index) => ({
+        nutricionistaId: n.id,
+        nombre: n.nombre + " " + n.apellidos,
+        porcentaje: index === 0 ? porcBase + resto : porcBase,
+      }));
+
+      setRepartosActuales(repartoEquitativo);
+      setMostrarModalReparto(true);
+      return;
+    }
+
+    // Si hay 1 o ninguna, se envía directamente con confirmación normal
     if (!window.confirm("¿Marcar este pedido como Enviado por mensajería?"))
       return;
+
+    const repartoDirecto =
+      nutrisDeEstaFarmacia.length === 1
+        ? [{ nutricionistaId: nutrisDeEstaFarmacia[0].id, porcentaje: 100 }]
+        : [];
+
+    ejecutarEnvioBackend(pedido.id, repartoDirecto);
+  };
+
+  const handleCambioSlider = (nutriId, nuevoPorcentaje) => {
+    let valor = Math.round(Number(nuevoPorcentaje));
+    setRepartosActuales((prev) => {
+      const otros = prev.filter((r) => r.nutricionistaId !== nutriId);
+      if (otros.length === 1) {
+        return prev.map((r) =>
+          r.nutricionistaId === nutriId
+            ? { ...r, porcentaje: valor }
+            : { ...r, porcentaje: 100 - valor },
+        );
+      } else {
+        return prev.map((r) =>
+          r.nutricionistaId === nutriId ? { ...r, porcentaje: valor } : r,
+        );
+      }
+    });
+  };
+
+  const setRepartoEquitativo = () => {
+    const porcBase = Math.floor(100 / repartosActuales.length);
+    let resto = 100 - porcBase * repartosActuales.length;
+    setRepartosActuales((prev) =>
+      prev.map((n, index) => ({
+        ...n,
+        porcentaje: index === 0 ? porcBase + resto : porcBase,
+      })),
+    );
+  };
+
+  const ejecutarEnvioBackend = async (pedidoId, listaRepartosFinal) => {
+    setEnviando(true);
     try {
-      await pedidosService.marcarComoEnviadoAdmin(id);
+      await pedidosService.marcarComoEnviadoAdmin(pedidoId, listaRepartosFinal);
+      setMostrarModalReparto(false);
+      setPedidoEnProceso(null);
       cargarDatos();
     } catch (error) {
       console.error(error);
-      alert("Error al enviar");
+      alert("Error al enviar el pedido y asignar comisión");
+    } finally {
+      setEnviando(false);
     }
   };
+  // =========================================================================
 
   const handleEstadoSuministro = async (id, estado) => {
     if (!window.confirm(`¿Seguro que quieres ${estado} esta petición?`)) return;
@@ -95,7 +181,6 @@ const VistaValidaciones = () => {
     }
   };
 
-  // --- BLINDAJE MATEMÁTICO: Asignamos array vacío [] por defecto por si el backend falla ---
   const calcularTotalesPedido = (lineas = []) => {
     let totalReal = 0;
     let totalVirtual = 0;
@@ -141,8 +226,124 @@ const VistaValidaciones = () => {
     return true;
   });
 
+  const sumaReparto = repartosActuales.reduce(
+    (sum, r) => sum + r.porcentaje,
+    0,
+  );
+  const coloresGrafico = [
+    "bg-sky-500",
+    "bg-indigo-500",
+    "bg-emerald-500",
+    "bg-amber-500",
+    "bg-purple-500",
+  ];
+
   return (
-    <div className="space-y-8 animate-fade-in pb-10">
+    <div className="space-y-8 animate-fade-in pb-10 relative">
+      {/* MODAL REPARTO MULTICAPA (ADMIN) */}
+      {mostrarModalReparto && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-gray-900/80 backdrop-blur-sm">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-lg w-full overflow-hidden animate-scale-in">
+            <div className="bg-gray-900 p-8 text-white text-center relative">
+              <div className="bg-sky-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-sky-500/30">
+                <PieChart size={32} />
+              </div>
+              <h3 className="text-2xl font-black">Asignar Comisión</h3>
+              <p className="text-gray-400 mt-2 text-sm">
+                Esta farmacia tiene {repartosActuales.length} nutricionistas.
+                Reparte la comisión del pedido antes de enviarlo.
+              </p>
+            </div>
+
+            <div className="p-8 space-y-8">
+              <div className="w-full h-6 bg-gray-100 rounded-full flex overflow-hidden shadow-inner">
+                {repartosActuales.map((r, i) => (
+                  <div
+                    key={r.nutricionistaId}
+                    style={{ width: `${r.porcentaje}%` }}
+                    className={`h-full transition-all duration-300 ${coloresGrafico[i % coloresGrafico.length]}`}
+                  ></div>
+                ))}
+              </div>
+
+              <div className="space-y-6">
+                {repartosActuales.map((r, i) => (
+                  <div
+                    key={r.nutricionistaId}
+                    className="bg-gray-50 p-4 rounded-2xl border border-gray-100"
+                  >
+                    <div className="flex justify-between items-center mb-3">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-3 h-3 rounded-full ${coloresGrafico[i % coloresGrafico.length]}`}
+                        ></div>
+                        <span className="font-bold text-gray-800">
+                          {r.nombre}
+                        </span>
+                      </div>
+                      <span className="font-black text-xl text-gray-900">
+                        {r.porcentaje}%
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={r.porcentaje}
+                      onChange={(e) =>
+                        handleCambioSlider(r.nutricionistaId, e.target.value)
+                      }
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-sky-500"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-between items-center">
+                <button
+                  onClick={setRepartoEquitativo}
+                  className="text-sky-600 font-bold text-sm flex items-center gap-2 hover:text-sky-800 transition-colors"
+                >
+                  <Scale size={16} /> Repartir a partes iguales
+                </button>
+                <div
+                  className={`text-sm font-black px-3 py-1 rounded-lg ${sumaReparto === 100 ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700 animate-pulse"}`}
+                >
+                  Total: {sumaReparto}%
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 bg-gray-50 flex gap-4">
+              <button
+                onClick={() => {
+                  setMostrarModalReparto(false);
+                  setPedidoEnProceso(null);
+                }}
+                className="flex-1 py-4 bg-white border-2 border-gray-200 text-gray-600 font-black rounded-2xl hover:bg-gray-100 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() =>
+                  ejecutarEnvioBackend(pedidoEnProceso.id, repartosActuales)
+                }
+                disabled={sumaReparto !== 100 || enviando}
+                className="flex-1 py-4 bg-sky-600 text-white font-black rounded-2xl shadow-lg hover:bg-sky-700 transition-all disabled:bg-gray-300 disabled:shadow-none flex justify-center items-center gap-2"
+              >
+                {enviando ? (
+                  <Loader2 className="animate-spin" size={20} />
+                ) : (
+                  <>
+                    <Package size={18} /> Enviar Pedido
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {detalleSeleccionado && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden animate-scale-in">
@@ -301,6 +502,29 @@ const VistaValidaciones = () => {
                     </div>
                   </div>
 
+                  {/* NUEVO: Mostrar el reparto de comisiones si existe */}
+                  {detalleSeleccionado.repartos &&
+                    detalleSeleccionado.repartos.length > 0 && (
+                      <div className="mt-4 border border-gray-100 rounded-xl overflow-hidden">
+                        <p className="bg-gray-50 text-xs font-bold text-gray-500 uppercase p-3 border-b border-gray-100">
+                          Comisión Asignada
+                        </p>
+                        <div className="p-4 space-y-2">
+                          {detalleSeleccionado.repartos.map((r, i) => (
+                            <div
+                              key={i}
+                              className="flex justify-between items-center text-sm font-bold text-gray-700"
+                            >
+                              <span>{r.nutricionistaNombre}</span>
+                              <span className="text-sky-600 bg-sky-50 px-2 py-1 rounded-md">
+                                {r.porcentaje}%
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                   <div className="bg-gray-900 rounded-2xl p-6 text-white mt-4 flex justify-between items-center">
                     <div>
                       <p className="text-xs text-gray-400 uppercase font-bold mb-1">
@@ -345,7 +569,6 @@ const VistaValidaciones = () => {
                       Materiales Enviados
                     </p>
                     <ul className="p-4 space-y-2 text-sm font-bold text-gray-700">
-                      {/* BLINDAJE CON ?.map */}
                       {detalleSeleccionado.materiales?.map((m, i) => (
                         <li
                           key={i}
@@ -564,8 +787,9 @@ const VistaValidaciones = () => {
                       </div>
                     </div>
 
+                    {/* BOTÓN CON NUEVA LÓGICA DE INTERCEPCIÓN */}
                     <button
-                      onClick={() => handleEnviarPedido(p.id)}
+                      onClick={() => iniciarProcesoEnvio(p)}
                       className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 rounded-xl flex justify-center items-center gap-2 mt-auto"
                     >
                       <Package size={18} /> Marcar como Enviado
@@ -597,7 +821,6 @@ const VistaValidaciones = () => {
                       Materiales Solicitados
                     </p>
                     <ul className="space-y-1 text-sm font-bold text-gray-700 max-h-24 overflow-y-auto custom-scrollbar">
-                      {/* BLINDAJE CON ?.map */}
                       {s.materiales?.map((m, i) => (
                         <li key={i} className="flex justify-between">
                           <span>{m.nombre}</span>

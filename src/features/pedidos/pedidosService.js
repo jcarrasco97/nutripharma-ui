@@ -38,12 +38,11 @@ export const pedidosService = {
     const response = await axios.get(API_URL, getConfig());
     return response.data;
   },
-  marcarComoEnviadoAdmin: async (id) => {
-    const response = await axios.put(
-      `${API_URL}/${id}/enviar`,
-      {},
-      getConfig(),
-    );
+  marcarComoEnviadoAdmin: async (id, repartos = []) => {
+    const token = localStorage.getItem("token");
+    const response = await axios.put(`${API_URL}/${id}/enviar`, repartos, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return response.data;
   },
 };
