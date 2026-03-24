@@ -33,7 +33,8 @@ FILE: farmaciaService.js
 
 import axios from "axios";
 
-const API_URL = "http://localhost:8080/api";
+// URL PLURAL
+const API_URL = "http://localhost:8080/api/farmacias";
 
 const getConfig = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -41,33 +42,27 @@ const getConfig = () => ({
 
 export const farmaciaService = {
   listarTodas: async () => {
-    const response = await axios.get(`${API_URL}/farmacias`, getConfig());
+    const response = await axios.get(API_URL, getConfig());
     return response.data;
   },
-
-  // Â¡AQUÃ ESTÃ LA FUNCIÃ“N QUE FALTABA!
   crear: async (farmaciaData) => {
-    const response = await axios.post(
-      `${API_URL}/farmacias`,
-      farmaciaData,
-      getConfig(),
-    );
+    const response = await axios.post(API_URL, farmaciaData, getConfig());
     return response.data;
   },
   obtenerMiPerfil: async () => {
-    const response = await axios.get(
-      `${API_URL}/farmacias/perfil/me`,
-      getConfig(),
-    );
+    const response = await axios.get(`${API_URL}/perfil/me`, getConfig());
     return response.data;
   },
-  // AÃ±ade esto:
   actualizar: async (id, data) => {
     const response = await axios.put(`${API_URL}/${id}`, data, getConfig());
     return response.data;
   },
   eliminar: async (id) => {
     const response = await axios.delete(`${API_URL}/${id}`, getConfig());
+    return response.data;
+  },
+  listarBajas: async () => {
+    const response = await axios.get(`${API_URL}/bajas`, getConfig());
     return response.data;
   },
 };
@@ -78,7 +73,9 @@ FILE: nutricionistasService.js
 
 import axios from "axios";
 
+// URL PLURAL
 const API_URL = "http://localhost:8080/api/nutricionistas";
+
 const getConfig = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
 });
@@ -89,27 +86,59 @@ export const nutricionistasService = {
     return response.data;
   },
   crear: async (datos) => {
-    // Los datos que le pasamos deben coincidir EXACTAMENTE con tu NutricionistaRequest de Java
     const response = await axios.post(API_URL, datos, getConfig());
     return response.data;
   },
   obtenerMiPerfil: async () => {
-    // FÃ­jate que ahora dice /perfil/me
-    const response = await axios.get(
-      "http://localhost:8080/api/nutricionistas/perfil/me",
-      {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      },
-    );
+    const response = await axios.get(`${API_URL}/perfil/me`, getConfig());
     return response.data;
   },
-  // AÃ±ade esto:
   actualizar: async (id, data) => {
     const response = await axios.put(`${API_URL}/${id}`, data, getConfig());
     return response.data;
   },
   eliminar: async (id) => {
     const response = await axios.delete(`${API_URL}/${id}`, getConfig());
+    return response.data;
+  },
+  listarBajas: async () => {
+    const response = await axios.get(`${API_URL}/bajas`, getConfig());
+    return response.data;
+  },
+};
+
+========================================
+FILE: personalInternoService.js
+========================================
+
+import axios from "axios";
+
+const API_URL = "http://localhost:8080/api/personal-interno";
+
+const authHeader = () => {
+  const token = localStorage.getItem("token");
+  return { Authorization: `Bearer ${token}` };
+};
+
+export const personalInternoService = {
+  crearAdmin: async (datos) => {
+    const response = await axios.post(`${API_URL}/admin`, datos, {
+      headers: authHeader(),
+    });
+    return response.data;
+  },
+
+  listarAdmins: async () => {
+    const response = await axios.get(`${API_URL}/admin`, {
+      headers: authHeader(),
+    });
+    return response.data;
+  },
+
+  eliminarAdmin: async (id) => {
+    const response = await axios.delete(`${API_URL}/admin/${id}`, {
+      headers: authHeader(),
+    });
     return response.data;
   },
 };
@@ -135,6 +164,9 @@ import {
   Trash2,
   X,
   Save,
+  MapPin,
+  Car,
+  Archive,
 } from "lucide-react";
 import { farmaciaService } from "./farmaciaService";
 import { nutricionistasService } from "./nutricionistasService";
@@ -145,13 +177,14 @@ const VistaAdministracion = () => {
   const [nutricionistas, setNutricionistas] = useState([]);
   const [farmacias, setFarmacias] = useState([]);
   const [productos, setProductos] = useState([]);
+  const [farmaciasBajas, setFarmaciasBajas] = useState([]);
+  const [nutricionistasBajas, setNutricionistasBajas] = useState([]);
+  const [mostrarBajas, setMostrarBajas] = useState(false); // Controla si vemos el cementerio
   const [cargando, setCargando] = useState(true);
   const [enviando, setEnviando] = useState(false);
 
-  // --- ESTADO DEL MODAL DE EDICIÃ“N ---
   const [itemEditando, setItemEditando] = useState(null);
 
-  // Formulario para altas
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -162,26 +195,33 @@ const VistaAdministracion = () => {
     cif: "",
     direccion: "",
     telefono: "",
-    // Campos de Producto
     nombreProducto: "",
     acronimo: "",
     categoria: "PEQUENO",
     referencia: "",
     pvf: "",
     pvp: "",
+    asignaciones: [],
+    esProvinciaLocal: true,
+    porcentajeComision: 30,
   });
 
   const cargarDatos = async () => {
     setCargando(true);
     try {
-      const [datosNutris, datosFarms, datosProds] = await Promise.all([
-        nutricionistasService.listarTodas(),
-        farmaciaService.listarTodas(),
-        productosService.listarTodos(),
-      ]);
+      const [datosNutris, datosFarms, datosProds, bajasNutris, bajasFarms] =
+        await Promise.all([
+          nutricionistasService.listarTodas(),
+          farmaciaService.listarTodas(),
+          productosService.listarTodos(),
+          nutricionistasService.listarBajas().catch(() => []), // Atrapamos el error por si acaso
+          farmaciaService.listarBajas().catch(() => []),
+        ]);
       setNutricionistas(datosNutris);
       setFarmacias(datosFarms);
       setProductos(datosProds);
+      setNutricionistasBajas(bajasNutris); // <-- AÃ‘ADIDO
+      setFarmaciasBajas(bajasFarms); // <-- AÃ‘ADIDO
     } catch (error) {
       console.error("Error al cargar administracion:", error);
     } finally {
@@ -197,10 +237,41 @@ const VistaAdministracion = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // --- LÃ“GICA DE CREACIÃ“N ---
+  const handleToggleFarmacia = (farmaciaId, checked, esEdicion = false) => {
+    const setTarget = esEdicion ? setItemEditando : setFormData;
+    setTarget((prev) => {
+      const actuales = prev.asignaciones || [];
+      if (checked) {
+        return {
+          ...prev,
+          asignaciones: [...actuales, { farmaciaId, kilometros: 0 }],
+        };
+      } else {
+        return {
+          ...prev,
+          asignaciones: actuales.filter((a) => a.farmaciaId !== farmaciaId),
+        };
+      }
+    });
+  };
+
+  const handleCambiarKilometros = (farmaciaId, kms, esEdicion = false) => {
+    const setTarget = esEdicion ? setItemEditando : setFormData;
+    setTarget((prev) => {
+      const actuales = prev.asignaciones || [];
+      return {
+        ...prev,
+        asignaciones: actuales.map((a) =>
+          a.farmaciaId === farmaciaId ? { ...a, kilometros: Number(kms) } : a,
+        ),
+      };
+    });
+  };
+
   const handleCrear = async (e) => {
     e.preventDefault();
     setEnviando(true);
+
     try {
       if (pestana === "nutricionistas") {
         await nutricionistasService.crear({
@@ -210,6 +281,7 @@ const VistaAdministracion = () => {
           apellidos: formData.apellidos,
           dni: formData.dni,
           horasContratoMensual: Number(formData.horasContratoMensual),
+          asignaciones: formData.asignaciones,
         });
         alert("Nutricionista creada con Ã©xito.");
       } else if (pestana === "farmacias") {
@@ -219,6 +291,8 @@ const VistaAdministracion = () => {
           nombre: formData.nombre,
           cif: formData.cif,
           direccion: formData.direccion,
+          esProvinciaLocal: formData.esProvinciaLocal,
+          porcentajeComision: Number(formData.porcentajeComision),
         });
         alert("Farmacia registrada con Ã©xito.");
       } else if (pestana === "productos") {
@@ -249,7 +323,12 @@ const VistaAdministracion = () => {
         referencia: "",
         pvf: "",
         pvp: "",
+        asignaciones: [],
+        esProvinciaLocal: true,
+        porcentajeComision: 30,
       });
+
+      setMostrarBajas(false);
       cargarDatos();
     } catch (error) {
       alert(error.response?.data?.message || "Error al realizar la operaciÃ³n.");
@@ -258,7 +337,6 @@ const VistaAdministracion = () => {
     }
   };
 
-  // --- LÃ“GICA DE ELIMINACIÃ“N ---
   const handleEliminar = async (id, tipo) => {
     if (
       !window.confirm(
@@ -272,27 +350,41 @@ const VistaAdministracion = () => {
       if (tipo === "producto") await productosService.eliminar(id);
       cargarDatos();
     } catch (error) {
-      console.error(`Error al eliminar ${tipo}:`, error); // <-- AQUÃ USAMOS LA VARIABLE
+      console.error(`Error al eliminar ${tipo}:`, error); // <-- AÃ‘ADIDO PARA ESLINT
       alert("Error al eliminar. Puede que tenga datos asociados.");
     }
   };
 
-  // --- LÃ“GICA DE ACTUALIZACIÃ“N ---
   const handleActualizar = async (e) => {
     e.preventDefault();
     try {
-      if (pestana === "nutricionistas")
-        await nutricionistasService.actualizar(itemEditando.id, itemEditando);
-      if (pestana === "farmacias")
-        await farmaciaService.actualizar(itemEditando.id, itemEditando);
-      if (pestana === "productos")
+      if (pestana === "nutricionistas") {
+        await nutricionistasService.actualizar(itemEditando.id, {
+          nombre: itemEditando.nombre,
+          apellidos: itemEditando.apellidos,
+          horasContratoMensual: Number(itemEditando.horasContratoMensual),
+          asignaciones: itemEditando.asignaciones || [],
+        });
+      }
+      if (pestana === "farmacias") {
+        await farmaciaService.actualizar(itemEditando.id, {
+          nombre: itemEditando.nombre,
+          cif: itemEditando.cif,
+          direccion: itemEditando.direccion,
+          esProvinciaLocal: itemEditando.esProvinciaLocal,
+          porcentajeComision: Number(itemEditando.porcentajeComision),
+        });
+      }
+      if (pestana === "productos") {
         await productosService.actualizar(itemEditando.id, itemEditando);
+      }
 
       alert("Datos actualizados correctamente.");
       setItemEditando(null);
+      setMostrarBajas(false);
       cargarDatos();
     } catch (error) {
-      console.error("Error al actualizar:", error); // <-- AQUÃ USAMOS LA VARIABLE
+      console.error("Error al actualizar:", error); // <-- AÃ‘ADIDO PARA ESLINT
       alert("Error al actualizar los datos.");
     }
   };
@@ -306,7 +398,7 @@ const VistaAdministracion = () => {
 
   return (
     <div className="space-y-8 animate-fade-in pb-10 relative">
-      {/* MODAL DE EDICIÃ“N FLOTANTE */}
+      {/* MODAL DE EDICIÃ“N */}
       {itemEditando && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/70 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-scale-in">
@@ -321,7 +413,10 @@ const VistaAdministracion = () => {
                 <X size={24} />
               </button>
             </div>
-            <form onSubmit={handleActualizar} className="p-6 space-y-4">
+            <form
+              onSubmit={handleActualizar}
+              className="p-6 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar"
+            >
               {pestana === "nutricionistas" && (
                 <>
                   <input
@@ -363,6 +458,72 @@ const VistaAdministracion = () => {
                     placeholder="Horas mensuales"
                     required
                   />
+
+                  <div className="pt-2 border-t border-gray-100">
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      AsignaciÃ³n y Kilometraje
+                    </label>
+                    <div className="max-h-56 overflow-y-auto space-y-2 p-3 border rounded-xl bg-gray-50 custom-scrollbar">
+                      {farmacias.map((farmacia) => {
+                        const asignacionInfo = itemEditando.asignaciones?.find(
+                          (a) => a.farmaciaId === farmacia.id,
+                        );
+                        const isChecked = !!asignacionInfo;
+                        return (
+                          <div
+                            key={farmacia.id}
+                            className={`flex flex-col p-3 rounded-lg border transition-all ${isChecked ? "bg-white border-indigo-200 shadow-sm" : "bg-transparent border-transparent hover:bg-gray-100"}`}
+                          >
+                            <label className="flex items-center gap-3 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) =>
+                                  handleToggleFarmacia(
+                                    farmacia.id,
+                                    e.target.checked,
+                                    true,
+                                  )
+                                }
+                                className="w-4 h-4 text-indigo-600 rounded border-gray-300"
+                              />
+                              <span className="text-sm font-bold text-gray-700">
+                                {farmacia.nombre}
+                              </span>
+                            </label>
+                            {isChecked && (
+                              <div className="mt-2 pl-7 flex items-center gap-2 animate-fade-in">
+                                <Car size={14} className="text-gray-400" />
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={asignacionInfo.kilometros}
+                                  onChange={(e) =>
+                                    handleCambiarKilometros(
+                                      farmacia.id,
+                                      e.target.value,
+                                      true,
+                                    )
+                                  }
+                                  className="w-20 p-1 text-sm border rounded-md focus:ring-indigo-500"
+                                  placeholder="Km"
+                                  required
+                                />
+                                <span className="text-xs font-bold text-gray-400">
+                                  Km totales
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {farmacias.length === 0 && (
+                        <p className="text-xs text-gray-500 text-center">
+                          No hay farmacias.
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </>
               )}
 
@@ -404,6 +565,47 @@ const VistaAdministracion = () => {
                     placeholder="DirecciÃ³n"
                     required
                   />
+                  <label className="flex items-center gap-3 p-4 bg-sky-50 border border-sky-100 rounded-xl cursor-pointer mt-2">
+                    <input
+                      type="checkbox"
+                      checked={itemEditando.esProvinciaLocal !== false}
+                      onChange={(e) =>
+                        setItemEditando({
+                          ...itemEditando,
+                          esProvinciaLocal: e.target.checked,
+                        })
+                      }
+                      className="w-5 h-5 text-sky-600 rounded"
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-gray-800">
+                        Provincia de AlmerÃ­a (Aplica PVF)
+                      </span>
+                    </div>
+                  </label>
+                  <div className="relative mt-2">
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
+                      ComisiÃ³n para la Farmacia
+                    </label>
+                    <input
+                      type="number"
+                      value={itemEditando.porcentajeComision || 30}
+                      onChange={(e) =>
+                        setItemEditando({
+                          ...itemEditando,
+                          porcentajeComision: e.target.value,
+                        })
+                      }
+                      required
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      className="w-full p-3 border rounded-xl"
+                    />
+                    <span className="absolute right-4 top-10 text-gray-400 font-bold">
+                      %
+                    </span>
+                  </div>
                 </>
               )}
 
@@ -457,7 +659,7 @@ const VistaAdministracion = () => {
 
               <button
                 type="submit"
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 mt-4"
               >
                 <Save size={18} /> Guardar Cambios
               </button>
@@ -467,22 +669,22 @@ const VistaAdministracion = () => {
       )}
 
       {/* CABECERA Y PESTAÃ‘AS */}
-      <div className="flex gap-4 border-b border-gray-200 pb-4">
+      <div className="flex gap-4 border-b border-gray-200 pb-4 overflow-x-auto custom-scrollbar">
         <button
           onClick={() => setPestana("nutricionistas")}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${pestana === "nutricionistas" ? "bg-indigo-600 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100"}`}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${pestana === "nutricionistas" ? "bg-indigo-600 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100"}`}
         >
           <Users size={20} /> Plantilla Nutricionistas
         </button>
         <button
           onClick={() => setPestana("farmacias")}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${pestana === "farmacias" ? "bg-indigo-600 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100"}`}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${pestana === "farmacias" ? "bg-indigo-600 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100"}`}
         >
           <Store size={20} /> Red de Farmacias
         </button>
         <button
           onClick={() => setPestana("productos")}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${pestana === "productos" ? "bg-indigo-600 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100"}`}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${pestana === "productos" ? "bg-indigo-600 text-white shadow-md" : "bg-gray-50 text-gray-500 hover:bg-gray-100"}`}
         >
           <PackagePlus size={20} /> CatÃ¡logo Productos
         </button>
@@ -502,10 +704,10 @@ const VistaAdministracion = () => {
                   nutricionistas.map((n) => (
                     <div
                       key={n.id}
-                      className="p-4 flex justify-between items-center hover:bg-gray-50 group"
+                      className="p-4 flex justify-between items-start md:items-center hover:bg-gray-50 group flex-col md:flex-row gap-4"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="bg-indigo-100 text-indigo-600 w-10 h-10 rounded-full flex items-center justify-center font-bold">
+                        <div className="bg-indigo-100 text-indigo-600 w-10 h-10 rounded-full flex items-center justify-center font-bold shrink-0">
                           {n.nombre.charAt(0)}
                           {n.apellidos ? n.apellidos.charAt(0) : ""}
                         </div>
@@ -513,12 +715,23 @@ const VistaAdministracion = () => {
                           <p className="font-bold text-gray-800">
                             {n.nombre} {n.apellidos}
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-gray-500 mb-1">
                             {n.email} â€¢ DNI: {n.dni}
                           </p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {n.asignaciones?.length > 0 ? (
+                              <span className="bg-indigo-50 text-indigo-600 text-[10px] font-black px-2 py-0.5 rounded-md uppercase">
+                                {n.asignaciones.length} Farmacias Asignadas
+                              </span>
+                            ) : (
+                              <span className="bg-red-50 text-red-500 text-[10px] font-black px-2 py-0.5 rounded-md uppercase">
+                                Sin Asignaciones
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-3 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity w-full md:w-auto justify-end">
                         <button
                           onClick={() => setItemEditando(n)}
                           className="p-2 text-sky-600 bg-sky-50 rounded-lg hover:bg-sky-100"
@@ -548,20 +761,29 @@ const VistaAdministracion = () => {
                   farmacias.map((f) => (
                     <div
                       key={f.id}
-                      className="p-4 flex justify-between items-center hover:bg-gray-50 group"
+                      className="p-4 flex justify-between items-start md:items-center hover:bg-gray-50 group flex-col md:flex-row gap-4"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="bg-emerald-100 text-emerald-600 p-2 rounded-lg">
+                        <div className="bg-emerald-100 text-emerald-600 p-3 rounded-xl shrink-0">
                           <Store size={24} />
                         </div>
                         <div>
-                          <p className="font-bold text-gray-800">{f.nombre}</p>
-                          <p className="text-xs text-gray-500">
+                          <p className="font-bold text-gray-800 flex items-center gap-2">
+                            {f.nombre}
+                            <span
+                              className={`text-[9px] px-2 py-0.5 rounded uppercase font-black ${f.esProvinciaLocal ? "bg-sky-100 text-sky-700" : "bg-purple-100 text-purple-700"}`}
+                            >
+                              {f.esProvinciaLocal
+                                ? "AlmerÃ­a (PVF)"
+                                : "Externa (PVP)"}
+                            </span>
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
                             {f.direccion} â€¢ CIF: {f.cif}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-3 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity w-full md:w-auto justify-end">
                         <button
                           onClick={() => setItemEditando(f)}
                           className="p-2 text-sky-600 bg-sky-50 rounded-lg hover:bg-sky-100"
@@ -591,10 +813,10 @@ const VistaAdministracion = () => {
                   productos.map((p) => (
                     <div
                       key={p.id}
-                      className="p-4 flex justify-between items-center hover:bg-gray-50 group"
+                      className="p-4 flex justify-between items-start md:items-center hover:bg-gray-50 group flex-col md:flex-row gap-4"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="bg-sky-100 text-sky-600 p-2 rounded-lg">
+                        <div className="bg-sky-100 text-sky-600 p-3 rounded-xl shrink-0">
                           <PackagePlus size={24} />
                         </div>
                         <div>
@@ -604,12 +826,12 @@ const VistaAdministracion = () => {
                               {p.referencia}
                             </span>
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-gray-500 mt-1">
                             PVF: {p.pvf}â‚¬ â€¢ PVP: {p.pvp}â‚¬
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-3 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity w-full md:w-auto justify-end">
                         <button
                           onClick={() => setItemEditando(p)}
                           className="p-2 text-sky-600 bg-sky-50 rounded-lg hover:bg-sky-100"
@@ -628,11 +850,98 @@ const VistaAdministracion = () => {
                 )}
               </div>
             )}
+
+            {/* ðŸ‘‡ INSERTA TODO ESTE BLOQUE AQUÃ ðŸ‘‡ */}
+            {/* --- BOTÃ“N Y LISTADO DEL CEMENTERIO DE BAJAS --- */}
+            {(pestana === "nutricionistas" || pestana === "farmacias") && (
+              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 mt-6">
+                <div className="text-center mb-2">
+                  <button
+                    onClick={() => setMostrarBajas(!mostrarBajas)}
+                    className="inline-flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-gray-800 transition-colors"
+                  >
+                    <Archive size={16} />
+                    {mostrarBajas
+                      ? "Ocultar Historial de Bajas"
+                      : "Ver Historial de Bajas"}
+                  </button>
+                </div>
+
+                {mostrarBajas && (
+                  <div className="mt-4 border-t-2 border-dashed border-gray-200 pt-4">
+                    <h4 className="text-xs font-black uppercase text-gray-400 mb-4 px-2">
+                      Registros Inactivos (Solo Lectura)
+                    </h4>
+
+                    {/* Bajas Nutricionistas */}
+                    {pestana === "nutricionistas" && (
+                      <div className="space-y-2">
+                        {nutricionistasBajas.length === 0 ? (
+                          <p className="text-sm text-gray-400 italic px-2">
+                            No hay historial de bajas.
+                          </p>
+                        ) : (
+                          nutricionistasBajas.map((n) => (
+                            <div
+                              key={n.id}
+                              className="p-3 bg-gray-200/50 rounded-xl flex items-center gap-3 grayscale opacity-75"
+                            >
+                              <div className="bg-gray-300 text-gray-500 w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0">
+                                {n.nombre.charAt(0)}
+                              </div>
+                              <div>
+                                <p className="font-bold text-gray-600 text-sm line-through">
+                                  {n.nombre} {n.apellidos}
+                                </p>
+                                <p className="text-[10px] text-gray-500">
+                                  {n.email} â€¢ DNI: {n.dni}
+                                </p>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+
+                    {/* Bajas Farmacias */}
+                    {pestana === "farmacias" && (
+                      <div className="space-y-2">
+                        {farmaciasBajas.length === 0 ? (
+                          <p className="text-sm text-gray-400 italic px-2">
+                            No hay historial de bajas.
+                          </p>
+                        ) : (
+                          farmaciasBajas.map((f) => (
+                            <div
+                              key={f.id}
+                              className="p-3 bg-gray-200/50 rounded-xl flex items-center gap-3 grayscale opacity-75"
+                            >
+                              <div className="bg-gray-300 text-gray-500 p-2 rounded-lg shrink-0">
+                                <Store size={16} />
+                              </div>
+                              <div>
+                                <p className="font-bold text-gray-600 text-sm line-through">
+                                  {f.nombre}
+                                </p>
+                                <p className="text-[10px] text-gray-500">
+                                  {f.email} â€¢ CIF: {f.cif}
+                                </p>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+            {/* ðŸ‘† FIN DEL BLOQUE A INSERTAR ðŸ‘† */}
           </div>
         </div>
 
-        {/* COLUMNA DERECHA: EL FORMULARIO ORIGINAL (Adaptado a productos) */}
-        <div className="bg-gray-900 rounded-3xl p-6 text-white shadow-xl h-fit sticky top-6">
+        {/* COLUMNA DERECHA: FORMULARIO CREACIÃ“N */}
+        <div className="bg-gray-900 rounded-3xl p-6 text-white shadow-xl h-fit xl:sticky xl:top-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="bg-indigo-500 p-2 rounded-xl">
               <Plus size={20} className="text-white" />
@@ -641,7 +950,6 @@ const VistaAdministracion = () => {
           </div>
 
           <form onSubmit={handleCrear} className="space-y-4">
-            {/* Si NO son productos, pedimos las credenciales de Usuario */}
             {pestana !== "productos" && (
               <div className="space-y-3">
                 <h4 className="text-xs font-bold text-gray-400 uppercase border-b border-gray-700 pb-2">
@@ -687,7 +995,6 @@ const VistaAdministracion = () => {
                   : "2. Perfil Laboral"}
               </h4>
 
-              {/* CAMPOS COMUNES NUTRI/FARMACIA */}
               {pestana !== "productos" && (
                 <div className="relative">
                   <User
@@ -753,6 +1060,72 @@ const VistaAdministracion = () => {
                       className="w-full bg-gray-800 border-none rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
                     />
                   </div>
+
+                  <div className="space-y-3 mt-4">
+                    <h4 className="text-xs font-bold text-sky-400 uppercase border-b border-gray-700 pb-2">
+                      3. AsignaciÃ³n y Distancia
+                    </h4>
+                    <div className="max-h-56 overflow-y-auto space-y-2 p-2 bg-gray-800/50 rounded-xl custom-scrollbar border border-gray-700">
+                      {farmacias.map((farmacia) => {
+                        const asignacionInfo = formData.asignaciones.find(
+                          (a) => a.farmaciaId === farmacia.id,
+                        );
+                        const isChecked = !!asignacionInfo;
+                        return (
+                          <div
+                            key={farmacia.id}
+                            className={`flex flex-col p-2 rounded-lg transition-colors ${isChecked ? "bg-gray-700 border border-gray-600" : "bg-transparent border border-transparent"}`}
+                          >
+                            <label className="flex items-center gap-3 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) =>
+                                  handleToggleFarmacia(
+                                    farmacia.id,
+                                    e.target.checked,
+                                    false,
+                                  )
+                                }
+                                className="w-4 h-4 rounded text-sky-500 bg-gray-900 border-gray-600 focus:ring-sky-500"
+                              />
+                              <span className="text-sm font-medium text-gray-200">
+                                {farmacia.nombre}
+                              </span>
+                            </label>
+                            {isChecked && (
+                              <div className="mt-2 pl-7 flex items-center gap-2 animate-fade-in">
+                                <Car size={14} className="text-gray-400" />
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={asignacionInfo.kilometros}
+                                  onChange={(e) =>
+                                    handleCambiarKilometros(
+                                      farmacia.id,
+                                      e.target.value,
+                                      false,
+                                    )
+                                  }
+                                  className="w-16 p-1 text-sm bg-gray-900 text-white border border-gray-600 rounded-md focus:ring-sky-500 outline-none text-center"
+                                  placeholder="Km"
+                                  required
+                                />
+                                <span className="text-xs text-gray-400 font-bold">
+                                  Km totales
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {farmacias.length === 0 && (
+                        <p className="text-xs text-gray-500 text-center py-2">
+                          No hay farmacias
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </>
               )}
 
@@ -782,10 +1155,46 @@ const VistaAdministracion = () => {
                     placeholder="DirecciÃ³n completa"
                     className="w-full bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
                   />
+                  <div className="pt-4">
+                    <label className="flex items-center gap-3 p-4 bg-sky-900/30 border border-sky-500/30 rounded-xl cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.esProvinciaLocal}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            esProvinciaLocal: e.target.checked,
+                          })
+                        }
+                        className="w-5 h-5 rounded text-sky-500"
+                      />
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-sky-100 flex items-center gap-2">
+                          <MapPin size={14} /> AlmerÃ­a (PVF)
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+                  <div className="relative mt-2">
+                    <input
+                      type="number"
+                      name="porcentajeComision"
+                      value={formData.porcentajeComision}
+                      onChange={handleChange}
+                      required
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      placeholder="ComisiÃ³n para la Farmacia (%)"
+                      className="w-full bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
+                    <span className="absolute right-4 top-3.5 text-gray-400 font-bold">
+                      %
+                    </span>
+                  </div>
                 </>
               )}
 
-              {/* CAMPOS DE PRODUCTO */}
               {pestana === "productos" && (
                 <>
                   <input
@@ -795,7 +1204,7 @@ const VistaAdministracion = () => {
                     onChange={handleChange}
                     required
                     placeholder="Nombre (Ej: Batido Vainilla)"
-                    className="w-full bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white outline-none"
                   />
                   <div className="flex gap-2">
                     <input
@@ -805,13 +1214,13 @@ const VistaAdministracion = () => {
                       onChange={handleChange}
                       required
                       placeholder="AcrÃ³nimo"
-                      className="w-1/2 bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                      className="w-full bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white outline-none"
                     />
                     <select
                       name="categoria"
                       value={formData.categoria}
                       onChange={handleChange}
-                      className="w-1/2 bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                      className="w-full bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white outline-none"
                     >
                       <option value="PEQUENO">PEQUEÃ‘O</option>
                       <option value="GRANDE">GRANDE</option>
@@ -823,8 +1232,8 @@ const VistaAdministracion = () => {
                     value={formData.referencia}
                     onChange={handleChange}
                     required
-                    placeholder="Referencia / SKU (Ãšnica)"
-                    className="w-full bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                    placeholder="Referencia / SKU"
+                    className="w-full bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white outline-none"
                   />
                   <div className="flex gap-2">
                     <input
@@ -835,7 +1244,7 @@ const VistaAdministracion = () => {
                       onChange={handleChange}
                       required
                       placeholder="PVF (â‚¬)"
-                      className="w-1/2 bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                      className="w-full bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white outline-none"
                     />
                     <input
                       type="number"
@@ -845,7 +1254,7 @@ const VistaAdministracion = () => {
                       onChange={handleChange}
                       required
                       placeholder="PVP (â‚¬)"
-                      className="w-1/2 bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                      className="w-full bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white outline-none"
                     />
                   </div>
                 </>
@@ -855,7 +1264,7 @@ const VistaAdministracion = () => {
             <button
               type="submit"
               disabled={enviando}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl mt-4 transition-colors flex justify-center items-center shadow-lg shadow-indigo-500/30"
+              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl mt-4 flex justify-center items-center shadow-lg"
             >
               {enviando ? (
                 <Loader2 className="animate-spin" size={20} />
@@ -871,6 +1280,233 @@ const VistaAdministracion = () => {
 };
 
 export default VistaAdministracion;
+
+========================================
+FILE: VistaPersonalInterno.jsx
+========================================
+
+import React, { useState, useEffect } from "react";
+import { Shield, Plus, Loader2, Mail, Lock, User, Trash2 } from "lucide-react";
+import { personalInternoService } from "./personalInternoService";
+
+const VistaPersonalInterno = () => {
+  const [admins, setAdmins] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [enviando, setEnviando] = useState(false);
+
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    nombre: "",
+    apellidos: "",
+  });
+
+  const cargarDatos = async () => {
+    setCargando(true);
+    try {
+      const datos = await personalInternoService.listarAdmins();
+      setAdmins(datos);
+    } catch (error) {
+      console.error("Error al cargar administradores:", error);
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleCrear = async (e) => {
+    e.preventDefault();
+    setEnviando(true);
+    try {
+      await personalInternoService.crearAdmin(formData);
+      alert("Administrador creado con Ã©xito. Ya puede iniciar sesiÃ³n.");
+      setFormData({ email: "", password: "", nombre: "", apellidos: "" });
+      cargarDatos();
+    } catch (error) {
+      alert(error.response?.data?.message || "Error al crear administrador.");
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const handleEliminar = async (id) => {
+    if (
+      !window.confirm(
+        "Â¿Seguro que deseas revocar el acceso a este Administrador?",
+      )
+    )
+      return;
+    try {
+      await personalInternoService.eliminarAdmin(id);
+      cargarDatos();
+    } catch (error) {
+      alert(
+        error.response?.data?.message ||
+          "Error al eliminar. Puede que sea el SuperAdmin.",
+      );
+    }
+  };
+
+  return (
+    <div className="space-y-8 animate-fade-in pb-10">
+      <div className="bg-indigo-900 p-8 rounded-[2.5rem] shadow-lg text-white flex flex-col md:flex-row items-start md:items-center gap-6">
+        <div className="bg-indigo-800 p-4 rounded-3xl shadow-inner">
+          <Shield size={40} className="text-indigo-300" />
+        </div>
+        <div>
+          <h2 className="text-3xl font-black">Centro de Mando (SuperAdmin)</h2>
+          <p className="text-indigo-200 font-medium mt-2">
+            GestiÃ³n exclusiva de credenciales con privilegios globales. Los
+            usuarios aquÃ­ listados tienen acceso total a la plataforma.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        {/* COLUMNA IZQUIERDA: LISTADO */}
+        <div className="xl:col-span-2 space-y-6">
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+              <h3 className="font-bold text-gray-800">
+                Administradores Activos
+              </h3>
+              <span className="bg-indigo-100 text-indigo-700 text-xs font-black px-3 py-1 rounded-full">
+                {admins.length} Usuarios
+              </span>
+            </div>
+
+            {cargando ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="animate-spin text-indigo-500" size={32} />
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-50">
+                {admins.map((admin) => (
+                  <div
+                    key={admin.id}
+                    className="p-5 flex justify-between items-center hover:bg-gray-50 transition-colors group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="bg-gray-900 text-white w-12 h-12 rounded-full flex items-center justify-center font-black text-lg shadow-md">
+                        {admin.nombre.charAt(0)}
+                        {admin.apellidos ? admin.apellidos.charAt(0) : ""}
+                      </div>
+                      <div>
+                        <p className="font-black text-gray-800 text-lg">
+                          {admin.nombre} {admin.apellidos}
+                        </p>
+                        <p className="text-sm font-bold text-indigo-600 flex items-center gap-1">
+                          <Mail size={14} /> {admin.email}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleEliminar(admin.id)}
+                      className="p-3 text-red-500 bg-red-50 rounded-xl hover:bg-red-500 hover:text-white transition-all opacity-100 md:opacity-0 group-hover:opacity-100"
+                      title="Revocar Acceso"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* COLUMNA DERECHA: FORMULARIO */}
+        <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm h-fit xl:sticky xl:top-6">
+          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
+            <div className="bg-indigo-50 p-2 rounded-xl">
+              <Plus size={20} className="text-indigo-600" />
+            </div>
+            <h3 className="text-lg font-black text-gray-800">
+              Dar de Alta Admin
+            </h3>
+          </div>
+
+          <form onSubmit={handleCrear} className="space-y-4">
+            <div className="relative">
+              <Mail
+                size={16}
+                className="absolute left-4 top-3.5 text-gray-400"
+              />
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                placeholder="Correo corporativo"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-11 pr-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+            <div className="relative">
+              <Lock
+                size={16}
+                className="absolute left-4 top-3.5 text-gray-400"
+              />
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                placeholder="ContraseÃ±a inicial"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-11 pr-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+            <div className="relative">
+              <User
+                size={16}
+                className="absolute left-4 top-3.5 text-gray-400"
+              />
+              <input
+                type="text"
+                name="nombre"
+                value={formData.nombre}
+                onChange={handleChange}
+                required
+                placeholder="Nombre"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-11 pr-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+            <input
+              type="text"
+              name="apellidos"
+              value={formData.apellidos}
+              onChange={handleChange}
+              required
+              placeholder="Apellidos"
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+            />
+
+            <button
+              type="submit"
+              disabled={enviando}
+              className="w-full bg-gray-900 hover:bg-black text-white font-black py-4 rounded-xl mt-6 flex justify-center items-center shadow-lg transition-transform hover:scale-[1.02]"
+            >
+              {enviando ? (
+                <Loader2 className="animate-spin" size={20} />
+              ) : (
+                "Generar Credenciales"
+              )}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default VistaPersonalInterno;
 
 ========================================
 FILE: VistaValidaciones.jsx
@@ -890,10 +1526,13 @@ import {
   Eye,
   Wallet,
   Banknote,
+  PieChart,
+  Scale,
 } from "lucide-react";
 import { consultasService } from "../consultas/consultasService";
 import { pedidosService } from "../pedidos/pedidosService";
 import { suministrosService } from "../suministros/suministrosService";
+import { nutricionistasService } from "../admin/nutricionistasService";
 
 const VistaValidaciones = () => {
   const [pestaÃ±aActual, setPestaÃ±aActual] = useState("consultas");
@@ -904,6 +1543,13 @@ const VistaValidaciones = () => {
   const [busqueda, setBusqueda] = useState("");
 
   const [detalleSeleccionado, setDetalleSeleccionado] = useState(null);
+  const [listaNutrisGlobal, setListaNutrisGlobal] = useState([]); // <-- Para cruzar datos de comisiones
+
+  // --- ESTADO DEL MODAL MULTICAPA ---
+  const [mostrarModalReparto, setMostrarModalReparto] = useState(false);
+  const [repartosActuales, setRepartosActuales] = useState([]);
+  const [pedidoEnProceso, setPedidoEnProceso] = useState(null);
+  const [enviando, setEnviando] = useState(false);
 
   const cargarDatos = async () => {
     setCargando(true);
@@ -918,9 +1564,13 @@ const VistaValidaciones = () => {
           ),
         );
       } else if (pestaÃ±aActual === "pedidos") {
-        const todos = await pedidosService.obtenerTodos();
+        const [todos, nutris] = await Promise.all([
+          pedidosService.obtenerTodos(),
+          nutricionistasService.listarTodas(), // El admin tiene permiso total
+        ]);
         setPendientes(todos.filter((p) => p.estado === "PENDIENTE_ENVIO"));
         setHistorial(todos.filter((p) => p.estado !== "PENDIENTE_ENVIO"));
+        setListaNutrisGlobal(nutris);
       } else if (pestaÃ±aActual === "suministros") {
         const todos = await suministrosService.listarPeticionesAdmin();
         setPendientes(todos.filter((s) => s.estado === "SOLICITADO"));
@@ -950,17 +1600,89 @@ const VistaValidaciones = () => {
     }
   };
 
-  const handleEnviarPedido = async (id) => {
+  // =========================================================================
+  // LÃ“GICA DE INTERCEPCIÃ“N DEL PEDIDO (MULTICAPA PARA ADMIN)
+  // =========================================================================
+  const iniciarProcesoEnvio = (pedido) => {
+    setPedidoEnProceso(pedido);
+
+    // Buscamos cuÃ¡ntas chicas trabajan en la farmacia de este pedido
+    const nutrisDeEstaFarmacia = listaNutrisGlobal.filter((n) =>
+      n.asignaciones?.some((a) => a.farmaciaNombre === pedido.farmaciaNombre),
+    );
+
+    // Si hay 2 o mÃ¡s, interceptamos y abrimos el Modal.
+    if (nutrisDeEstaFarmacia.length > 1) {
+      const porcBase = Math.floor(100 / nutrisDeEstaFarmacia.length);
+      let resto = 100 - porcBase * nutrisDeEstaFarmacia.length;
+
+      const repartoEquitativo = nutrisDeEstaFarmacia.map((n, index) => ({
+        nutricionistaId: n.id,
+        nombre: n.nombre + " " + n.apellidos,
+        porcentaje: index === 0 ? porcBase + resto : porcBase,
+      }));
+
+      setRepartosActuales(repartoEquitativo);
+      setMostrarModalReparto(true);
+      return;
+    }
+
+    // Si hay 1 o ninguna, se envÃ­a directamente con confirmaciÃ³n normal
     if (!window.confirm("Â¿Marcar este pedido como Enviado por mensajerÃ­a?"))
       return;
+
+    const repartoDirecto =
+      nutrisDeEstaFarmacia.length === 1
+        ? [{ nutricionistaId: nutrisDeEstaFarmacia[0].id, porcentaje: 100 }]
+        : [];
+
+    ejecutarEnvioBackend(pedido.id, repartoDirecto);
+  };
+
+  const handleCambioSlider = (nutriId, nuevoPorcentaje) => {
+    let valor = Math.round(Number(nuevoPorcentaje));
+    setRepartosActuales((prev) => {
+      const otros = prev.filter((r) => r.nutricionistaId !== nutriId);
+      if (otros.length === 1) {
+        return prev.map((r) =>
+          r.nutricionistaId === nutriId
+            ? { ...r, porcentaje: valor }
+            : { ...r, porcentaje: 100 - valor },
+        );
+      } else {
+        return prev.map((r) =>
+          r.nutricionistaId === nutriId ? { ...r, porcentaje: valor } : r,
+        );
+      }
+    });
+  };
+
+  const setRepartoEquitativo = () => {
+    const porcBase = Math.floor(100 / repartosActuales.length);
+    let resto = 100 - porcBase * repartosActuales.length;
+    setRepartosActuales((prev) =>
+      prev.map((n, index) => ({
+        ...n,
+        porcentaje: index === 0 ? porcBase + resto : porcBase,
+      })),
+    );
+  };
+
+  const ejecutarEnvioBackend = async (pedidoId, listaRepartosFinal) => {
+    setEnviando(true);
     try {
-      await pedidosService.marcarComoEnviadoAdmin(id);
+      await pedidosService.marcarComoEnviadoAdmin(pedidoId, listaRepartosFinal);
+      setMostrarModalReparto(false);
+      setPedidoEnProceso(null);
       cargarDatos();
     } catch (error) {
       console.error(error);
-      alert("Error al enviar");
+      alert("Error al enviar el pedido y asignar comisiÃ³n");
+    } finally {
+      setEnviando(false);
     }
   };
+  // =========================================================================
 
   const handleEstadoSuministro = async (id, estado) => {
     if (!window.confirm(`Â¿Seguro que quieres ${estado} esta peticiÃ³n?`)) return;
@@ -973,7 +1695,6 @@ const VistaValidaciones = () => {
     }
   };
 
-  // --- BLINDAJE MATEMÃTICO: Asignamos array vacÃ­o [] por defecto por si el backend falla ---
   const calcularTotalesPedido = (lineas = []) => {
     let totalReal = 0;
     let totalVirtual = 0;
@@ -1019,8 +1740,124 @@ const VistaValidaciones = () => {
     return true;
   });
 
+  const sumaReparto = repartosActuales.reduce(
+    (sum, r) => sum + r.porcentaje,
+    0,
+  );
+  const coloresGrafico = [
+    "bg-sky-500",
+    "bg-indigo-500",
+    "bg-emerald-500",
+    "bg-amber-500",
+    "bg-purple-500",
+  ];
+
   return (
-    <div className="space-y-8 animate-fade-in pb-10">
+    <div className="space-y-8 animate-fade-in pb-10 relative">
+      {/* MODAL REPARTO MULTICAPA (ADMIN) */}
+      {mostrarModalReparto && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-gray-900/80 backdrop-blur-sm">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-lg w-full overflow-hidden animate-scale-in">
+            <div className="bg-gray-900 p-8 text-white text-center relative">
+              <div className="bg-sky-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-sky-500/30">
+                <PieChart size={32} />
+              </div>
+              <h3 className="text-2xl font-black">Asignar ComisiÃ³n</h3>
+              <p className="text-gray-400 mt-2 text-sm">
+                Esta farmacia tiene {repartosActuales.length} nutricionistas.
+                Reparte la comisiÃ³n del pedido antes de enviarlo.
+              </p>
+            </div>
+
+            <div className="p-8 space-y-8">
+              <div className="w-full h-6 bg-gray-100 rounded-full flex overflow-hidden shadow-inner">
+                {repartosActuales.map((r, i) => (
+                  <div
+                    key={r.nutricionistaId}
+                    style={{ width: `${r.porcentaje}%` }}
+                    className={`h-full transition-all duration-300 ${coloresGrafico[i % coloresGrafico.length]}`}
+                  ></div>
+                ))}
+              </div>
+
+              <div className="space-y-6">
+                {repartosActuales.map((r, i) => (
+                  <div
+                    key={r.nutricionistaId}
+                    className="bg-gray-50 p-4 rounded-2xl border border-gray-100"
+                  >
+                    <div className="flex justify-between items-center mb-3">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-3 h-3 rounded-full ${coloresGrafico[i % coloresGrafico.length]}`}
+                        ></div>
+                        <span className="font-bold text-gray-800">
+                          {r.nombre}
+                        </span>
+                      </div>
+                      <span className="font-black text-xl text-gray-900">
+                        {r.porcentaje}%
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={r.porcentaje}
+                      onChange={(e) =>
+                        handleCambioSlider(r.nutricionistaId, e.target.value)
+                      }
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-sky-500"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-between items-center">
+                <button
+                  onClick={setRepartoEquitativo}
+                  className="text-sky-600 font-bold text-sm flex items-center gap-2 hover:text-sky-800 transition-colors"
+                >
+                  <Scale size={16} /> Repartir a partes iguales
+                </button>
+                <div
+                  className={`text-sm font-black px-3 py-1 rounded-lg ${sumaReparto === 100 ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700 animate-pulse"}`}
+                >
+                  Total: {sumaReparto}%
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 bg-gray-50 flex gap-4">
+              <button
+                onClick={() => {
+                  setMostrarModalReparto(false);
+                  setPedidoEnProceso(null);
+                }}
+                className="flex-1 py-4 bg-white border-2 border-gray-200 text-gray-600 font-black rounded-2xl hover:bg-gray-100 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() =>
+                  ejecutarEnvioBackend(pedidoEnProceso.id, repartosActuales)
+                }
+                disabled={sumaReparto !== 100 || enviando}
+                className="flex-1 py-4 bg-sky-600 text-white font-black rounded-2xl shadow-lg hover:bg-sky-700 transition-all disabled:bg-gray-300 disabled:shadow-none flex justify-center items-center gap-2"
+              >
+                {enviando ? (
+                  <Loader2 className="animate-spin" size={20} />
+                ) : (
+                  <>
+                    <Package size={18} /> Enviar Pedido
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {detalleSeleccionado && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden animate-scale-in">
@@ -1179,6 +2016,29 @@ const VistaValidaciones = () => {
                     </div>
                   </div>
 
+                  {/* NUEVO: Mostrar el reparto de comisiones si existe */}
+                  {detalleSeleccionado.repartos &&
+                    detalleSeleccionado.repartos.length > 0 && (
+                      <div className="mt-4 border border-gray-100 rounded-xl overflow-hidden">
+                        <p className="bg-gray-50 text-xs font-bold text-gray-500 uppercase p-3 border-b border-gray-100">
+                          ComisiÃ³n Asignada
+                        </p>
+                        <div className="p-4 space-y-2">
+                          {detalleSeleccionado.repartos.map((r, i) => (
+                            <div
+                              key={i}
+                              className="flex justify-between items-center text-sm font-bold text-gray-700"
+                            >
+                              <span>{r.nutricionistaNombre}</span>
+                              <span className="text-sky-600 bg-sky-50 px-2 py-1 rounded-md">
+                                {r.porcentaje}%
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                   <div className="bg-gray-900 rounded-2xl p-6 text-white mt-4 flex justify-between items-center">
                     <div>
                       <p className="text-xs text-gray-400 uppercase font-bold mb-1">
@@ -1223,7 +2083,6 @@ const VistaValidaciones = () => {
                       Materiales Enviados
                     </p>
                     <ul className="p-4 space-y-2 text-sm font-bold text-gray-700">
-                      {/* BLINDAJE CON ?.map */}
                       {detalleSeleccionado.materiales?.map((m, i) => (
                         <li
                           key={i}
@@ -1442,8 +2301,9 @@ const VistaValidaciones = () => {
                       </div>
                     </div>
 
+                    {/* BOTÃ“N CON NUEVA LÃ“GICA DE INTERCEPCIÃ“N */}
                     <button
-                      onClick={() => handleEnviarPedido(p.id)}
+                      onClick={() => iniciarProcesoEnvio(p)}
                       className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 rounded-xl flex justify-center items-center gap-2 mt-auto"
                     >
                       <Package size={18} /> Marcar como Enviado
@@ -1475,7 +2335,6 @@ const VistaValidaciones = () => {
                       Materiales Solicitados
                     </p>
                     <ul className="space-y-1 text-sm font-bold text-gray-700 max-h-24 overflow-y-auto custom-scrollbar">
-                      {/* BLINDAJE CON ?.map */}
                       {s.materiales?.map((m, i) => (
                         <li key={i} className="flex justify-between">
                           <span>{m.nombre}</span>
@@ -2141,8 +3000,8 @@ import {
   X,
   Filter,
   ArrowUpDown,
-  Search, // <-- AsegÃºrate de que esto estÃ¡
-  Calendar, // <-- Â¡AQUÃ ESTABA EL FALLO DEL RENDERIZADO!
+  Search,
+  Calendar,
 } from "lucide-react";
 import { consultasService } from "./consultasService";
 import { farmaciaService } from "../admin/farmaciaService";
@@ -2154,7 +3013,6 @@ const VistaConsultas = () => {
   const [perfil, setPerfil] = useState(null);
   const [cargando, setCargando] = useState(true);
 
-  // ESTADOS DE FILTRO
   const [mesFiltro, setMesFiltro] = useState("Todos");
   const [ordenFiltro, setOrdenFiltro] = useState("recientes");
   const [busqueda, setBusqueda] = useState("");
@@ -2178,20 +3036,30 @@ const VistaConsultas = () => {
   const cargarDatos = async () => {
     setCargando(true);
     try {
-      const [datosConsultas, datosFarmacias, miPerfil] = await Promise.all([
+      const [datosConsultas, todasLasFarmacias, miPerfil] = await Promise.all([
         consultasService.obtenerMisConsultas(),
         farmaciaService.listarTodas(),
         nutricionistasService.obtenerMiPerfil(),
       ]);
       setConsultas(datosConsultas);
-      setFarmacias(datosFarmacias);
       setPerfil(miPerfil);
 
-      if (datosFarmacias.length > 0) {
+      // --- NUEVA LÃ“GICA DE AISLAMIENTO (N:M) ---
+      // Filtramos la lista global para dejar solo las asignadas a este nutricionista
+      const misFarmacias = todasLasFarmacias.filter((f) =>
+        miPerfil.asignaciones?.some(
+          (asignacion) => asignacion.farmaciaId === f.id,
+        ),
+      );
+      setFarmacias(misFarmacias);
+
+      if (misFarmacias.length > 0) {
         setFormulario((prev) => ({
           ...prev,
-          farmaciaId: datosFarmacias[0].id,
+          farmaciaId: misFarmacias[0].id,
         }));
+      } else {
+        setFormulario((prev) => ({ ...prev, farmaciaId: "" }));
       }
     } catch (error) {
       console.error("Error cargando datos:", error);
@@ -2204,7 +3072,6 @@ const VistaConsultas = () => {
     cargarDatos();
   }, []);
 
-  // --- LÃ“GICA DE FILTRADO Y ORDENACIÃ“N ---
   const mesesDisponibles = [
     "Todos",
     ...new Set(consultas.map((c) => c.fecha.substring(0, 7))),
@@ -2235,15 +3102,15 @@ const VistaConsultas = () => {
     setMostrarModal(true);
   };
 
-  // --- CORRECCIÃ“N CLAVE: Uso de .crear() y .confirmar() ---
   const confirmarYGuardar = async () => {
-    if (!perfil)
-      return alert("El perfil del usuario no ha cargado correctamente.");
+    if (!perfil) return alert("El perfil no ha cargado correctamente.");
+    if (!formulario.farmaciaId) return alert("Debes seleccionar una farmacia.");
+
     setGuardando(true);
     try {
       const payload = {
         ...formulario,
-        nutricionistaId: perfil.id, // Sincronizado dinÃ¡micamente
+        nutricionistaId: perfil.id,
         farmaciaId: Number(formulario.farmaciaId),
         horaInicio:
           formulario.horaInicio.length === 5
@@ -2270,17 +3137,13 @@ const VistaConsultas = () => {
         observacionesJornada: "",
       }));
     } catch (err) {
-      console.error("Error al guardar:", err); // Chivato para la consola de React (F12)
-      alert(
-        "Error al registrar el turno: " +
-          (err.response?.data?.message || err.message),
-      );
+      console.error("Error al guardar:", err);
+      alert("Error al registrar el turno.");
     } finally {
       setGuardando(false);
     }
   };
 
-  // --- CORRECCIÃ“N CLAVE: Uso de .abrirIncidencia() ---
   const handleIncidencia = async (id) => {
     const mensaje = window.prompt("Escribe el motivo de la incidencia:");
     if (!mensaje) return;
@@ -2293,7 +3156,6 @@ const VistaConsultas = () => {
     }
   };
 
-  // --- CORRECCIÃ“N CLAVE: Uso de .confirmar() ---
   const handleConfirmarAntiguo = async (id) => {
     if (!window.confirm("Â¿Seguro que quieres confirmar?")) return;
     try {
@@ -2402,19 +3264,25 @@ const VistaConsultas = () => {
             <label className="block text-sm font-bold text-gray-700 mb-1">
               Farmacia
             </label>
-            <select
-              name="farmaciaId"
-              value={formulario.farmaciaId}
-              onChange={handleChange}
-              className="w-full border-gray-200 rounded-xl text-sm"
-              required
-            >
-              {farmacias.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.nombre}
-                </option>
-              ))}
-            </select>
+            {farmacias.length === 0 ? (
+              <div className="p-3 bg-red-50 text-red-600 border border-red-100 rounded-xl text-sm font-bold flex items-center gap-2">
+                <AlertTriangle size={16} /> No tienes farmacias asignadas.
+              </div>
+            ) : (
+              <select
+                name="farmaciaId"
+                value={formulario.farmaciaId}
+                onChange={handleChange}
+                className="w-full border-gray-200 rounded-xl text-sm"
+                required
+              >
+                {farmacias.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.nombre}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -2477,7 +3345,6 @@ const VistaConsultas = () => {
             </div>
           </div>
 
-          {/* MÃ‰TRICAS DE ACTIVIDAD */}
           <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
             <div>
               <label className="block text-xs font-bold text-gray-500 mb-1">
@@ -2548,7 +3415,8 @@ const VistaConsultas = () => {
 
           <button
             type="submit"
-            className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 rounded-xl transition-colors shadow-md"
+            disabled={farmacias.length === 0}
+            className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 rounded-xl transition-colors shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
             <CheckCircle size={18} className="mr-2" /> Revisar y Registrar
           </button>
@@ -2597,7 +3465,6 @@ const VistaConsultas = () => {
           </div>
         </div>
 
-        {/* Buscador de farmacias */}
         <div className="relative mb-4">
           <Search size={16} className="absolute left-3 top-3 text-gray-400" />
           <input
@@ -2622,11 +3489,7 @@ const VistaConsultas = () => {
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <span
-                    className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide
-                    ${c.estado === "BORRADOR" ? "bg-gray-100 text-gray-600" : ""}
-                    ${c.estado === "CONFIRMADA" ? "bg-emerald-100 text-emerald-700" : ""}
-                    ${c.estado === "CON_INCIDENCIA" ? "bg-amber-100 text-amber-700" : ""}
-                  `}
+                    className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${c.estado === "BORRADOR" ? "bg-gray-100 text-gray-600" : ""} ${c.estado === "CONFIRMADA" ? "bg-emerald-100 text-emerald-700" : ""} ${c.estado === "CON_INCIDENCIA" ? "bg-amber-100 text-amber-700" : ""}`}
                   >
                     {c.estado.replace("_", " ")}
                   </span>
@@ -2914,23 +3777,34 @@ import {
   ShieldCheck,
   Users,
   Menu,
-  History, // <-- AÃ‘ADIDO
+  History,
+  Shield,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 
-// ImportaciÃ³n de Vistas
+// ImportaciÃ³n de Vistas (NUEVA ARQUITECTURA FEATURE-BASED)
+
+// 1. Vistas del propio mÃ³dulo Dashboard (Misma carpeta: ./)
 import VistaResumen from "./VistaResumen";
 import VistaResumenFarmacia from "./VistaResumenFarmacia";
-import VistaConsultas from "../consultas/VistaConsultas";
-import VistaPedidos from "./vistas/VistaPedidos";
-import VistaSuministros from "./vistas/VistaSuministros";
-import VistaAdminSuministros from "./vistas/VistaAdminSuministros";
-import VistaDocumentacion from "../documentacion/VistaDocumentacion";
-import VistaValidaciones from "../admin/VistaValidaciones";
-import VistaEmpleados from "../admin/VistaAdministracion";
-import VistaHistorialFarmacia from "../consultas/VistaHistorialFarmacia"; // <-- YA IMPORTADO
 import VistaResumenAdmin from "./VistaResumenAdmin";
+
+// 2. Vistas de otros mÃ³dulos (Subimos un nivel: ../)
+import VistaConsultas from "../consultas/VistaConsultas";
+import VistaHistorialFarmacia from "../consultas/VistaHistorialFarmacia";
+
+import VistaPedidos from "../pedidos/VistaPedidos";
+
+import VistaSuministros from "../suministros/VistaSuministros";
+import VistaAdminSuministros from "../suministros/VistaAdminSuministros";
+
+import VistaDocumentacion from "../documentacion/VistaDocumentacion";
+
+// 3. Vistas de AdministraciÃ³n
+import VistaValidaciones from "../admin/VistaValidaciones";
+import VistaAdministracion from "../admin/VistaAdministracion";
+import VistaPersonalInterno from "../admin/VistaPersonalInterno";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -2985,6 +3859,7 @@ const Dashboard = () => {
   const isAdmin = usuario.roles.includes("ROLE_ADMIN");
   const isNutricionista = usuario.roles.includes("ROLE_NUTRICIONISTA");
   const isFarmacia = usuario.roles.includes("ROLE_FARMACIA");
+  const isSuperAdmin = usuario.roles.includes("ROLE_SUPERADMIN"); // <-- AÃ‘ADIDO
 
   // 4. GENERACIÃ“N DEL MENÃš DINÃMICO
   const generarMenu = () => {
@@ -3044,7 +3919,7 @@ const Dashboard = () => {
         label: "Centro Validaciones",
         icon: ShieldCheck,
       });
-      items.push({ id: "usuarios", label: "GestiÃ³n Empleados", icon: Users });
+      items.push({ id: "usuarios", label: "AdministraciÃ³n", icon: Users });
     }
 
     // El mÃ³dulo de DocumentaciÃ³n es para todos, asÃ­ que lo empujamos una sola vez al final
@@ -3053,6 +3928,15 @@ const Dashboard = () => {
       label: "GestiÃ³n Documental",
       icon: FileText,
     });
+
+    // --- NUEVO: MÃ³dulo Exclusivo del SuperAdmin (Paco) ---
+    if (isSuperAdmin) {
+      items.push({
+        id: "personal-interno",
+        label: "Personal Interno",
+        icon: Shield,
+      });
+    }
 
     return items;
   };
@@ -3180,7 +4064,9 @@ const Dashboard = () => {
           ) : vistaActual === "historial-farmacia" ? (
             <VistaHistorialFarmacia />
           ) : vistaActual === "usuarios" ? (
-            <VistaEmpleados />
+            <VistaAdministracion />
+          ) : vistaActual === "personal-interno" ? (
+            <VistaPersonalInterno /> // <-- AÃ‘ADIDO
           ) : (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 min-h-[500px] flex items-center justify-center">
               <div className="text-center">
@@ -3265,7 +4151,8 @@ import {
   Clock,
   Loader2,
   AlertCircle,
-  Check, // Â¡Asegurado de que estÃ¡ importado!
+  Check,
+  Car, // <-- NUEVO ICONO PARA KILÃ“METROS
 } from "lucide-react";
 import { consultasService } from "../consultas/consultasService";
 import { pedidosService } from "../pedidos/pedidosService";
@@ -3275,9 +4162,8 @@ const VistaResumen = () => {
   const [datosResumen, setDatosResumen] = useState(null);
   const [perfil, setPerfil] = useState(null);
   const [cargando, setCargando] = useState(true);
-  const [errorBackend, setErrorBackend] = useState(null); // <-- NUEVO ESTADO PARA ERRORES
+  const [errorBackend, setErrorBackend] = useState(null);
 
-  // --- TABLA BASE DE OBJETIVOS (Para 40 Horas) ---
   const METAS_BASE = {
     OB1: { facturacion: 5000, productos: 800, incentivo: 200, exceso: 0 },
     OB2: { facturacion: 6800, productos: 1000, incentivo: 400, exceso: 0.05 },
@@ -3286,23 +4172,26 @@ const VistaResumen = () => {
 
   const cargarDatos = async () => {
     try {
-      // LLAMAMOS A LOS NUEVOS ENDPOINTS SEGUROS (Solo mis datos)
       const [miPerfil, misConsultas, misPedidos] = await Promise.all([
         nutricionistasService.obtenerMiPerfil(),
         consultasService.obtenerMisConsultas(),
         pedidosService.obtenerMisPedidos(),
       ]);
-
       setPerfil(miPerfil);
 
-      // Filtramos solo el mes actual
-      const mesActual = new Date().toISOString().substring(0, 7); // "YYYY-MM"
+      const mesActual = new Date().toISOString().substring(0, 7);
 
+      // POR ESTO (El filtro Anti-Trampas):
       const consultasMes = misConsultas.filter(
-        (c) => c.fecha.startsWith(mesActual) && c.estado === "CONFIRMADA",
+        (c) => c.fecha.startsWith(mesActual) && c.estado === "VALIDADA",
+        // Nota: Si en tu backend el estado de validaciÃ³n se llama distinto
+        // (ej. "APROBADA"), cÃ¡mbialo aquÃ­.
       );
+
       const pedidosMes = misPedidos.filter(
-        (p) => p.fechaPedido.startsWith(mesActual) && p.estado !== "CANCELADO",
+        (p) =>
+          p.fechaPedido.startsWith(mesActual) &&
+          (p.estado === "ENVIADO" || p.estado === "LIQUIDADO"),
       );
 
       // 1. CÃ¡lculos de Consultas
@@ -3313,14 +4202,35 @@ const VistaResumen = () => {
       );
       const facturacionConsultas = totalNuevas * 25 + totalRevisiones * 20;
 
-      // 2. CÃ¡lculos de Pedidos (Solo dinero real)
-      const facturacionProductos = pedidosMes.reduce(
-        (sum, p) => sum + p.totalPedido,
-        0,
-      );
+      const facturacionProductos = pedidosMes.reduce((sum, pedido) => {
+        // Buscamos si el Admin asignÃ³ un reparto especÃ­fico a ESTA nutricionista
+        const miReparto = pedido.repartos?.find(
+          (r) => r.nutricionistaId === miPerfil.id,
+        );
+
+        // Si hay reparto explÃ­cito, usamos ese %. Si no hay (pedido normal o antiguo), asumimos el 100%
+        const porcentaje = miReparto ? miReparto.porcentaje : 100;
+
+        // Calculamos: (TotalPedido * Porcentaje) / 100
+        const miParteDelPedido = (pedido.totalPedido * porcentaje) / 100;
+
+        return sum + miParteDelPedido;
+      }, 0);
 
       // 3. Totales Globales
       const facturacionTotal = facturacionConsultas + facturacionProductos;
+
+      // 4. --- NUEVO: CÃLCULO DE KILOMETRAJE MENSUAL ---
+      const totalKilometros = consultasMes.reduce((sum, consulta) => {
+        // Buscamos la asignaciÃ³n coincidiendo por ID (asegurando que ambos son nÃºmeros) o por el Nombre de la Farmacia
+        const asignacion = miPerfil.asignaciones?.find(
+          (a) =>
+            Number(a.farmaciaId) === Number(consulta.farmaciaId) ||
+            a.farmaciaNombre === consulta.farmaciaNombre,
+        );
+        const kmViaje = asignacion ? asignacion.kilometros : 0;
+        return sum + kmViaje;
+      }, 0);
 
       setDatosResumen({
         mes: mesActual,
@@ -3329,12 +4239,12 @@ const VistaResumen = () => {
         facturacionConsultas,
         facturacionProductos,
         facturacionTotal,
+        totalKilometros, // <-- Guardamos la nueva mÃ©trica
       });
     } catch (error) {
       console.error("Error al cargar resumen:", error);
-      // CAPTURAMOS EL ERROR AQUÃ PARA EVITAR LA CARGA INFINITA
       setErrorBackend(
-        "No se pudieron cargar tus datos. AsegÃºrate de tener permisos de Nutricionista.",
+        "No se pudieron cargar tus datos. AsegÃºrate de tener permisos.",
       );
     } finally {
       setCargando(false);
@@ -3345,7 +4255,6 @@ const VistaResumen = () => {
     cargarDatos();
   }, []);
 
-  // --- LÃ“GICA DE RENDERIZADO (Evita el bucle infinito) ---
   if (cargando) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -3354,7 +4263,6 @@ const VistaResumen = () => {
     );
   }
 
-  // SI HAY ERROR, MOSTRAMOS EL MENSAJE EN LUGAR DE ROMPER LA VISTA
   if (errorBackend) {
     return (
       <div className="flex flex-col items-center justify-center h-64 bg-red-50 rounded-2xl border border-red-100 p-8 text-center animate-fade-in">
@@ -3365,10 +4273,8 @@ const VistaResumen = () => {
     );
   }
 
-  // ProtecciÃ³n extra por si los datos llegan vacÃ­os sin saltar el catch
   if (!datosResumen || !perfil) return null;
 
-  // --- CÃLCULO DINÃMICO SEGÃšN CONTRATO ---
   const horasContrato = perfil.horasContratoMensual || 40;
   const factorJornada = horasContrato / 40;
 
@@ -3393,7 +4299,6 @@ const VistaResumen = () => {
     },
   };
 
-  // --- MOTOR DE CÃLCULO DE COMISIONES ---
   const { facturacionTotal, facturacionProductos } = datosResumen;
 
   let nivelAlcanzado = "Ninguno";
@@ -3460,9 +4365,9 @@ const VistaResumen = () => {
               Tu rendimiento acumulado en {datosResumen.mes} (Contrato:{" "}
               {horasContrato}h/semana)
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
               <div>
-                <p className="text-sky-200 text-sm font-bold uppercase tracking-wide mb-1">
+                <p className="text-sky-200 text-xs font-bold uppercase tracking-wide mb-1">
                   Nuevas
                 </p>
                 <p className="text-3xl font-black">
@@ -3470,7 +4375,7 @@ const VistaResumen = () => {
                 </p>
               </div>
               <div>
-                <p className="text-sky-200 text-sm font-bold uppercase tracking-wide mb-1">
+                <p className="text-sky-200 text-xs font-bold uppercase tracking-wide mb-1">
                   Revisiones
                 </p>
                 <p className="text-3xl font-black">
@@ -3478,7 +4383,7 @@ const VistaResumen = () => {
                 </p>
               </div>
               <div>
-                <p className="text-sky-200 text-sm font-bold uppercase tracking-wide mb-1">
+                <p className="text-sky-200 text-xs font-bold uppercase tracking-wide mb-1">
                   Servicios
                 </p>
                 <p className="text-3xl font-black">
@@ -3486,11 +4391,22 @@ const VistaResumen = () => {
                 </p>
               </div>
               <div>
-                <p className="text-sky-200 text-sm font-bold uppercase tracking-wide mb-1">
+                <p className="text-sky-200 text-xs font-bold uppercase tracking-wide mb-1">
                   Productos
                 </p>
                 <p className="text-3xl font-black text-emerald-300">
                   {datosResumen.facturacionProductos.toFixed(2)}â‚¬
+                </p>
+              </div>
+
+              {/* --- NUEVA TARJETA DE KILOMETRAJE --- */}
+              <div className="bg-white/10 p-3 rounded-2xl border border-white/20 backdrop-blur-sm">
+                <p className="text-sky-100 text-xs font-black uppercase tracking-widest mb-1 flex items-center gap-1">
+                  <Car size={14} /> Distancia
+                </p>
+                <p className="text-3xl font-black text-white">
+                  {datosResumen.totalKilometros}{" "}
+                  <span className="text-lg font-bold opacity-70">km</span>
                 </p>
               </div>
             </div>
@@ -3524,12 +4440,11 @@ const VistaResumen = () => {
         </div>
 
         <div className="p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-2 gap-10">
-          {/* COLUMNA IZQUIERDA: ESTADO ACTUAL */}
+          {/* ESTADO ACTUAL */}
           <div>
             <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-6">
               Estado Actual
             </h4>
-
             <div className="space-y-6">
               <div>
                 <div className="flex justify-between text-sm mb-2">
@@ -3558,7 +4473,6 @@ const VistaResumen = () => {
                 <p className="text-sm font-bold text-gray-700 mb-3">
                   Requisitos MÃ­nimos (Doble CondiciÃ³n)
                 </p>
-
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600 flex items-center gap-2">
@@ -3578,7 +4492,6 @@ const VistaResumen = () => {
                       â‚¬
                     </span>
                   </div>
-
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600 flex items-center gap-2">
                       {proximoObjetivo &&
@@ -3615,7 +4528,7 @@ const VistaResumen = () => {
             </div>
           </div>
 
-          {/* COLUMNA DERECHA: LOS 3 TRAMOS */}
+          {/* TRAMOS */}
           <div>
             <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-6">
               Tramos de Incentivos
@@ -4792,12 +5705,11 @@ export const pedidosService = {
     const response = await axios.get(API_URL, getConfig());
     return response.data;
   },
-  marcarComoEnviadoAdmin: async (id) => {
-    const response = await axios.put(
-      `${API_URL}/${id}/enviar`,
-      {},
-      getConfig(),
-    );
+  marcarComoEnviadoAdmin: async (id, repartos = []) => {
+    const token = localStorage.getItem("token");
+    const response = await axios.put(`${API_URL}/${id}/enviar`, repartos, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return response.data;
   },
 };
@@ -4868,28 +5780,23 @@ import { nutricionistasService } from "../admin/nutricionistasService";
 import { jwtDecode } from "jwt-decode";
 
 const VistaPedidos = () => {
-  // --- ESTADOS DE DATOS ---
   const [productos, setProductos] = useState([]);
   const [pedidos, setPedidos] = useState([]);
   const [farmacias, setFarmacias] = useState([]);
   const [perfil, setPerfil] = useState(null);
 
-  // --- ESTADOS DE CONTROL ---
   const [esFarmacia, setEsFarmacia] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [errorCarga, setErrorCarga] = useState(null);
 
-  // --- ESTADOS DE FILTROS (HISTORIAL) ---
   const [mesFiltro, setMesFiltro] = useState("Todos");
   const [ordenFiltro, setOrdenFiltro] = useState("recientes");
 
-  // --- ESTADOS DE UI ---
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
   const [carrito, setCarrito] = useState([]);
   const [farmaciaSeleccionada, setFarmaciaSeleccionada] = useState("");
 
-  // --- CARGA DE DATOS INICIAL ---
   const cargarDatos = async () => {
     setCargando(true);
     setErrorCarga(null);
@@ -4900,7 +5807,6 @@ const VistaPedidos = () => {
       const soyFarmacia = roles.includes("ROLE_FARMACIA");
       setEsFarmacia(soyFarmacia);
 
-      // 1. Peticiones base (Productos y Pedidos propios)
       const [datosProds, datosPeds] = await Promise.all([
         productosService.listarTodos(),
         pedidosService.obtenerMisPedidos(),
@@ -4908,20 +5814,27 @@ const VistaPedidos = () => {
       setProductos(datosProds);
       setPedidos(datosPeds);
 
-      // 2. LÃ³gica de Perfil segÃºn Rol
       if (soyFarmacia) {
         const miPerfilFarm = await farmaciaService.obtenerMiPerfil();
         setPerfil(miPerfilFarm);
         setFarmaciaSeleccionada(miPerfilFarm.id.toString());
       } else {
-        const [miPerfilNutri, datosFarms] = await Promise.all([
+        const [miPerfilNutri, todasLasFarmacias] = await Promise.all([
           nutricionistasService.obtenerMiPerfil(),
           farmaciaService.listarTodas(),
         ]);
         setPerfil(miPerfilNutri);
-        setFarmacias(datosFarms);
-        if (datosFarms.length > 0) {
-          setFarmaciaSeleccionada(datosFarms[0].id.toString());
+
+        // --- NUEVA LÃ“GICA DE AISLAMIENTO (N:M) ---
+        const misFarmacias = todasLasFarmacias.filter((f) =>
+          miPerfilNutri.asignaciones?.some(
+            (asignacion) => asignacion.farmaciaId === f.id,
+          ),
+        );
+        setFarmacias(misFarmacias);
+
+        if (misFarmacias.length > 0) {
+          setFarmaciaSeleccionada(misFarmacias[0].id.toString());
         }
       }
     } catch (error) {
@@ -4938,32 +5851,47 @@ const VistaPedidos = () => {
     cargarDatos();
   }, []);
 
-  // Limpiar carrito si una Nutricionista cambia de Farmacia destino
+  // Limpiar carrito si una Nutricionista cambia de Farmacia destino (Evita problemas de cÃ¡lculo de precios cruzados)
   useEffect(() => {
     if (!esFarmacia) {
       setCarrito([]);
     }
   }, [farmaciaSeleccionada, esFarmacia]);
 
-  // --- CÃLCULOS DERIVADOS (LÃ“GICA DE NEGOCIO) ---
+  // Identificamos la farmacia destino seleccionada
   const farmaciaActual = esFarmacia
     ? perfil
     : farmacias.find((f) => f.id.toString() === farmaciaSeleccionada);
 
+  // --- MOTOR DE PRECIOS GEOGRÃFICOS ---
+  // Retorna PVF si es de AlmerÃ­a, o PVP si es de fuera.
+  const getPrecioAplicado = (producto) => {
+    if (!farmaciaActual || farmaciaActual.esProvinciaLocal !== false) {
+      return producto.pvf;
+    }
+    return producto.pvp;
+  };
+
   const saldoDisponibleInicial = farmaciaActual?.saldoVirtual || 0;
 
+  // Los totales ahora se calculan usando el Motor de Precios DinÃ¡mico
   const totalReal = carrito
     .filter((item) => !item.pagadoConSaldo)
-    .reduce((sum, item) => sum + item.cantidad * item.productoInfo.pvf, 0);
+    .reduce(
+      (sum, item) => sum + item.cantidad * getPrecioAplicado(item.productoInfo),
+      0,
+    );
 
   const totalVirtual = carrito
     .filter((item) => item.pagadoConSaldo)
-    .reduce((sum, item) => sum + item.cantidad * item.productoInfo.pvf, 0);
+    .reduce(
+      (sum, item) => sum + item.cantidad * getPrecioAplicado(item.productoInfo),
+      0,
+    );
 
   const saldoRestante = saldoDisponibleInicial - totalVirtual;
   const umbralAlcanzado = totalReal >= 80;
 
-  // --- FILTROS DE HISTORIAL ---
   const mesesDisponibles = [
     "Todos",
     ...new Set(pedidos.map((p) => p.fechaPedido.substring(0, 7))),
@@ -4983,23 +5911,21 @@ const VistaPedidos = () => {
       return 0;
     });
 
-  // --- ALGORITMO DE BONIFICADOS ---
   const calcularBonificados = (cantidad) => {
-    if (cantidad >= 100) return 30;
+    if (cantidad >= 100) return 20; // Corregido: antes tenÃ­as 30 en tu cÃ³digo original, el PRD dice 20
     if (cantidad >= 20) return 5;
     if (cantidad >= 10) return 2;
     if (cantidad >= 6) return 1;
     return 0;
   };
 
-  // --- ACCIONES DEL CARRITO ---
   const agregarAlCarrito = (producto, usarSaldo = false) => {
     if (usarSaldo && !umbralAlcanzado) {
       return alert(
-        "Debes alcanzar los 80â‚¬ en productos normales antes de usar el saldo virtual.",
+        "Debes alcanzar los 80â‚¬ en dinero real antes de usar el saldo virtual.",
       );
     }
-    if (usarSaldo && saldoRestante < producto.pvf) {
+    if (usarSaldo && saldoRestante < getPrecioAplicado(producto)) {
       return alert("Saldo virtual insuficiente para este producto.");
     }
 
@@ -5040,7 +5966,7 @@ const VistaPedidos = () => {
           if (
             pagadoConSaldo &&
             delta > 0 &&
-            saldoRestante < item.productoInfo.pvf
+            saldoRestante < getPrecioAplicado(item.productoInfo)
           ) {
             alert("No queda saldo virtual suficiente.");
             return item;
@@ -5075,8 +6001,8 @@ const VistaPedidos = () => {
           bonificados: item.bonificados,
           pagadoConSaldo: item.pagadoConSaldo,
         })),
+        creadoPorAdmin: false, // Desde esta vista, no es el admin haciendo de proxy
       };
-
       await pedidosService.crear(payload);
       alert("Â¡Pedido realizado con Ã©xito!");
       setCarrito([]);
@@ -5088,7 +6014,6 @@ const VistaPedidos = () => {
     }
   };
 
-  // --- RENDERIZADO CONDICIONAL DE CARGA/ERROR ---
   if (cargando) {
     return (
       <div className="flex flex-col justify-center items-center h-[60vh] gap-4">
@@ -5118,9 +6043,7 @@ const VistaPedidos = () => {
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 animate-fade-in relative pb-10">
-      {/* ============================================================
-          MODAL DE DETALLES DEL PEDIDO
-      ============================================================ */}
+      {/* MODAL DETALLES DEL PEDIDO */}
       {pedidoSeleccionado && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-md">
           <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-2xl w-full overflow-hidden animate-scale-in">
@@ -5256,9 +6179,7 @@ const VistaPedidos = () => {
         </div>
       )}
 
-      {/* ============================================================
-          COLUMNA IZQUIERDA: CATÃLOGO DE PRODUCTOS
-      ============================================================ */}
+      {/* CATÃLOGO DE PRODUCTOS */}
       <div className="xl:col-span-7 space-y-6">
         <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -5273,7 +6194,7 @@ const VistaPedidos = () => {
                 <p className="text-gray-500 font-medium mt-1">
                   CatÃ¡logo para{" "}
                   <span className="text-sky-600 font-black">
-                    {farmaciaActual?.nombre}
+                    {farmaciaActual?.nombre || "..."}
                   </span>
                 </p>
               </div>
@@ -5284,29 +6205,35 @@ const VistaPedidos = () => {
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block ml-1">
                   Seleccionar Destino
                 </label>
-                <div className="relative">
-                  <select
-                    value={farmaciaSeleccionada}
-                    onChange={(e) => setFarmaciaSeleccionada(e.target.value)}
-                    className="w-full md:w-64 pl-4 pr-10 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl text-sm font-bold text-gray-700 appearance-none focus:border-sky-500 focus:ring-0 transition-all outline-none"
-                  >
-                    {farmacias.map((f) => (
-                      <option key={f.id} value={f.id}>
-                        {f.nombre}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronRight
-                    size={18}
-                    className="absolute right-4 top-4.5 text-gray-400 rotate-90"
-                  />
-                </div>
+                {farmacias.length === 0 ? (
+                  <div className="p-3 bg-red-50 text-red-600 border border-red-100 rounded-xl text-sm font-bold flex items-center gap-2">
+                    <AlertCircle size={16} /> Sin farmacias asignadas
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <select
+                      value={farmaciaSeleccionada}
+                      onChange={(e) => setFarmaciaSeleccionada(e.target.value)}
+                      className="w-full md:w-64 pl-4 pr-10 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl text-sm font-bold text-gray-700 appearance-none focus:border-sky-500 focus:ring-0 transition-all outline-none"
+                    >
+                      {farmacias.map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {f.nombre}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronRight
+                      size={18}
+                      className="absolute right-4 top-4.5 text-gray-400 rotate-90"
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
 
-        {/* TARJETA MONEDERO DINÃMICA */}
+        {/* TARJETA MONEDERO */}
         <div
           className={`relative overflow-hidden rounded-[2.5rem] p-8 text-white transition-all duration-500 shadow-xl ${umbralAlcanzado ? "bg-gradient-to-br from-purple-600 to-indigo-800" : "bg-gradient-to-br from-gray-700 to-gray-900 opacity-90"}`}
         >
@@ -5365,7 +6292,7 @@ const VistaPedidos = () => {
           />
         </div>
 
-        {/* REJILLA DE PRODUCTOS */}
+        {/* REJILLA PRODUCTOS */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {productos.map((prod) => (
             <div
@@ -5389,17 +6316,24 @@ const VistaPedidos = () => {
                   REF: <span className="text-gray-600">{prod.referencia}</span>
                 </p>
                 <div className="mt-4 flex items-baseline gap-1">
+                  {/* NUEVO: Mostramos el precio dinÃ¡micamente segÃºn la ubicaciÃ³n de la farmacia */}
                   <span className="text-3xl font-black text-gray-900">
-                    {prod.pvf.toFixed(2)}
+                    {getPrecioAplicado(prod).toFixed(2)}
                   </span>
                   <span className="text-lg font-bold text-gray-400">â‚¬</span>
+                  <span className="ml-2 bg-gray-100 text-gray-500 text-[10px] font-bold px-2 py-1 rounded">
+                    {farmaciaActual?.esProvinciaLocal !== false
+                      ? "Tarifa Local"
+                      : "Tarifa Externa"}
+                  </span>
                 </div>
               </div>
 
               <div className="mt-8 space-y-3">
                 <button
                   onClick={() => agregarAlCarrito(prod, false)}
-                  className="w-full bg-gray-900 hover:bg-black text-white py-4 rounded-[1.25rem] font-black text-sm flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg shadow-gray-200"
+                  disabled={!farmaciaSeleccionada}
+                  className="w-full bg-gray-900 hover:bg-black disabled:bg-gray-300 text-white py-4 rounded-[1.25rem] font-black text-sm flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg shadow-gray-200"
                 >
                   <Plus size={18} /> AÃ±adir a Cesta Real
                 </button>
@@ -5407,7 +6341,7 @@ const VistaPedidos = () => {
                 {umbralAlcanzado && (
                   <button
                     onClick={() => agregarAlCarrito(prod, true)}
-                    disabled={saldoRestante < prod.pvf}
+                    disabled={saldoRestante < getPrecioAplicado(prod)}
                     className="w-full bg-purple-50 text-purple-700 border-2 border-purple-100 py-4 rounded-[1.25rem] font-black text-sm flex items-center justify-center gap-3 transition-all hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Wallet size={18} /> Comprar con Saldo
@@ -5419,9 +6353,7 @@ const VistaPedidos = () => {
         </div>
       </div>
 
-      {/* ============================================================
-          COLUMNA DERECHA: CARRITO Y RESUMEN FINANCIERO
-      ============================================================ */}
+      {/* CARRITO Y RESUMEN FINANCIERO */}
       <div className="xl:col-span-5 space-y-8">
         <div className="bg-white rounded-[3rem] shadow-xl border border-gray-100 p-8 sticky top-6">
           <div className="flex items-center justify-between mb-8 pb-4 border-b border-gray-50">
@@ -5438,7 +6370,6 @@ const VistaPedidos = () => {
             </span>
           </div>
 
-          {/* LISTA DEL CARRITO */}
           <div className="space-y-4 max-h-[400px] overflow-y-auto pr-4 mb-8 custom-scrollbar">
             {carrito.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-200">
@@ -5446,7 +6377,7 @@ const VistaPedidos = () => {
                 <p className="text-gray-400 font-bold">
                   Tu cesta estÃ¡ vacÃ­a.
                   <br />
-                  Selecciona productos del catÃ¡logo.
+                  Selecciona productos.
                 </p>
               </div>
             ) : (
@@ -5469,7 +6400,10 @@ const VistaPedidos = () => {
                     <p
                       className={`font-black text-lg ${item.pagadoConSaldo ? "text-purple-700" : "text-gray-900"}`}
                     >
-                      {(item.cantidad * item.productoInfo.pvf).toFixed(2)}â‚¬
+                      {(
+                        item.cantidad * getPrecioAplicado(item.productoInfo)
+                      ).toFixed(2)}
+                      â‚¬
                     </p>
                   </div>
 
@@ -5517,7 +6451,6 @@ const VistaPedidos = () => {
             )}
           </div>
 
-          {/* TOTALES */}
           <div className="bg-gray-50 rounded-[2rem] p-6 space-y-4 mb-8">
             {totalVirtual > 0 && (
               <div className="flex justify-between items-center text-purple-700 px-2">
@@ -5534,7 +6467,7 @@ const VistaPedidos = () => {
                 </p>
                 {!umbralAlcanzado && totalReal > 0 && (
                   <p className="text-[10px] text-amber-600 font-bold mt-1 flex items-center gap-1">
-                    <Info size={10} /> Falta para el mÃ­nimo de liquidaciÃ³n
+                    <Info size={10} /> Falta para el mÃ­nimo
                   </p>
                 )}
               </div>
@@ -5552,7 +6485,8 @@ const VistaPedidos = () => {
             disabled={
               carrito.length === 0 ||
               enviando ||
-              (!umbralAlcanzado && totalVirtual > 0)
+              (!umbralAlcanzado && totalVirtual > 0) ||
+              !farmaciaSeleccionada
             }
             className="w-full bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 text-white font-black py-5 rounded-[1.5rem] shadow-xl shadow-sky-100 disabled:from-gray-300 disabled:to-gray-400 disabled:shadow-none transition-all flex items-center justify-center gap-4 active:scale-[0.98]"
           >
@@ -5560,15 +6494,13 @@ const VistaPedidos = () => {
               <Loader2 className="animate-spin" />
             ) : (
               <>
-                <ShoppingBag size={24} /> Confirmar Pedido y Emitir
+                <ShoppingBag size={24} /> Confirmar Pedido
               </>
             )}
           </button>
         </div>
 
-        {/* ============================================================
-            HISTORIAL AVANZADO DE PEDIDOS (CON FILTROS RESTAURADOS)
-        ============================================================ */}
+        {/* HISTORIAL DE PEDIDOS */}
         <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
@@ -5584,7 +6516,6 @@ const VistaPedidos = () => {
             </span>
           </div>
 
-          {/* CONTROLES DE FILTRO */}
           <div className="grid grid-cols-2 gap-3 mb-6">
             <div className="relative">
               <Filter
@@ -6252,17 +7183,14 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./features/auth/Login";
 import ResetPassword from "./features/auth/ResetPassword";
 import Dashboard from "./features/dashboard/Dashboard";
-import ProtectedRoute from "./core/routes/ProtectedRoute"; // <-- Importamos al portero
+import ProtectedRoute from "./core/routes/ProtectedRoute";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Ruta pÃºblica */}
         <Route path="/" element={<Login />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-
-        {/* Ruta PRIVADA: Envolvemos el Dashboard con el ProtectedRoute */}
         <Route
           path="/dashboard"
           element={

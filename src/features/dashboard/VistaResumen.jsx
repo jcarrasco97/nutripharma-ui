@@ -57,11 +57,20 @@ const VistaResumen = () => {
       );
       const facturacionConsultas = totalNuevas * 25 + totalRevisiones * 20;
 
-      // 2. Cálculos de Pedidos
-      const facturacionProductos = pedidosMes.reduce(
-        (sum, p) => sum + p.totalPedido,
-        0,
-      );
+      const facturacionProductos = pedidosMes.reduce((sum, pedido) => {
+        // Buscamos si el Admin asignó un reparto específico a ESTA nutricionista
+        const miReparto = pedido.repartos?.find(
+          (r) => r.nutricionistaId === miPerfil.id,
+        );
+
+        // Si hay reparto explícito, usamos ese %. Si no hay (pedido normal o antiguo), asumimos el 100%
+        const porcentaje = miReparto ? miReparto.porcentaje : 100;
+
+        // Calculamos: (TotalPedido * Porcentaje) / 100
+        const miParteDelPedido = (pedido.totalPedido * porcentaje) / 100;
+
+        return sum + miParteDelPedido;
+      }, 0);
 
       // 3. Totales Globales
       const facturacionTotal = facturacionConsultas + facturacionProductos;

@@ -10,7 +10,8 @@ import {
   ShieldCheck,
   Users,
   Menu,
-  History, // <-- AÑADIDO
+  History,
+  Shield,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
@@ -35,7 +36,8 @@ import VistaDocumentacion from "../documentacion/VistaDocumentacion";
 
 // 3. Vistas de Administración
 import VistaValidaciones from "../admin/VistaValidaciones";
-import VistaAdministracion from "../admin/VistaAdministracion"; // Nota: si le cambiaste el nombre al archivo por VistaAdministracion.jsx, asegúrate de que el nombre del archivo coincida aquí
+import VistaAdministracion from "../admin/VistaAdministracion";
+import VistaPersonalInterno from "../admin/VistaPersonalInterno";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -90,6 +92,7 @@ const Dashboard = () => {
   const isAdmin = usuario.roles.includes("ROLE_ADMIN");
   const isNutricionista = usuario.roles.includes("ROLE_NUTRICIONISTA");
   const isFarmacia = usuario.roles.includes("ROLE_FARMACIA");
+  const isSuperAdmin = usuario.roles.includes("ROLE_SUPERADMIN"); // <-- AÑADIDO
 
   // 4. GENERACIÓN DEL MENÚ DINÁMICO
   const generarMenu = () => {
@@ -158,6 +161,15 @@ const Dashboard = () => {
       label: "Gestión Documental",
       icon: FileText,
     });
+
+    // --- NUEVO: Módulo Exclusivo del SuperAdmin (Paco) ---
+    if (isSuperAdmin) {
+      items.push({
+        id: "personal-interno",
+        label: "Personal Interno",
+        icon: Shield,
+      });
+    }
 
     return items;
   };
@@ -286,6 +298,8 @@ const Dashboard = () => {
             <VistaHistorialFarmacia />
           ) : vistaActual === "usuarios" ? (
             <VistaAdministracion />
+          ) : vistaActual === "personal-interno" ? (
+            <VistaPersonalInterno /> // <-- AÑADIDO
           ) : (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 min-h-[500px] flex items-center justify-center">
               <div className="text-center">

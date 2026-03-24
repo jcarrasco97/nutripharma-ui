@@ -16,7 +16,9 @@ import {
   X,
   Save,
   MapPin,
-  Car, // <-- Nuevo icono
+  Car,
+  Archive,
+  RefreshCw,
 } from "lucide-react";
 import { farmaciaService } from "./farmaciaService";
 import { nutricionistasService } from "./nutricionistasService";
@@ -27,6 +29,9 @@ const VistaAdministracion = () => {
   const [nutricionistas, setNutricionistas] = useState([]);
   const [farmacias, setFarmacias] = useState([]);
   const [productos, setProductos] = useState([]);
+  const [farmaciasBajas, setFarmaciasBajas] = useState([]);
+  const [nutricionistasBajas, setNutricionistasBajas] = useState([]);
+  const [mostrarBajas, setMostrarBajas] = useState(false); // Controla si vemos el cementerio
   const [cargando, setCargando] = useState(true);
   const [enviando, setEnviando] = useState(false);
 
@@ -48,21 +53,27 @@ const VistaAdministracion = () => {
     referencia: "",
     pvf: "",
     pvp: "",
-    asignaciones: [], // <-- NUEVA ESTRUCTURA: [{ farmaciaId: 1, kilometros: 15 }]
+    asignaciones: [],
     esProvinciaLocal: true,
+    porcentajeComision: 30,
   });
 
   const cargarDatos = async () => {
     setCargando(true);
     try {
-      const [datosNutris, datosFarms, datosProds] = await Promise.all([
-        nutricionistasService.listarTodas(),
-        farmaciaService.listarTodas(),
-        productosService.listarTodos(),
-      ]);
+      const [datosNutris, datosFarms, datosProds, bajasNutris, bajasFarms] =
+        await Promise.all([
+          nutricionistasService.listarTodas(),
+          farmaciaService.listarTodas(),
+          productosService.listarTodos(),
+          nutricionistasService.listarBajas().catch(() => []), // Atrapamos el error por si acaso
+          farmaciaService.listarBajas().catch(() => []),
+        ]);
       setNutricionistas(datosNutris);
       setFarmacias(datosFarms);
       setProductos(datosProds);
+      setNutricionistasBajas(bajasNutris); // <-- AÑADIDO
+      setFarmaciasBajas(bajasFarms); // <-- AÑADIDO
     } catch (error) {
       console.error("Error al cargar administracion:", error);
     } finally {
@@ -78,20 +89,16 @@ const VistaAdministracion = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // --- MANEJADORES DE ASIGNACIONES (N:M con Kilómetros) ---
   const handleToggleFarmacia = (farmaciaId, checked, esEdicion = false) => {
     const setTarget = esEdicion ? setItemEditando : setFormData;
-
     setTarget((prev) => {
       const actuales = prev.asignaciones || [];
       if (checked) {
-        // Añadimos la farmacia con 0 km por defecto
         return {
           ...prev,
           asignaciones: [...actuales, { farmaciaId, kilometros: 0 }],
         };
       } else {
-        // La quitamos de la lista
         return {
           ...prev,
           asignaciones: actuales.filter((a) => a.farmaciaId !== farmaciaId),
@@ -102,7 +109,6 @@ const VistaAdministracion = () => {
 
   const handleCambiarKilometros = (farmaciaId, kms, esEdicion = false) => {
     const setTarget = esEdicion ? setItemEditando : setFormData;
-
     setTarget((prev) => {
       const actuales = prev.asignaciones || [];
       return {
@@ -127,7 +133,7 @@ const VistaAdministracion = () => {
           apellidos: formData.apellidos,
           dni: formData.dni,
           horasContratoMensual: Number(formData.horasContratoMensual),
-          asignaciones: formData.asignaciones, // <-- ENVIAMOS LA ESTRUCTURA COMPLEJA
+          asignaciones: formData.asignaciones,
         });
         alert("Nutricionista creada con éxito.");
       } else if (pestana === "farmacias") {
@@ -138,6 +144,7 @@ const VistaAdministracion = () => {
           cif: formData.cif,
           direccion: formData.direccion,
           esProvinciaLocal: formData.esProvinciaLocal,
+          porcentajeComision: Number(formData.porcentajeComision),
         });
         alert("Farmacia registrada con éxito.");
       } else if (pestana === "productos") {
@@ -170,8 +177,10 @@ const VistaAdministracion = () => {
         pvp: "",
         asignaciones: [],
         esProvinciaLocal: true,
+        porcentajeComision: 30,
       });
 
+      setMostrarBajas(false);
       cargarDatos();
     } catch (error) {
       alert(error.response?.data?.message || "Error al realizar la operación.");
@@ -193,8 +202,27 @@ const VistaAdministracion = () => {
       if (tipo === "producto") await productosService.eliminar(id);
       cargarDatos();
     } catch (error) {
-      console.error(`Error al eliminar ${tipo}:`, error);
+      console.error(`Error al eliminar ${tipo}:`, error); // <-- AÑADIDO PARA ESLINT
       alert("Error al eliminar. Puede que tenga datos asociados.");
+    }
+  };
+
+  const handleRestaurar = async (id, tipo) => {
+    if (
+      !window.confirm(
+        `¿Seguro que deseas reactivar este registro? Volverá a estar operativo.`,
+      )
+    )
+      return;
+    try {
+      if (tipo === "nutricionista") await nutricionistasService.restaurar(id);
+      if (tipo === "farmacia") await farmaciaService.restaurar(id);
+
+      // Recargamos los datos para ver cómo desaparece del cementerio y vuelve arriba
+      cargarDatos();
+    } catch (error) {
+      console.error(`Error al restaurar ${tipo}:`, error);
+      alert("Error al restaurar el registro.");
     }
   };
 
@@ -206,7 +234,7 @@ const VistaAdministracion = () => {
           nombre: itemEditando.nombre,
           apellidos: itemEditando.apellidos,
           horasContratoMensual: Number(itemEditando.horasContratoMensual),
-          asignaciones: itemEditando.asignaciones || [], // <-- ENVIAMOS ESTRUCTURA COMPLEJA
+          asignaciones: itemEditando.asignaciones || [],
         });
       }
       if (pestana === "farmacias") {
@@ -215,6 +243,7 @@ const VistaAdministracion = () => {
           cif: itemEditando.cif,
           direccion: itemEditando.direccion,
           esProvinciaLocal: itemEditando.esProvinciaLocal,
+          porcentajeComision: Number(itemEditando.porcentajeComision),
         });
       }
       if (pestana === "productos") {
@@ -223,9 +252,10 @@ const VistaAdministracion = () => {
 
       alert("Datos actualizados correctamente.");
       setItemEditando(null);
+      setMostrarBajas(false);
       cargarDatos();
     } catch (error) {
-      console.error("Error al actualizar:", error);
+      console.error("Error al actualizar:", error); // <-- AÑADIDO PARA ESLINT
       alert("Error al actualizar los datos.");
     }
   };
@@ -302,7 +332,7 @@ const VistaAdministracion = () => {
 
                   <div className="pt-2 border-t border-gray-100">
                     <label className="block text-sm font-bold text-gray-700 mb-2">
-                      Asignación y Kilometraje (Ida y Vuelta)
+                      Asignación y Kilometraje
                     </label>
                     <div className="max-h-56 overflow-y-auto space-y-2 p-3 border rounded-xl bg-gray-50 custom-scrollbar">
                       {farmacias.map((farmacia) => {
@@ -310,7 +340,6 @@ const VistaAdministracion = () => {
                           (a) => a.farmaciaId === farmacia.id,
                         );
                         const isChecked = !!asignacionInfo;
-
                         return (
                           <div
                             key={farmacia.id}
@@ -333,8 +362,6 @@ const VistaAdministracion = () => {
                                 {farmacia.nombre}
                               </span>
                             </label>
-
-                            {/* Input condicional de Kilómetros */}
                             {isChecked && (
                               <div className="mt-2 pl-7 flex items-center gap-2 animate-fade-in">
                                 <Car size={14} className="text-gray-400" />
@@ -409,7 +436,6 @@ const VistaAdministracion = () => {
                     placeholder="Dirección"
                     required
                   />
-
                   <label className="flex items-center gap-3 p-4 bg-sky-50 border border-sky-100 rounded-xl cursor-pointer mt-2">
                     <input
                       type="checkbox"
@@ -428,6 +454,29 @@ const VistaAdministracion = () => {
                       </span>
                     </div>
                   </label>
+                  <div className="relative mt-2">
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
+                      Comisión para la Farmacia
+                    </label>
+                    <input
+                      type="number"
+                      value={itemEditando.porcentajeComision || 30}
+                      onChange={(e) =>
+                        setItemEditando({
+                          ...itemEditando,
+                          porcentajeComision: e.target.value,
+                        })
+                      }
+                      required
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      className="w-full p-3 border rounded-xl"
+                    />
+                    <span className="absolute right-4 top-10 text-gray-400 font-bold">
+                      %
+                    </span>
+                  </div>
                 </>
               )}
 
@@ -540,7 +589,6 @@ const VistaAdministracion = () => {
                           <p className="text-xs text-gray-500 mb-1">
                             {n.email} • DNI: {n.dni}
                           </p>
-
                           <div className="flex flex-wrap gap-1 mt-1">
                             {n.asignaciones?.length > 0 ? (
                               <span className="bg-indigo-50 text-indigo-600 text-[10px] font-black px-2 py-0.5 rounded-md uppercase">
@@ -673,6 +721,114 @@ const VistaAdministracion = () => {
                 )}
               </div>
             )}
+
+            {/* 👇 INSERTA TODO ESTE BLOQUE AQUÍ 👇 */}
+            {/* --- BOTÓN Y LISTADO DEL CEMENTERIO DE BAJAS --- */}
+            {(pestana === "nutricionistas" || pestana === "farmacias") && (
+              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 mt-6">
+                <div className="text-center mb-2">
+                  <button
+                    onClick={() => setMostrarBajas(!mostrarBajas)}
+                    className="inline-flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-gray-800 transition-colors"
+                  >
+                    <Archive size={16} />
+                    {mostrarBajas
+                      ? "Ocultar Historial de Bajas"
+                      : "Ver Historial de Bajas"}
+                  </button>
+                </div>
+
+                {mostrarBajas && (
+                  <div className="mt-4 border-t-2 border-dashed border-gray-200 pt-4">
+                    <h4 className="text-xs font-black uppercase text-gray-400 mb-4 px-2">
+                      Registros Inactivos (Solo Lectura)
+                    </h4>
+                    {/* Bajas Nutricionistas */}
+                    {pestana === "nutricionistas" && (
+                      <div className="space-y-2">
+                        {nutricionistasBajas.length === 0 ? (
+                          <p className="text-sm text-gray-400 italic px-2">
+                            No hay historial de bajas.
+                          </p>
+                        ) : (
+                          nutricionistasBajas.map((n) => (
+                            <div
+                              key={n.id}
+                              className="p-3 bg-gray-200/50 rounded-xl flex items-center justify-between group"
+                            >
+                              <div className="flex items-center gap-3 grayscale opacity-75">
+                                <div className="bg-gray-300 text-gray-500 w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0">
+                                  {n.nombre.charAt(0)}
+                                </div>
+                                <div>
+                                  <p className="font-bold text-gray-600 text-sm line-through">
+                                    {n.nombre} {n.apellidos}
+                                  </p>
+                                  <p className="text-[10px] text-gray-500">
+                                    {n.email} • DNI: {n.dni}
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() =>
+                                  handleRestaurar(n.id, "nutricionista")
+                                }
+                                className="p-2 text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 opacity-0 group-hover:opacity-100 transition-opacity"
+                                title="Restaurar / Reactivar"
+                              >
+                                <RefreshCw size={16} />
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+
+                    {/* Haz lo mismo para Bajas Farmacias añadiendo el botón al lado de la información */}
+                    {pestana === "farmacias" && (
+                      <div className="space-y-2">
+                        {farmaciasBajas.length === 0 ? (
+                          <p className="text-sm text-gray-400 italic px-2">
+                            No hay historial de bajas.
+                          </p>
+                        ) : (
+                          farmaciasBajas.map((f) => (
+                            <div
+                              key={f.id}
+                              className="p-3 bg-gray-200/50 rounded-xl flex items-center justify-between group"
+                            >
+                              <div className="flex items-center gap-3 grayscale opacity-75">
+                                <div className="bg-gray-300 text-gray-500 p-2 rounded-lg shrink-0">
+                                  <Store size={16} />
+                                </div>
+                                <div>
+                                  <p className="font-bold text-gray-600 text-sm line-through">
+                                    {f.nombre}
+                                  </p>
+                                  <p className="text-[10px] text-gray-500">
+                                    {f.email} • CIF: {f.cif}
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() =>
+                                  handleRestaurar(f.id, "farmacia")
+                                }
+                                className="p-2 text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 opacity-0 group-hover:opacity-100 transition-opacity"
+                                title="Restaurar / Reactivar"
+                              >
+                                <RefreshCw size={16} />
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+            {/* 👆 FIN DEL BLOQUE A INSERTAR 👆 */}
           </div>
         </div>
 
@@ -807,7 +963,6 @@ const VistaAdministracion = () => {
                           (a) => a.farmaciaId === farmacia.id,
                         );
                         const isChecked = !!asignacionInfo;
-
                         return (
                           <div
                             key={farmacia.id}
@@ -830,8 +985,6 @@ const VistaAdministracion = () => {
                                 {farmacia.nombre}
                               </span>
                             </label>
-
-                            {/* Input condicional de Kilómetros */}
                             {isChecked && (
                               <div className="mt-2 pl-7 flex items-center gap-2 animate-fade-in">
                                 <Car size={14} className="text-gray-400" />
@@ -851,7 +1004,7 @@ const VistaAdministracion = () => {
                                   required
                                 />
                                 <span className="text-xs text-gray-400 font-bold">
-                                  Km totales (Ida/Vuelta)
+                                  Km totales
                                 </span>
                               </div>
                             )}
@@ -894,7 +1047,6 @@ const VistaAdministracion = () => {
                     placeholder="Dirección completa"
                     className="w-full bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
                   />
-
                   <div className="pt-4">
                     <label className="flex items-center gap-3 p-4 bg-sky-900/30 border border-sky-500/30 rounded-xl cursor-pointer">
                       <input
@@ -914,6 +1066,23 @@ const VistaAdministracion = () => {
                         </span>
                       </div>
                     </label>
+                  </div>
+                  <div className="relative mt-2">
+                    <input
+                      type="number"
+                      name="porcentajeComision"
+                      value={formData.porcentajeComision}
+                      onChange={handleChange}
+                      required
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      placeholder="Comisión para la Farmacia (%)"
+                      className="w-full bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
+                    <span className="absolute right-4 top-3.5 text-gray-400 font-bold">
+                      %
+                    </span>
                   </div>
                 </>
               )}
@@ -937,13 +1106,13 @@ const VistaAdministracion = () => {
                       onChange={handleChange}
                       required
                       placeholder="Acrónimo"
-                      className="w-1/2 bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white outline-none"
+                      className="w-full bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white outline-none"
                     />
                     <select
                       name="categoria"
                       value={formData.categoria}
                       onChange={handleChange}
-                      className="w-1/2 bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white outline-none"
+                      className="w-full bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white outline-none"
                     >
                       <option value="PEQUENO">PEQUEÑO</option>
                       <option value="GRANDE">GRANDE</option>
@@ -967,7 +1136,7 @@ const VistaAdministracion = () => {
                       onChange={handleChange}
                       required
                       placeholder="PVF (€)"
-                      className="w-1/2 bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white outline-none"
+                      className="w-full bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white outline-none"
                     />
                     <input
                       type="number"
@@ -977,7 +1146,7 @@ const VistaAdministracion = () => {
                       onChange={handleChange}
                       required
                       placeholder="PVP (€)"
-                      className="w-1/2 bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white outline-none"
+                      className="w-full bg-gray-800 border-none rounded-xl px-4 py-3 text-sm text-white outline-none"
                     />
                   </div>
                 </>
