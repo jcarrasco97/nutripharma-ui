@@ -26,4 +26,12 @@ export const personalInternoService = {
     const response = await axios.get(`${API_URL}/admin/bajas`, getConfig());
     return response.data;
   },
+  restaurarAdmin: async (id) => {
+    const response = await axios.put(
+      `${API_URL}/admin/${id}/restaurar`,
+      {},
+      getConfig(),
+    );
+    return response.data;
+  },
 };

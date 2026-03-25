@@ -32,6 +32,7 @@ const VistaAdministracion = () => {
   const [farmaciasBajas, setFarmaciasBajas] = useState([]);
   const [nutricionistasBajas, setNutricionistasBajas] = useState([]);
   const [mostrarBajas, setMostrarBajas] = useState(false); // Controla si vemos el cementerio
+  const [productosBajas, setProductosBajas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [enviando, setEnviando] = useState(false);
 
@@ -61,19 +62,27 @@ const VistaAdministracion = () => {
   const cargarDatos = async () => {
     setCargando(true);
     try {
-      const [datosNutris, datosFarms, datosProds, bajasNutris, bajasFarms] =
-        await Promise.all([
-          nutricionistasService.listarTodas(),
-          farmaciaService.listarTodas(),
-          productosService.listarTodos(),
-          nutricionistasService.listarBajas().catch(() => []), // Atrapamos el error por si acaso
-          farmaciaService.listarBajas().catch(() => []),
-        ]);
+      const [
+        datosNutris,
+        datosFarms,
+        datosProds,
+        bajasNutris,
+        bajasFarms,
+        bajasProds,
+      ] = await Promise.all([
+        nutricionistasService.listarTodas(),
+        farmaciaService.listarTodas(),
+        productosService.listarTodos(),
+        nutricionistasService.listarBajas().catch(() => []), // Atrapamos el error por si acaso
+        farmaciaService.listarBajas().catch(() => []),
+        productosService.listarBajas().catch(() => []), // <-- AÑADIDO
+      ]);
       setNutricionistas(datosNutris);
       setFarmacias(datosFarms);
       setProductos(datosProds);
       setNutricionistasBajas(bajasNutris); // <-- AÑADIDO
       setFarmaciasBajas(bajasFarms); // <-- AÑADIDO
+      setProductosBajas(bajasProds); // <-- AÑADIDO
     } catch (error) {
       console.error("Error al cargar administracion:", error);
     } finally {
@@ -217,6 +226,7 @@ const VistaAdministracion = () => {
     try {
       if (tipo === "nutricionista") await nutricionistasService.restaurar(id);
       if (tipo === "farmacia") await farmaciaService.restaurar(id);
+      if (tipo === "producto") await productosService.restaurar(id);
 
       // Recargamos los datos para ver cómo desaparece del cementerio y vuelve arriba
       cargarDatos();
@@ -724,7 +734,9 @@ const VistaAdministracion = () => {
 
             {/* 👇 INSERTA TODO ESTE BLOQUE AQUÍ 👇 */}
             {/* --- BOTÓN Y LISTADO DEL CEMENTERIO DE BAJAS --- */}
-            {(pestana === "nutricionistas" || pestana === "farmacias") && (
+            {(pestana === "nutricionistas" ||
+              pestana === "farmacias" ||
+              pestana === "productos") && (
               <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 mt-6">
                 <div className="text-center mb-2">
                   <button
@@ -813,6 +825,46 @@ const VistaAdministracion = () => {
                               <button
                                 onClick={() =>
                                   handleRestaurar(f.id, "farmacia")
+                                }
+                                className="p-2 text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 opacity-0 group-hover:opacity-100 transition-opacity"
+                                title="Restaurar / Reactivar"
+                              >
+                                <RefreshCw size={16} />
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                    {/* Bajas Productos */}
+                    {pestana === "productos" && (
+                      <div className="space-y-2">
+                        {productosBajas.length === 0 ? (
+                          <p className="text-sm text-gray-400 italic px-2">
+                            No hay historial de bajas.
+                          </p>
+                        ) : (
+                          productosBajas.map((p) => (
+                            <div
+                              key={p.id}
+                              className="p-3 bg-gray-200/50 rounded-xl flex items-center justify-between group"
+                            >
+                              <div className="flex items-center gap-3 grayscale opacity-75">
+                                <div className="bg-gray-300 text-gray-500 p-2 rounded-lg shrink-0">
+                                  <PackagePlus size={16} />
+                                </div>
+                                <div>
+                                  <p className="font-bold text-gray-600 text-sm line-through">
+                                    {p.nombreProducto}
+                                  </p>
+                                  <p className="text-[10px] text-gray-500">
+                                    Ref: {p.referencia} • PVF: {p.pvf}€
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() =>
+                                  handleRestaurar(p.id, "producto")
                                 }
                                 className="p-2 text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 opacity-0 group-hover:opacity-100 transition-opacity"
                                 title="Restaurar / Reactivar"

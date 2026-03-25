@@ -8,6 +8,7 @@ import {
   User,
   Trash2,
   Archive,
+  RefreshCw,
 } from "lucide-react";
 import { personalInternoService } from "./personalInternoService";
 
@@ -81,6 +82,22 @@ const VistaPersonalInterno = () => {
         error.response?.data?.message ||
           "Error al eliminar. Puede que sea el SuperAdmin.",
       );
+    }
+  };
+
+  const handleRestaurar = async (id) => {
+    if (
+      !window.confirm(
+        "¿Seguro que deseas reactivar a este Administrador? Recuperará todos sus privilegios de acceso.",
+      )
+    )
+      return;
+    try {
+      await personalInternoService.restaurarAdmin(id);
+      cargarDatos();
+    } catch (error) {
+      console.error("Error al restaurar admin:", error);
+      alert("Error al restaurar el registro.");
     }
   };
 
@@ -178,20 +195,29 @@ const VistaPersonalInterno = () => {
                     adminsBajas.map((admin) => (
                       <div
                         key={admin.id}
-                        className="p-4 bg-gray-200/50 rounded-2xl flex items-center gap-4 grayscale opacity-75"
+                        className="p-4 bg-gray-200/50 rounded-2xl flex items-center justify-between group"
                       >
-                        <div className="bg-gray-300 text-gray-500 w-10 h-10 rounded-full flex items-center justify-center font-black text-sm shadow-inner shrink-0">
-                          {admin.nombre.charAt(0)}
-                          {admin.apellidos ? admin.apellidos.charAt(0) : ""}
+                        <div className="flex items-center gap-4 grayscale opacity-75">
+                          <div className="bg-gray-300 text-gray-500 w-10 h-10 rounded-full flex items-center justify-center font-black text-sm shadow-inner shrink-0">
+                            {admin.nombre.charAt(0)}
+                            {admin.apellidos ? admin.apellidos.charAt(0) : ""}
+                          </div>
+                          <div>
+                            <p className="font-bold text-gray-600 text-base line-through">
+                              {admin.nombre} {admin.apellidos}
+                            </p>
+                            <p className="text-xs font-medium text-gray-500 flex items-center gap-1">
+                              <Mail size={12} /> {admin.email}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-bold text-gray-600 text-base line-through">
-                            {admin.nombre} {admin.apellidos}
-                          </p>
-                          <p className="text-xs font-medium text-gray-500 flex items-center gap-1">
-                            <Mail size={12} /> {admin.email}
-                          </p>
-                        </div>
+                        <button
+                          onClick={() => handleRestaurar(admin.id)}
+                          className="p-2 text-emerald-600 bg-emerald-50 rounded-xl hover:bg-emerald-100 opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Restaurar Acceso"
+                        >
+                          <RefreshCw size={18} />
+                        </button>
                       </div>
                     ))
                   )}
