@@ -26,21 +26,29 @@ const VistaResumen = () => {
   };
 
   const cargarDatos = async () => {
+    setCargando(true); // Aseguramos que el estado de carga empiece en true
     try {
+      // --- ESCUDO 1: Capturamos los errores de permisos (403) individualmente ---
       const [miPerfil, misConsultas, misPedidos] = await Promise.all([
-        nutricionistasService.obtenerMiPerfil(),
-        consultasService.obtenerMisConsultas(),
-        pedidosService.obtenerMisPedidos(),
+        nutricionistasService.obtenerMiPerfil().catch(() => null),
+        consultasService.obtenerMisConsultas().catch(() => []),
+        pedidosService.obtenerMisPedidos().catch(() => []),
       ]);
+
+      // --- CRÍTICO: Si no hay perfil, guardamos null y salimos de la función ---
+      // Esto evita que los .reduce y .filter de abajo intenten leer de un null
+      if (!miPerfil) {
+        setPerfil(null);
+        setCargando(false);
+        return;
+      }
+
       setPerfil(miPerfil);
 
       const mesActual = new Date().toISOString().substring(0, 7);
 
-      // POR ESTO (El filtro Anti-Trampas):
       const consultasMes = misConsultas.filter(
         (c) => c.fecha.startsWith(mesActual) && c.estado === "VALIDADA",
-        // Nota: Si en tu backend el estado de validación se llama distinto
-        // (ej. "APROBADA"), cámbialo aquí.
       );
 
       const pedidosMes = misPedidos.filter(
@@ -57,27 +65,21 @@ const VistaResumen = () => {
       );
       const facturacionConsultas = totalNuevas * 25 + totalRevisiones * 20;
 
+      // 2. Cálculos de Productos (Usando el ID de miPerfil ya validado)
       const facturacionProductos = pedidosMes.reduce((sum, pedido) => {
-        // Buscamos si el Admin asignó un reparto específico a ESTA nutricionista
         const miReparto = pedido.repartos?.find(
           (r) => r.nutricionistaId === miPerfil.id,
         );
-
-        // Si hay reparto explícito, usamos ese %. Si no hay (pedido normal o antiguo), asumimos el 100%
         const porcentaje = miReparto ? miReparto.porcentaje : 100;
-
-        // Calculamos: (TotalPedido * Porcentaje) / 100
         const miParteDelPedido = (pedido.totalPedido * porcentaje) / 100;
-
         return sum + miParteDelPedido;
       }, 0);
 
       // 3. Totales Globales
       const facturacionTotal = facturacionConsultas + facturacionProductos;
 
-      // 4. --- NUEVO: CÁLCULO DE KILOMETRAJE MENSUAL ---
+      // 4. Cálculo de Kilometraje
       const totalKilometros = consultasMes.reduce((sum, consulta) => {
-        // Buscamos la asignación coincidiendo por ID (asegurando que ambos son números) o por el Nombre de la Farmacia
         const asignacion = miPerfil.asignaciones?.find(
           (a) =>
             Number(a.farmaciaId) === Number(consulta.farmaciaId) ||
@@ -94,12 +96,12 @@ const VistaResumen = () => {
         facturacionConsultas,
         facturacionProductos,
         facturacionTotal,
-        totalKilometros, // <-- Guardamos la nueva métrica
+        totalKilometros,
       });
     } catch (error) {
       console.error("Error al cargar resumen:", error);
       setErrorBackend(
-        "No se pudieron cargar tus datos. Asegúrate de tener permisos.",
+        "No se pudieron cargar tus datos. Verifica tus permisos.",
       );
     } finally {
       setCargando(false);
@@ -128,7 +130,23 @@ const VistaResumen = () => {
     );
   }
 
-  if (!datosResumen || !perfil) return null;
+  // --- ESCUDO 3: Mensaje elegante si no es nutricionista (perfil null) ---
+  if (!perfil) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 bg-gray-50 rounded-3xl border border-gray-100 p-8 text-center animate-fade-in">
+        <TrendingUp size={48} className="text-gray-300 mb-4" />
+        <h3 className="text-xl font-bold text-gray-700 mb-2">
+          Panel de Objetivos
+        </h3>
+        <p className="text-gray-500">
+          Este resumen de métricas y comisiones está disponible únicamente para
+          perfiles de Nutricionista.
+        </p>
+      </div>
+    );
+  }
+
+  if (!datosResumen) return null;
 
   const horasContrato = perfil.horasContratoMensual || 40;
   const factorJornada = horasContrato / 40;

@@ -19,6 +19,8 @@ import {
   Car,
   Archive,
   RefreshCw,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { farmaciaService } from "./farmaciaService";
 import { nutricionistasService } from "./nutricionistasService";
@@ -70,21 +72,22 @@ const VistaAdministracion = () => {
         bajasFarms,
         bajasProds,
       ] = await Promise.all([
-        nutricionistasService.listarTodas(),
-        farmaciaService.listarTodas(),
-        productosService.listarTodos(),
-        nutricionistasService.listarBajas().catch(() => []), // Atrapamos el error por si acaso
+        nutricionistasService.listarTodas().catch(() => []), // <-- BLINDADO CONTRA 403
+        farmaciaService.listarTodas().catch(() => []), // <-- BLINDADO CONTRA 403
+        productosService.listarTodos().catch(() => []), // <-- BLINDADO CONTRA 403
+        nutricionistasService.listarBajas().catch(() => []),
         farmaciaService.listarBajas().catch(() => []),
-        productosService.listarBajas().catch(() => []), // <-- AÑADIDO
+        productosService.listarBajas().catch(() => []),
       ]);
+
       setNutricionistas(datosNutris);
       setFarmacias(datosFarms);
       setProductos(datosProds);
-      setNutricionistasBajas(bajasNutris); // <-- AÑADIDO
-      setFarmaciasBajas(bajasFarms); // <-- AÑADIDO
-      setProductosBajas(bajasProds); // <-- AÑADIDO
+      setNutricionistasBajas(bajasNutris);
+      setFarmaciasBajas(bajasFarms);
+      setProductosBajas(bajasProds);
     } catch (error) {
-      console.error("Error al cargar administracion:", error);
+      console.error("Error crítico al cargar administración:", error);
     } finally {
       setCargando(false);
     }
@@ -211,8 +214,19 @@ const VistaAdministracion = () => {
       if (tipo === "producto") await productosService.eliminar(id);
       cargarDatos();
     } catch (error) {
-      console.error(`Error al eliminar ${tipo}:`, error); // <-- AÑADIDO PARA ESLINT
-      alert("Error al eliminar. Puede que tenga datos asociados.");
+      console.error(`Error al eliminar ${tipo}:`, error);
+      // 👇 MAGIA: Leemos el mensaje del backend 👇
+      alert(error.response?.data?.message || "Error al eliminar el registro.");
+    }
+  };
+
+  const handleToggleStock = async (id) => {
+    try {
+      await productosService.toggleStock(id);
+      cargarDatos(); // Recargamos la lista para ver el cambio visual
+    } catch (error) {
+      console.error("Error al cambiar stock:", error);
+      alert("Error al actualizar la disponibilidad del producto.");
     }
   };
 
@@ -694,31 +708,60 @@ const VistaAdministracion = () => {
                   productos.map((p) => (
                     <div
                       key={p.id}
-                      className="p-4 flex justify-between items-start md:items-center hover:bg-gray-50 group flex-col md:flex-row gap-4"
+                      className={`p-4 flex justify-between items-start md:items-center hover:bg-gray-50 group flex-col md:flex-row gap-4 transition-all ${!p.hayExistencias ? "opacity-60 grayscale bg-gray-50" : ""}`}
                     >
                       <div className="flex items-center gap-4">
-                        <div className="bg-sky-100 text-sky-600 p-3 rounded-xl shrink-0">
+                        <div
+                          className={`p-3 rounded-xl shrink-0 ${p.hayExistencias ? "bg-sky-100 text-sky-600" : "bg-gray-200 text-gray-500"}`}
+                        >
                           <PackagePlus size={24} />
                         </div>
                         <div>
-                          <p className="font-bold text-gray-800">
+                          <p
+                            className={`font-bold ${p.hayExistencias ? "text-gray-800" : "text-gray-500 line-through decoration-gray-400"}`}
+                          >
                             {p.nombreProducto}{" "}
-                            <span className="ml-2 text-[10px] bg-gray-200 px-2 rounded">
+                            <span className="ml-2 text-[10px] bg-gray-200 px-2 rounded font-normal no-underline">
                               {p.referencia}
                             </span>
                           </p>
                           <p className="text-xs text-gray-500 mt-1">
                             PVF: {p.pvf}€ • PVP: {p.pvp}€
+                            {!p.hayExistencias && (
+                              <span className="ml-2 text-red-500 font-bold uppercase text-[9px] bg-red-50 px-2 py-0.5 rounded">
+                                Sin Stock
+                              </span>
+                            )}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity w-full md:w-auto justify-end">
+
+                      {/* UN SOLO CONTENEDOR DE BOTONES */}
+                      <div className="flex items-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity w-full md:w-auto justify-end">
+                        {/* BOTÓN DE STOCK */}
+                        <button
+                          onClick={() => handleToggleStock(p.id)}
+                          className={`p-2 rounded-lg transition-colors ${p.hayExistencias ? "text-emerald-600 bg-emerald-50 hover:bg-emerald-100" : "text-amber-600 bg-amber-50 hover:bg-amber-100"}`}
+                          title={
+                            p.hayExistencias
+                              ? "Marcar Sin Stock"
+                              : "Marcar Con Stock"
+                          }
+                        >
+                          {p.hayExistencias ? (
+                            <CheckCircle size={16} />
+                          ) : (
+                            <XCircle size={16} />
+                          )}
+                        </button>
+
                         <button
                           onClick={() => setItemEditando(p)}
                           className="p-2 text-sky-600 bg-sky-50 rounded-lg hover:bg-sky-100"
                         >
                           <Edit size={16} />
                         </button>
+
                         <button
                           onClick={() => handleEliminar(p.id, "producto")}
                           className="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100"

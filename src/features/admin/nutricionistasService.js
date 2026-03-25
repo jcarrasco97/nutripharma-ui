@@ -1,11 +1,13 @@
 import axios from "axios";
 
-// URL PLURAL
 const API_URL = "http://localhost:8080/api/nutricionistas";
 
-const getConfig = () => ({
-  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-});
+const getConfig = () => {
+  const token = localStorage.getItem("token");
+  return {
+    headers: { Authorization: `Bearer ${token}` },
+  };
+};
 
 export const nutricionistasService = {
   listarTodas: async () => {
@@ -33,7 +35,11 @@ export const nutricionistasService = {
     return response.data;
   },
   restaurar: async (id) => {
-    const response = await axios.put(`${API_URL}/${id}/restaurar`, {}, getConfig());
+    const response = await axios.put(
+      `${API_URL}/${id}/restaurar`,
+      {},
+      getConfig(),
+    );
     return response.data;
   },
 };

@@ -12,11 +12,11 @@ import {
   Banknote,
   Filter,
   ArrowUpDown,
-  FileText,
+  History,
   X,
   Info,
   ChevronRight,
-  History,
+  ShieldCheck,
 } from "lucide-react";
 import { productosService } from "../../features/pedidos/productosService";
 import { pedidosService } from "../../features/pedidos/pedidosService";
@@ -31,6 +31,7 @@ const VistaPedidos = () => {
   const [perfil, setPerfil] = useState(null);
 
   const [esFarmacia, setEsFarmacia] = useState(false);
+  const [esAdmin, setEsAdmin] = useState(false); // <-- CONTROL PROXY
   const [cargando, setCargando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [errorCarga, setErrorCarga] = useState(null);
@@ -48,45 +49,69 @@ const VistaPedidos = () => {
     try {
       const token = localStorage.getItem("token");
       const decoded = jwtDecode(token);
-      const roles = decoded.roles || [];
-      const soyFarmacia = roles.includes("ROLE_FARMACIA");
-      setEsFarmacia(soyFarmacia);
+      const userRoles = Array.isArray(decoded.roles)
+        ? decoded.roles.map((r) => (typeof r === "string" ? r : r.authority))
+        : [];
 
+      const soyFarmacia = userRoles.includes("ROLE_FARMACIA");
+      const soyAdmin =
+        userRoles.includes("ROLE_ADMIN") ||
+        userRoles.includes("ROLE_SUPERADMIN");
+
+      setEsFarmacia(soyFarmacia);
+      setEsAdmin(soyAdmin);
+
+      // Los admins no cargan historial aquí (lo ven en Validaciones)
       const [datosProds, datosPeds] = await Promise.all([
-        productosService.listarTodos(),
-        pedidosService.obtenerMisPedidos(),
+        productosService.listarTodos().catch(() => []),
+        soyAdmin
+          ? Promise.resolve([])
+          : pedidosService.obtenerMisPedidos().catch(() => []),
       ]);
+
       setProductos(datosProds);
       setPedidos(datosPeds);
 
       if (soyFarmacia) {
-        const miPerfilFarm = await farmaciaService.obtenerMiPerfil();
-        setPerfil(miPerfilFarm);
-        setFarmaciaSeleccionada(miPerfilFarm.id.toString());
+        const miPerfilFarm = await farmaciaService
+          .obtenerMiPerfil()
+          .catch(() => null);
+        if (miPerfilFarm) {
+          setPerfil(miPerfilFarm);
+          setFarmaciaSeleccionada(miPerfilFarm.id.toString());
+        }
+      } else if (soyAdmin) {
+        // --- MODO PROXY: Cargamos TODAS las farmacias ---
+        const todasLasFarmacias = await farmaciaService
+          .listarTodas()
+          .catch(() => []);
+        setFarmacias(todasLasFarmacias);
+        if (todasLasFarmacias.length > 0) {
+          setFarmaciaSeleccionada(todasLasFarmacias[0].id.toString());
+        }
       } else {
+        // Modo Nutricionista normal
         const [miPerfilNutri, todasLasFarmacias] = await Promise.all([
-          nutricionistasService.obtenerMiPerfil(),
-          farmaciaService.listarTodas(),
+          nutricionistasService.obtenerMiPerfil().catch(() => null),
+          farmaciaService.listarTodas().catch(() => []),
         ]);
-        setPerfil(miPerfilNutri);
 
-        // --- NUEVA LÓGICA DE AISLAMIENTO (N:M) ---
-        const misFarmacias = todasLasFarmacias.filter((f) =>
-          miPerfilNutri.asignaciones?.some(
-            (asignacion) => asignacion.farmaciaId === f.id,
-          ),
-        );
-        setFarmacias(misFarmacias);
-
-        if (misFarmacias.length > 0) {
-          setFarmaciaSeleccionada(misFarmacias[0].id.toString());
+        if (miPerfilNutri) {
+          setPerfil(miPerfilNutri);
+          const misFarmacias = todasLasFarmacias.filter((f) =>
+            miPerfilNutri.asignaciones?.some(
+              (asignacion) => asignacion.farmaciaId === f.id,
+            ),
+          );
+          setFarmacias(misFarmacias);
+          if (misFarmacias.length > 0) {
+            setFarmaciaSeleccionada(misFarmacias[0].id.toString());
+          }
         }
       }
     } catch (error) {
       console.error("Error al cargar datos:", error);
-      setErrorCarga(
-        "No se pudieron cargar los datos. Por favor, revisa tu conexión.",
-      );
+      setErrorCarga("No se pudieron cargar los datos.");
     } finally {
       setCargando(false);
     }
@@ -96,20 +121,14 @@ const VistaPedidos = () => {
     cargarDatos();
   }, []);
 
-  // Limpiar carrito si una Nutricionista cambia de Farmacia destino (Evita problemas de cálculo de precios cruzados)
   useEffect(() => {
-    if (!esFarmacia) {
-      setCarrito([]);
-    }
+    if (!esFarmacia) setCarrito([]);
   }, [farmaciaSeleccionada, esFarmacia]);
 
-  // Identificamos la farmacia destino seleccionada
   const farmaciaActual = esFarmacia
     ? perfil
-    : farmacias.find((f) => f.id.toString() === farmaciaSeleccionada);
+    : farmacias.find((f) => f.id?.toString() === farmaciaSeleccionada);
 
-  // --- MOTOR DE PRECIOS GEOGRÁFICOS ---
-  // Retorna PVF si es de Almería, o PVP si es de fuera.
   const getPrecioAplicado = (producto) => {
     if (!farmaciaActual || farmaciaActual.esProvinciaLocal !== false) {
       return producto.pvf;
@@ -119,7 +138,6 @@ const VistaPedidos = () => {
 
   const saldoDisponibleInicial = farmaciaActual?.saldoVirtual || 0;
 
-  // Los totales ahora se calculan usando el Motor de Precios Dinámico
   const totalReal = carrito
     .filter((item) => !item.pagadoConSaldo)
     .reduce(
@@ -157,7 +175,7 @@ const VistaPedidos = () => {
     });
 
   const calcularBonificados = (cantidad) => {
-    if (cantidad >= 100) return 20; // Corregido: antes tenías 30 en tu código original, el PRD dice 20
+    if (cantidad >= 100) return 20;
     if (cantidad >= 20) return 5;
     if (cantidad >= 10) return 2;
     if (cantidad >= 6) return 1;
@@ -218,9 +236,8 @@ const VistaPedidos = () => {
           }
           const nuevoValor = Math.max(0, item.cantidad + delta);
           const itemActualizado = { ...item, cantidad: nuevoValor };
-          if (!pagadoConSaldo) {
+          if (!pagadoConSaldo)
             itemActualizado.bonificados = calcularBonificados(nuevoValor);
-          }
           return itemActualizado;
         }
         return item;
@@ -238,7 +255,7 @@ const VistaPedidos = () => {
     try {
       const payload = {
         farmaciaId: Number(farmaciaSeleccionada),
-        nutricionistaId: esFarmacia ? null : perfil.id,
+        nutricionistaId: !esFarmacia && !esAdmin && perfil ? perfil.id : null,
         fechaPedido: new Date().toISOString().split("T")[0],
         lineas: carrito.map((item) => ({
           productoId: item.productoId,
@@ -246,12 +263,17 @@ const VistaPedidos = () => {
           bonificados: item.bonificados,
           pagadoConSaldo: item.pagadoConSaldo,
         })),
-        creadoPorAdmin: false, // Desde esta vista, no es el admin haciendo de proxy
+        // Ya no enviamos creadoPorAdmin. El backend lee el JWT.
       };
+
       await pedidosService.crear(payload);
-      alert("¡Pedido realizado con éxito!");
+      alert(
+        esAdmin
+          ? "¡Pedido Proxy registrado con éxito! (Auditoría guardada)"
+          : "¡Pedido realizado con éxito!",
+      );
       setCarrito([]);
-      cargarDatos();
+      if (!esAdmin) cargarDatos();
     } catch (e) {
       alert(e.response?.data?.message || "Error al procesar el pedido.");
     } finally {
@@ -264,7 +286,7 @@ const VistaPedidos = () => {
       <div className="flex flex-col justify-center items-center h-[60vh] gap-4">
         <Loader2 className="animate-spin text-sky-500" size={60} />
         <p className="text-gray-500 font-bold animate-pulse">
-          Cargando catálogo y pedidos...
+          Cargando catálogo y entorno...
         </p>
       </div>
     );
@@ -288,7 +310,7 @@ const VistaPedidos = () => {
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 animate-fade-in relative pb-10">
-      {/* MODAL DETALLES DEL PEDIDO */}
+      {/* --- MODAL DETALLES (Se mantiene intacto) --- */}
       {pedidoSeleccionado && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-md">
           <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-2xl w-full overflow-hidden animate-scale-in">
@@ -318,7 +340,6 @@ const VistaPedidos = () => {
                 <X size={28} />
               </button>
             </div>
-
             <div className="p-8 max-h-[65vh] overflow-y-auto">
               <div className="flex items-center gap-2 mb-6">
                 <div className="h-8 w-1 bg-sky-500 rounded-full"></div>
@@ -326,14 +347,12 @@ const VistaPedidos = () => {
                   Resumen de Cesta
                 </h4>
               </div>
-
               <div className="space-y-4">
                 {pedidoSeleccionado.lineas?.map((linea) => {
                   const precioUnidad =
                     linea.precioUnitario || linea.precioAplicado || 0;
                   const subtotalCalculado =
                     linea.subtotal || precioUnidad * linea.cantidad;
-
                   return (
                     <div
                       key={linea.id}
@@ -356,14 +375,14 @@ const VistaPedidos = () => {
                           </div>
                           {linea.bonificados > 0 && (
                             <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 text-[10px] px-2 py-0.5 rounded-md mt-2 font-black">
-                              🎁 +{linea.bonificados} BONIFICADOS (GRATIS)
+                              🎁 +{linea.bonificados} BONIFICADOS
                             </span>
                           )}
                         </div>
                       </div>
                       <div className="text-right">
                         {linea.pagadoConSaldo ? (
-                          <div className="text-right">
+                          <div>
                             <p className="text-purple-700 font-black text-lg">
                               {subtotalCalculado.toFixed(2)}€
                             </p>
@@ -381,37 +400,7 @@ const VistaPedidos = () => {
                   );
                 })}
               </div>
-
-              <div className="mt-8 bg-gray-900 rounded-[2rem] p-8 text-white relative overflow-hidden">
-                <div className="relative z-10 flex justify-between items-center">
-                  <div>
-                    <p className="text-sky-400 text-xs font-black uppercase tracking-[0.2em] mb-1">
-                      Total abonado real
-                    </p>
-                    <p className="text-4xl font-black">
-                      {(pedidoSeleccionado.totalPedido || 0).toFixed(2)}
-                      <span className="text-xl ml-1 text-sky-300">€</span>
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-gray-400 text-xs font-bold mb-1">
-                      Estado de Pago
-                    </p>
-                    <span
-                      className={`px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest ${pedidoSeleccionado.estado === "LIQUIDADO" ? "bg-emerald-500" : "bg-amber-500"}`}
-                    >
-                      {pedidoSeleccionado.estado?.replace("_", " ") ||
-                        "PENDIENTE"}
-                    </span>
-                  </div>
-                </div>
-                <ShoppingCart
-                  size={150}
-                  className="absolute -right-10 -bottom-10 opacity-5"
-                />
-              </div>
             </div>
-
             <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end">
               <button
                 onClick={() => setPedidoSeleccionado(null)}
@@ -429,37 +418,42 @@ const VistaPedidos = () => {
         <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
             <div className="flex items-center gap-4">
-              <div className="bg-sky-600 p-4 rounded-3xl text-white shadow-lg shadow-sky-200">
+              <div
+                className={`p-4 rounded-3xl text-white shadow-lg ${esAdmin ? "bg-indigo-600 shadow-indigo-200" : "bg-sky-600 shadow-sky-200"}`}
+              >
                 <ShoppingBag size={32} />
               </div>
               <div>
                 <h2 className="text-3xl font-black text-gray-800 tracking-tight">
-                  Hacer Pedido
+                  {esAdmin ? "Crear Pedido Proxy" : "Hacer Pedido"}
                 </h2>
                 <p className="text-gray-500 font-medium mt-1">
                   Catálogo para{" "}
-                  <span className="text-sky-600 font-black">
+                  <span
+                    className={`font-black ${esAdmin ? "text-indigo-600" : "text-sky-600"}`}
+                  >
                     {farmaciaActual?.nombre || "..."}
                   </span>
                 </p>
               </div>
             </div>
 
+            {/* SELECTOR DE DESTINO (Oculto solo si esFarmacia) */}
             {!esFarmacia && (
               <div className="w-full md:w-auto">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block ml-1">
-                  Seleccionar Destino
+                  {esAdmin ? "Buscar Farmacia Destino" : "Seleccionar Destino"}
                 </label>
                 {farmacias.length === 0 ? (
                   <div className="p-3 bg-red-50 text-red-600 border border-red-100 rounded-xl text-sm font-bold flex items-center gap-2">
-                    <AlertCircle size={16} /> Sin farmacias asignadas
+                    <AlertCircle size={16} /> Sin farmacias
                   </div>
                 ) : (
                   <div className="relative">
                     <select
                       value={farmaciaSeleccionada}
                       onChange={(e) => setFarmaciaSeleccionada(e.target.value)}
-                      className="w-full md:w-64 pl-4 pr-10 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl text-sm font-bold text-gray-700 appearance-none focus:border-sky-500 focus:ring-0 transition-all outline-none"
+                      className="w-full md:w-64 pl-4 pr-10 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl text-sm font-bold text-gray-700 appearance-none focus:border-indigo-500 focus:ring-0 transition-all outline-none"
                     >
                       {farmacias.map((f) => (
                         <option key={f.id} value={f.id}>
@@ -539,62 +533,65 @@ const VistaPedidos = () => {
 
         {/* REJILLA PRODUCTOS */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {productos.map((prod) => (
-            <div
-              key={prod.id}
-              className="group bg-white border-2 border-gray-50 rounded-[2.5rem] p-6 shadow-sm hover:shadow-xl hover:border-sky-100 transition-all duration-300 flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex justify-between items-start mb-4">
-                  <span className="bg-sky-50 text-sky-600 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
-                    {prod.acronimo}
-                  </span>
-                  <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-emerald-500">
-                    <div className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse"></div>{" "}
-                    En Stock
+          {/* --- ESCUDO DE STOCK: filter(prod => prod.hayExistencias) --- */}
+          {productos
+            .filter((prod) => prod.hayExistencias)
+            .map((prod) => (
+              <div
+                key={prod.id}
+                className="group bg-white border-2 border-gray-50 rounded-[2.5rem] p-6 shadow-sm hover:shadow-xl hover:border-sky-100 transition-all duration-300 flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex justify-between items-start mb-4">
+                    <span className="bg-sky-50 text-sky-600 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
+                      {prod.acronimo}
+                    </span>
+                    <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-emerald-500">
+                      <div className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse"></div>{" "}
+                      En Stock
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-black text-gray-800 leading-tight group-hover:text-sky-600 transition-colors">
+                    {prod.nombreProducto}
+                  </h3>
+                  <p className="text-xs font-bold text-gray-400 mt-2 flex items-center gap-1">
+                    REF:{" "}
+                    <span className="text-gray-600">{prod.referencia}</span>
+                  </p>
+                  <div className="mt-4 flex items-baseline gap-1">
+                    <span className="text-3xl font-black text-gray-900">
+                      {getPrecioAplicado(prod).toFixed(2)}
+                    </span>
+                    <span className="text-lg font-bold text-gray-400">€</span>
+                    <span className="ml-2 bg-gray-100 text-gray-500 text-[10px] font-bold px-2 py-1 rounded">
+                      {farmaciaActual?.esProvinciaLocal !== false
+                        ? "Tarifa Local"
+                        : "Tarifa Externa"}
+                    </span>
                   </div>
                 </div>
-                <h3 className="text-xl font-black text-gray-800 leading-tight group-hover:text-sky-600 transition-colors">
-                  {prod.nombreProducto}
-                </h3>
-                <p className="text-xs font-bold text-gray-400 mt-2 flex items-center gap-1">
-                  REF: <span className="text-gray-600">{prod.referencia}</span>
-                </p>
-                <div className="mt-4 flex items-baseline gap-1">
-                  {/* NUEVO: Mostramos el precio dinámicamente según la ubicación de la farmacia */}
-                  <span className="text-3xl font-black text-gray-900">
-                    {getPrecioAplicado(prod).toFixed(2)}
-                  </span>
-                  <span className="text-lg font-bold text-gray-400">€</span>
-                  <span className="ml-2 bg-gray-100 text-gray-500 text-[10px] font-bold px-2 py-1 rounded">
-                    {farmaciaActual?.esProvinciaLocal !== false
-                      ? "Tarifa Local"
-                      : "Tarifa Externa"}
-                  </span>
+
+                <div className="mt-8 space-y-3">
+                  <button
+                    onClick={() => agregarAlCarrito(prod, false)}
+                    disabled={!farmaciaSeleccionada}
+                    className="w-full bg-gray-900 hover:bg-black disabled:bg-gray-300 text-white py-4 rounded-[1.25rem] font-black text-sm flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg shadow-gray-200"
+                  >
+                    <Plus size={18} /> Añadir a Cesta Real
+                  </button>
+
+                  {umbralAlcanzado && (
+                    <button
+                      onClick={() => agregarAlCarrito(prod, true)}
+                      disabled={saldoRestante < getPrecioAplicado(prod)}
+                      className="w-full bg-purple-50 text-purple-700 border-2 border-purple-100 py-4 rounded-[1.25rem] font-black text-sm flex items-center justify-center gap-3 transition-all hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Wallet size={18} /> Comprar con Saldo
+                    </button>
+                  )}
                 </div>
               </div>
-
-              <div className="mt-8 space-y-3">
-                <button
-                  onClick={() => agregarAlCarrito(prod, false)}
-                  disabled={!farmaciaSeleccionada}
-                  className="w-full bg-gray-900 hover:bg-black disabled:bg-gray-300 text-white py-4 rounded-[1.25rem] font-black text-sm flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg shadow-gray-200"
-                >
-                  <Plus size={18} /> Añadir a Cesta Real
-                </button>
-
-                {umbralAlcanzado && (
-                  <button
-                    onClick={() => agregarAlCarrito(prod, true)}
-                    disabled={saldoRestante < getPrecioAplicado(prod)}
-                    className="w-full bg-purple-50 text-purple-700 border-2 border-purple-100 py-4 rounded-[1.25rem] font-black text-sm flex items-center justify-center gap-3 transition-all hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <Wallet size={18} /> Comprar con Saldo
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
+            ))}
         </div>
       </div>
 
@@ -603,7 +600,9 @@ const VistaPedidos = () => {
         <div className="bg-white rounded-[3rem] shadow-xl border border-gray-100 p-8 sticky top-6">
           <div className="flex items-center justify-between mb-8 pb-4 border-b border-gray-50">
             <div className="flex items-center gap-3">
-              <div className="bg-sky-100 p-3 rounded-2xl text-sky-600">
+              <div
+                className={`p-3 rounded-2xl ${esAdmin ? "bg-indigo-100 text-indigo-600" : "bg-sky-100 text-sky-600"}`}
+              >
                 <ShoppingCart size={24} />
               </div>
               <h3 className="text-xl font-black text-gray-800">
@@ -733,114 +732,132 @@ const VistaPedidos = () => {
               (!umbralAlcanzado && totalVirtual > 0) ||
               !farmaciaSeleccionada
             }
-            className="w-full bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 text-white font-black py-5 rounded-[1.5rem] shadow-xl shadow-sky-100 disabled:from-gray-300 disabled:to-gray-400 disabled:shadow-none transition-all flex items-center justify-center gap-4 active:scale-[0.98]"
+            className={`w-full text-white font-black py-5 rounded-[1.5rem] shadow-xl disabled:from-gray-300 disabled:to-gray-400 disabled:shadow-none transition-all flex items-center justify-center gap-4 active:scale-[0.98] ${esAdmin ? "bg-gradient-to-r from-indigo-600 to-purple-600 shadow-indigo-200 hover:from-indigo-700 hover:to-purple-700" : "bg-gradient-to-r from-sky-600 to-indigo-600 shadow-sky-100 hover:from-sky-700 hover:to-indigo-700"}`}
           >
             {enviando ? (
               <Loader2 className="animate-spin" />
             ) : (
               <>
-                <ShoppingBag size={24} /> Confirmar Pedido
+                <ShoppingBag size={24} />{" "}
+                {esAdmin ? "Procesar Proxy" : "Confirmar Pedido"}
               </>
             )}
           </button>
         </div>
 
-        {/* HISTORIAL DE PEDIDOS */}
-        <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <div className="bg-amber-100 p-2 rounded-xl text-amber-600">
-                <History size={20} />
-              </div>
-              <h3 className="text-lg font-black text-gray-800">
-                Mis últimos pedidos
-              </h3>
-            </div>
-            <span className="bg-amber-50 text-amber-700 text-[10px] font-black px-3 py-1 rounded-full uppercase">
-              {pedidosFiltradosYOrdenados.length} Registros
-            </span>
+        {/* HISTORIAL DE PEDIDOS (Oculto para el Admin) */}
+        {esAdmin ? (
+          <div className="bg-indigo-50 p-8 rounded-[3rem] shadow-sm border border-indigo-100 text-center">
+            <ShieldCheck size={48} className="mx-auto text-indigo-300 mb-4" />
+            <h3 className="text-xl font-black text-indigo-800 mb-2">
+              Modo Administrador (Proxy Activo)
+            </h3>
+            <p className="text-indigo-600 font-medium">
+              Estás creando un pedido en nombre de la Farmacia seleccionada.{" "}
+              <br />
+              <br />
+              El pedido quedará registrado bajo tu auditoría de correo. Para
+              ver, gestionar o enviar este pedido, dirígete al{" "}
+              <b>Centro de Validaciones</b>.
+            </p>
           </div>
-
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            <div className="relative">
-              <Filter
-                size={14}
-                className="absolute left-3.5 top-3.5 text-gray-400"
-              />
-              <select
-                value={mesFiltro}
-                onChange={(e) => setMesFiltro(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-gray-50 border-2 border-transparent rounded-2xl text-[11px] font-black text-gray-600 appearance-none focus:bg-white focus:border-sky-500 transition-all outline-none"
-              >
-                {mesesDisponibles.map((mes) => (
-                  <option key={mes} value={mes}>
-                    {mes === "Todos" ? "TODOS LOS MESES" : mes}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="relative">
-              <ArrowUpDown
-                size={14}
-                className="absolute left-3.5 top-3.5 text-gray-400"
-              />
-              <select
-                value={ordenFiltro}
-                onChange={(e) => setOrdenFiltro(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-gray-50 border-2 border-transparent rounded-2xl text-[11px] font-black text-gray-600 appearance-none focus:bg-white focus:border-sky-500 transition-all outline-none"
-              >
-                <option value="recientes">MÁS RECIENTES</option>
-                <option value="antiguos">MÁS ANTIGUOS</option>
-                <option value="precio_desc">MAYOR IMPORTE</option>
-                <option value="precio_asc">MENOR IMPORTE</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-            {pedidosFiltradosYOrdenados.length === 0 ? (
-              <div className="text-center py-12 bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-100">
-                <p className="text-gray-400 font-bold text-sm">
-                  No hay resultados para este filtro
-                </p>
-              </div>
-            ) : (
-              pedidosFiltradosYOrdenados.map((ped) => (
-                <div
-                  key={ped.id}
-                  className="group bg-gray-50 rounded-[1.5rem] p-5 border-2 border-transparent hover:bg-white hover:border-amber-100 transition-all duration-300"
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <p className="font-black text-gray-800">
-                        Pedido #{ped.id}
-                      </p>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
-                        {ped.fechaPedido}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-black text-gray-900 text-lg">
-                        {(ped.totalPedido || 0).toFixed(2)}€
-                      </p>
-                      <span
-                        className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-tighter ${ped.estado === "LIQUIDADO" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}
-                      >
-                        {ped.estado?.replace("_", " ")}
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setPedidoSeleccionado(ped)}
-                    className="w-full py-3 bg-white border border-gray-200 text-gray-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-900 hover:text-white hover:border-gray-900 transition-all"
-                  >
-                    Ver Informe Detallado
-                  </button>
+        ) : (
+          <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="bg-amber-100 p-2 rounded-xl text-amber-600">
+                  <History size={20} />
                 </div>
-              ))
-            )}
+                <h3 className="text-lg font-black text-gray-800">
+                  Mis últimos pedidos
+                </h3>
+              </div>
+              <span className="bg-amber-50 text-amber-700 text-[10px] font-black px-3 py-1 rounded-full uppercase">
+                {pedidosFiltradosYOrdenados.length} Registros
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              <div className="relative">
+                <Filter
+                  size={14}
+                  className="absolute left-3.5 top-3.5 text-gray-400"
+                />
+                <select
+                  value={mesFiltro}
+                  onChange={(e) => setMesFiltro(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border-2 border-transparent rounded-2xl text-[11px] font-black text-gray-600 appearance-none focus:bg-white focus:border-sky-500 transition-all outline-none"
+                >
+                  {mesesDisponibles.map((mes) => (
+                    <option key={mes} value={mes}>
+                      {mes === "Todos" ? "TODOS LOS MESES" : mes}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="relative">
+                <ArrowUpDown
+                  size={14}
+                  className="absolute left-3.5 top-3.5 text-gray-400"
+                />
+                <select
+                  value={ordenFiltro}
+                  onChange={(e) => setOrdenFiltro(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border-2 border-transparent rounded-2xl text-[11px] font-black text-gray-600 appearance-none focus:bg-white focus:border-sky-500 transition-all outline-none"
+                >
+                  <option value="recientes">MÁS RECIENTES</option>
+                  <option value="antiguos">MÁS ANTIGUOS</option>
+                  <option value="precio_desc">MAYOR IMPORTE</option>
+                  <option value="precio_asc">MENOR IMPORTE</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+              {pedidosFiltradosYOrdenados.length === 0 ? (
+                <div className="text-center py-12 bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-100">
+                  <p className="text-gray-400 font-bold text-sm">
+                    No hay resultados para este filtro
+                  </p>
+                </div>
+              ) : (
+                pedidosFiltradosYOrdenados.map((ped) => (
+                  <div
+                    key={ped.id}
+                    className="group bg-gray-50 rounded-[1.5rem] p-5 border-2 border-transparent hover:bg-white hover:border-amber-100 transition-all duration-300"
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <p className="font-black text-gray-800">
+                          Pedido #{ped.id}
+                        </p>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
+                          {ped.fechaPedido}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-black text-gray-900 text-lg">
+                          {(ped.totalPedido || 0).toFixed(2)}€
+                        </p>
+                        <span
+                          className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-tighter ${ped.estado === "LIQUIDADO" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}
+                        >
+                          {ped.estado?.replace("_", " ")}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setPedidoSeleccionado(ped)}
+                      className="w-full py-3 bg-white border border-gray-200 text-gray-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-900 hover:text-white hover:border-gray-900 transition-all"
+                    >
+                      Ver Informe Detallado
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -27,6 +27,14 @@ export const productosService = {
     const response = await axios.delete(`${API_URL}/${id}`, getConfig());
     return response.data;
   },
+  toggleStock: async (id) => {
+    const response = await axios.patch(
+      `${API_URL}/${id}/stock`,
+      {},
+      getConfig(),
+    );
+    return response.data;
+  },
   listarBajas: async () => {
     const response = await axios.get(`${API_URL}/bajas`, getConfig());
     return response.data;

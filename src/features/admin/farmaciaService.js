@@ -1,11 +1,14 @@
 import axios from "axios";
 
-// URL PLURAL
+// URL corregida a /api/farmacia
 const API_URL = "http://localhost:8080/api/farmacias";
 
-const getConfig = () => ({
-  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-});
+const getConfig = () => {
+  const token = localStorage.getItem("token");
+  return {
+    headers: { Authorization: `Bearer ${token}` },
+  };
+};
 
 export const farmaciaService = {
   listarTodas: async () => {

@@ -29,9 +29,17 @@ const VistaResumenFarmacia = ({ cambiarVista }) => {
     setError(false);
     try {
       const [miPerfil, misPedidos] = await Promise.all([
-        farmaciaService.obtenerMiPerfil(),
-        pedidosService.obtenerMisPedidos(),
+        farmaciaService.obtenerMiPerfil().catch(() => null),
+        pedidosService.obtenerMisPedidos().catch(() => []),
       ]);
+
+      // Si no hay perfil de farmacia, abortamos antes de setear estados
+      if (!miPerfil) {
+        setPerfil(null);
+        setCargando(false);
+        return;
+      }
+
       setPerfil(miPerfil);
       setPedidos(misPedidos);
     } catch (err) {

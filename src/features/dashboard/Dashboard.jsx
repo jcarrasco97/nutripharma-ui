@@ -88,11 +88,15 @@ const Dashboard = () => {
 
   if (!usuario) return null;
 
-  // 3. CONTROL DE ROLES
-  const isAdmin = usuario.roles.includes("ROLE_ADMIN");
-  const isNutricionista = usuario.roles.includes("ROLE_NUTRICIONISTA");
-  const isFarmacia = usuario.roles.includes("ROLE_FARMACIA");
-  const isSuperAdmin = usuario.roles.includes("ROLE_SUPERADMIN"); // <-- AÑADIDO
+  // 3. CONTROL DE ROLES (Blindado contra diferentes formatos del JWT)
+  const userRoles = Array.isArray(usuario.roles)
+    ? usuario.roles.map((r) => (typeof r === "string" ? r : r.authority))
+    : [];
+
+  const isAdmin = userRoles.includes("ROLE_ADMIN");
+  const isNutricionista = userRoles.includes("ROLE_NUTRICIONISTA");
+  const isFarmacia = userRoles.includes("ROLE_FARMACIA");
+  const isSuperAdmin = userRoles.includes("ROLE_SUPERADMIN");
 
   // 4. GENERACIÓN DEL MENÚ DINÁMICO
   const generarMenu = () => {
@@ -124,7 +128,6 @@ const Dashboard = () => {
 
     // Módulos de Farmacia
     if (isFarmacia) {
-      // Usamos .some para no duplicar botones si el usuario tuviera perfiles raros
       if (!items.some((i) => i.id === "resumen"))
         items.push({ id: "resumen", label: "Mi Resumen", icon: BarChart3 });
       if (!items.some((i) => i.id === "pedidos"))
@@ -142,11 +145,22 @@ const Dashboard = () => {
 
     // Módulos Exclusivos del Admin (Paco)
     if (isAdmin) {
-      items.push({
-        id: "resumen-admin",
-        label: "Dashboard General",
-        icon: BarChart3,
-      });
+      if (!items.some((i) => i.id === "resumen-admin"))
+        items.push({
+          id: "resumen-admin",
+          label: "Dashboard General",
+          icon: BarChart3,
+        });
+
+      // 👇 ESCUDO ANTI-DUPLICADOS 👇
+      if (!items.some((i) => i.id === "pedidos")) {
+        items.push({
+          id: "pedidos",
+          label: "Crear Pedido (Proxy)",
+          icon: ShoppingCart,
+        });
+      }
+
       items.push({
         id: "validaciones",
         label: "Centro Validaciones",
@@ -155,20 +169,24 @@ const Dashboard = () => {
       items.push({ id: "usuarios", label: "Administración", icon: Users });
     }
 
-    // El módulo de Documentación es para todos, así que lo empujamos una sola vez al final
-    items.push({
-      id: "documentacion",
-      label: "Gestión Documental",
-      icon: FileText,
-    });
-
-    // --- NUEVO: Módulo Exclusivo del SuperAdmin (Paco) ---
-    if (isSuperAdmin) {
+    // El módulo de Documentación es para todos
+    if (!items.some((i) => i.id === "documentacion")) {
       items.push({
-        id: "personal-interno",
-        label: "Personal Interno",
-        icon: Shield,
+        id: "documentacion",
+        label: "Gestión Documental",
+        icon: FileText,
       });
+    }
+
+    // Módulo Exclusivo del SuperAdmin (Nacho)
+    if (isSuperAdmin) {
+      if (!items.some((i) => i.id === "personal-interno")) {
+        items.push({
+          id: "personal-interno",
+          label: "Personal Interno",
+          icon: Shield,
+        });
+      }
     }
 
     return items;

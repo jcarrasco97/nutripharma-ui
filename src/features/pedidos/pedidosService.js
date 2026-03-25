@@ -2,9 +2,12 @@ import axios from "axios";
 
 const API_URL = "http://localhost:8080/api/pedidos";
 
-const getConfig = () => ({
-  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-});
+const getConfig = () => {
+  const token = localStorage.getItem("token");
+  return {
+    headers: { Authorization: `Bearer ${token}` },
+  };
+};
 
 export const pedidosService = {
   // Lista absolutamente todos (solo para Admin)
