@@ -745,8 +745,8 @@ const VistaAdministracion = () => {
                   >
                     <Archive size={16} />
                     {mostrarBajas
-                      ? "Ocultar Historial de Bajas"
-                      : "Ver Historial de Bajas"}
+                      ? "Ocultar Archivo Histórico"
+                      : "Ver Archivo Histórico"}
                   </button>
                 </div>
 
@@ -779,6 +779,14 @@ const VistaAdministracion = () => {
                                   <p className="text-[10px] text-gray-500">
                                     {n.email} • DNI: {n.dni}
                                   </p>
+                                  <div className="mt-1 flex items-center gap-1 text-[9px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded w-fit uppercase">
+                                    <Archive size={10} />
+                                    Baja el{" "}
+                                    {new Date(
+                                      n.fechaBaja,
+                                    ).toLocaleDateString()}{" "}
+                                    por {n.borradoPor}
+                                  </div>
                                 </div>
                               </div>
                               <button
@@ -820,6 +828,14 @@ const VistaAdministracion = () => {
                                   <p className="text-[10px] text-gray-500">
                                     {f.email} • CIF: {f.cif}
                                   </p>
+                                  <div className="mt-1 flex items-center gap-1 text-[9px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded w-fit uppercase">
+                                    <Archive size={10} />
+                                    Baja el{" "}
+                                    {new Date(
+                                      f.fechaBaja,
+                                    ).toLocaleDateString()}{" "}
+                                    por {f.borradoPor}
+                                  </div>
                                 </div>
                               </div>
                               <button
@@ -860,6 +876,15 @@ const VistaAdministracion = () => {
                                   <p className="text-[10px] text-gray-500">
                                     Ref: {p.referencia} • PVF: {p.pvf}€
                                   </p>
+                                  {/* --- NUEVO: INFORMACIÓN DE AUDITORÍA --- */}
+                                  <div className="mt-1 flex items-center gap-1 text-[9px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded w-fit uppercase">
+                                    <Archive size={10} />
+                                    Baja el{" "}
+                                    {new Date(
+                                      p.fechaBaja,
+                                    ).toLocaleDateString()}{" "}
+                                    por {p.borradoPor}
+                                  </div>
                                 </div>
                               </div>
                               <button
