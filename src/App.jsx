@@ -1,8 +1,10 @@
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Login from "./features/auth/Login";
-import ResetPassword from "./features/auth/ResetPassword";
-import Dashboard from "./features/dashboard/Dashboard";
+
+// 👇 Nuevas rutas FSD
+import Login from "./features/auth/views/Login";
+import ResetPassword from "./features/auth/views/ResetPassword";
+import Dashboard from "./core/layout/Dashboard"; // <-- Aquí estaba el fallo principal
 import ProtectedRoute from "./core/routes/ProtectedRoute";
 
 function App() {

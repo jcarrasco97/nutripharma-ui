@@ -133,3 +133,27 @@ El sistema debe llevar un registro automático del desgaste por desplazamiento p
 - **Atributo Relacional:** La distancia (en kilómetros) se define de forma única para cada par `[Nutricionista ↔ Farmacia]`. El Administrador debe especificar este valor numérico en el momento de asignar una farmacia al perfil de la nutricionista.
 - **Cálculo de Acumulación Mensual:** Cada vez que una nutricionista registra un turno (consulta) con estado `CONFIRMADA` en una farmacia, el sistema computa un "Viaje" (Ida y Vuelta).
 - **Visibilidad:** El "Resumen Operativo" de la Nutricionista debe mostrar el Total de Kilómetros Acumulados en el mes en curso, calculado como: `Σ (Consultas Confirmadas en Farmacia X * Distancia a Farmacia X)`. La aplicación no calcula euros por gasolina, solo acumula la métrica de distancia bruta.
+
+---
+
+## 5. DISEÑO UI/UX Y BRANDING CORPORATIVO
+
+El sistema abandona los colores genéricos de las librerías CSS para adoptar una identidad visual 100% alineada con la marca NutriPharma. La implementación se realiza inyectando los valores hexadecimales exactos en la capa de presentación (vía Tailwind CSS).
+
+### 5.1. Paleta de Colores Base (Por orden de jerarquía)
+
+- **Color Principal (Acción/Primario):** `#367933` (Verde oscuro)
+  - _Uso:_ Botones de acción principal, elementos activos del menú lateral, barras de progreso y textos clave de éxito. Transmite salud y crecimiento.
+- **Color Secundario (Institucional/Contraste):** `#062e3a` (Azul oscuro)
+  - _Uso:_ Encabezados (Header/Sidebar), títulos principales (H1/H2), tipografía de alto contraste y fondos de tarjetas de control. Aporta seriedad, profesionalidad y peso visual.
+- **Color Terciario (Acento/Resalte):** `#b1cb0c` (Verde claro/Lima)
+  - _Uso:_ Combinado frecuentemente con opacidad (ej. fondos al 20%) para destacar selecciones, iluminar iconos clave, notificaciones y elementos que requieren atención rápida sin ser agresivos.
+- **Color Cuaternario (Apoyo/Neutro):** `#342c1e` (Gris oscuro/Pardo)
+  - _Uso:_ Tipografía secundaria, subtítulos, etiquetas (labels) de formularios y bordes estructurales.
+
+### 5.2. Gradientes Corporativos
+
+Se utilizan exclusivamente en zonas de alto impacto (Hero Cards) para romper la monotonía visual y resaltar métricas financieras o de rendimiento, logrando armonía con la estructura de la aplicación:
+
+- **Gradiente Claro:** De `#bed000` a `#85ac1c`
+- **Gradiente Oscuro:** De `#006633` a `#68b54e`
