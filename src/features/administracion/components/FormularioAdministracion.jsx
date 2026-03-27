@@ -111,17 +111,17 @@ const FormularioAdministracion = ({
                 className="w-full bg-[#062e3a]/50 border border-[#342c1e]/30 rounded-xl px-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#b1cb0c] outline-none transition-all"
               />
               <div className="relative">
-                <FileText
+                <FileText // (Puedes cambiar el icono por <Phone size={16} ... /> si lo importas de lucide-react)
                   size={16}
                   className="absolute left-3 top-3.5 text-gray-400"
                 />
                 <input
                   type="text"
-                  name="dni"
-                  value={formData.dni}
+                  name="telefono"
+                  value={formData.telefono}
                   onChange={handleChange}
                   required
-                  placeholder="DNI / NIE"
+                  placeholder="Teléfono corporativo"
                   className="w-full bg-[#062e3a]/50 border border-[#342c1e]/30 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#b1cb0c] outline-none transition-all"
                 />
               </div>

@@ -93,21 +93,21 @@ const Login = () => {
             <form onSubmit={hook.handleLogin} className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-[#062e3a] mb-2">
-                  Usuario / DNI
+                  Correo electrónico
                 </label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <User className="h-5 w-5 text-gray-400 group-focus-within:text-[#367933]" />
                   </div>
                   <input
-                    type="text"
+                    type="email"
                     name="username"
                     required
                     value={hook.credenciales.username}
                     onChange={hook.handleChange}
                     disabled={hook.cargando}
                     className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#367933] outline-none disabled:bg-gray-100 transition-all"
-                    placeholder="Introduce tu usuario"
+                    placeholder="ejemplo@nutripharma.com"
                   />
                 </div>
               </div>

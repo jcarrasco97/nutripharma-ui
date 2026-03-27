@@ -2,10 +2,11 @@ import React from "react";
 import { Users, Store, Loader2, PackagePlus } from "lucide-react";
 
 import { useAdministracion } from "../hooks/useAdministracion";
-import FormularioEntidad from "../components/FormularioAdministracion";
-import ModalEdicionEntidad from "../components/ModalEdicionAdministracion";
-import ListadoEntidades from "../components/ListadoAdministracion";
-import ArchivoBajas from "../components/ArchivoAdministracion";
+import FormularioAdministracion from "../components/FormularioAdministracion";
+import ModalEdicionAdministracion from "../components/ModalEdicionAdministracion";
+import ListadoAdministracion from "../components/ListadoAdministracion";
+import ArchivoAdministracion from "../components/ArchivoAdministracion";
+import ModalVerAsignaciones from "../components/ModalVerAsignaciones";
 
 const VistaAdministracion = () => {
   const hook = useAdministracion();
@@ -20,7 +21,12 @@ const VistaAdministracion = () => {
 
   return (
     <div className="space-y-8 animate-fade-in pb-10 relative">
-      <ModalEdicionEntidad {...hook} />
+      <ModalEdicionAdministracion {...hook} />
+      <ModalVerAsignaciones
+        modalAsignaciones={hook.modalAsignaciones}
+        cerrarModalAsignaciones={hook.cerrarModalAsignaciones}
+        nutricionistas={hook.nutricionistas}
+      />
 
       <div className="flex gap-4 border-b border-gray-200 pb-4 overflow-x-auto custom-scrollbar">
         <button
@@ -45,11 +51,11 @@ const VistaAdministracion = () => {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         <div className="xl:col-span-2 space-y-6">
-          <ListadoEntidades {...hook} />
-          <ArchivoBajas {...hook} />
+          <ListadoAdministracion {...hook} />
+          <ArchivoAdministracion {...hook} />
         </div>
 
-        <FormularioEntidad {...hook} />
+        <FormularioAdministracion {...hook} />
       </div>
     </div>
   );

@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { farmaciaService } from "../services/farmaciaService";
 import { nutricionistasService } from "../services/nutricionistasService";
-// Cuidado con la ruta del servicio de productos, ajusta según necesites:
 import { productosService } from "../../pedidos/services/productosService";
 
 export const useAdministracion = () => {
@@ -18,16 +17,26 @@ export const useAdministracion = () => {
   const [enviando, setEnviando] = useState(false);
   const [itemEditando, setItemEditando] = useState(null);
 
+  // --- NUEVO ESTADO PARA EL MODAL DE VISTA RÁPIDA ---
+  const [modalAsignaciones, setModalAsignaciones] = useState({
+    visible: false,
+    tipo: null,
+    item: null,
+  });
+  const abrirModalAsignaciones = (item, tipo) =>
+    setModalAsignaciones({ visible: true, tipo, item });
+  const cerrarModalAsignaciones = () =>
+    setModalAsignaciones({ visible: false, tipo: null, item: null });
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     nombre: "",
     apellidos: "",
-    dni: "",
+    telefono: "", // <-- CAMBIADO: Antes dni
     horasContratoMensual: "",
     cif: "",
     direccion: "",
-    telefono: "",
     nombreProducto: "",
     acronimo: "",
     categoria: "PEQUENO",
@@ -120,7 +129,7 @@ export const useAdministracion = () => {
           password: formData.password,
           nombre: formData.nombre,
           apellidos: formData.apellidos,
-          dni: formData.dni,
+          telefono: formData.telefono, // <-- CAMBIADO: Antes dni
           horasContratoMensual: Number(formData.horasContratoMensual),
           asignaciones: formData.asignaciones,
         });
@@ -153,11 +162,10 @@ export const useAdministracion = () => {
         password: "",
         nombre: "",
         apellidos: "",
-        dni: "",
+        telefono: "", // <-- CAMBIADO: Antes dni
         horasContratoMensual: "",
         cif: "",
         direccion: "",
-        telefono: "",
         nombreProducto: "",
         acronimo: "",
         categoria: "PEQUENO",
@@ -231,6 +239,7 @@ export const useAdministracion = () => {
         await nutricionistasService.actualizar(itemEditando.id, {
           nombre: itemEditando.nombre,
           apellidos: itemEditando.apellidos,
+          telefono: itemEditando.telefono, // <-- AÑADIDO POR SI ACASO
           horasContratoMensual: Number(itemEditando.horasContratoMensual),
           asignaciones: itemEditando.asignaciones || [],
         });
@@ -275,6 +284,9 @@ export const useAdministracion = () => {
     setItemEditando,
     formData,
     setFormData,
+    modalAsignaciones,
+    abrirModalAsignaciones,
+    cerrarModalAsignaciones,
 
     handleChange,
     handleToggleFarmacia,

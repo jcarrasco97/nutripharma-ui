@@ -49,7 +49,7 @@ const ArchivoAdministracion = ({
                           {n.nombre} {n.apellidos}
                         </p>
                         <p className="text-[10px] text-gray-500 font-medium">
-                          {n.email} • DNI: {n.dni}
+                          {n.email} • Tel: {n.telefono}
                         </p>
                         <div className="mt-1 flex items-center gap-1 text-[9px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded w-fit uppercase">
                           <Archive size={10} /> Baja el{" "}
