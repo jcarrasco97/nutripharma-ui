@@ -23,6 +23,8 @@ export const useValidaciones = () => {
   const [repartosActuales, setRepartosActuales] = useState([]);
   const [pedidoEnProceso, setPedidoEnProceso] = useState(null);
   const [enviando, setEnviando] = useState(false);
+  // --- ESTADOS PARA LA EVIDENCIA (FOTO) ---
+  const [urlEvidenciaModal, setUrlEvidenciaModal] = useState(null);
 
   const [formEdicion, setFormEdicion] = useState({
     nuevas: 0,
@@ -283,6 +285,49 @@ export const useValidaciones = () => {
     0,
   );
 
+  const handleVerFoto = async (id) => {
+    try {
+      setCargando(true);
+      const url = await consultasService.verEvidencia(id);
+      setUrlEvidenciaModal(url);
+    } catch (error) {
+      console.error("Error visualizando evidencia:", error);
+      alert("Error al descargar la foto.");
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  const cerrarModalEvidencia = () => {
+    if (urlEvidenciaModal) URL.revokeObjectURL(urlEvidenciaModal);
+    setUrlEvidenciaModal(null);
+  };
+
+  const handleBorrarEvidenciaAdmin = async (id) => {
+    if (
+      !window.confirm(
+        "¿Seguro que deseas ELIMINAR esta evidencia? Se destruirá de Google Drive y el nutricionista tendrá que subir una nueva.",
+      )
+    )
+      return;
+
+    setEnviando(true);
+    try {
+      const consultaActualizada =
+        await consultasService.eliminarEvidenciaAdmin(id);
+      setDetalleSeleccionado(consultaActualizada); // Actualiza el modal en tiempo real
+      cargarDatos(); // Refresca las tablas de fondo
+      alert(
+        "Evidencia eliminada correctamente. El candado del nutricionista se ha abierto.",
+      );
+    } catch (error) {
+      console.error("Error borrando evidencia:", error);
+      alert("Error al intentar borrar la evidencia.");
+    } finally {
+      setEnviando(false);
+    }
+  };
+
   // Exponemos TODO lo que la UI necesita para pintarse
   return {
     pestañaActual,
@@ -313,6 +358,10 @@ export const useValidaciones = () => {
     setRepartoEquitativo,
     ejecutarEnvioBackend,
     handleEstadoSuministro,
+    urlEvidenciaModal,
+    handleVerFoto,
+    handleBorrarEvidenciaAdmin,
+    cerrarModalEvidencia,
 
     // Utilidades
     calcularTotalesPedido,

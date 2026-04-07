@@ -72,4 +72,44 @@ export const consultasService = {
     );
     return response.data;
   },
+
+  // 👇 NUEVO MÉTODO PARA SUBIR FOTOS (EVIDENCIAS) 👇
+  subirEvidencia: async (consultaId, archivoArchivo) => {
+    const formData = new FormData();
+    formData.append("file", archivoArchivo);
+
+    const config = getConfig();
+    config.headers["Content-Type"] = "multipart/form-data";
+
+    const response = await axios.post(
+      `${API_URL}/${consultaId}/evidencia`,
+      formData,
+      config,
+    );
+    return response.data;
+  },
+  // Descarga la imagen y genera una URL local para React
+  verEvidencia: async (consultaId) => {
+    const config = getConfig();
+    config.responseType = "blob";
+
+    const response = await axios.get(
+      `${API_URL}/${consultaId}/evidencia`,
+      config,
+    );
+
+    const tipoArchivo = response.headers["content-type"] || "image/jpeg";
+    const blob = new Blob([response.data], { type: tipoArchivo });
+
+    // RETORNAMOS la URL en lugar de abrirla en una pestaña
+    return window.URL.createObjectURL(blob);
+  },
+  // Permite al admin destruir una foto rechazada
+  eliminarEvidenciaAdmin: async (consultaId) => {
+    const response = await axios.delete(
+      `${API_URL}/${consultaId}/evidencia`,
+      getConfig(),
+    );
+    return response.data;
+  },
 };

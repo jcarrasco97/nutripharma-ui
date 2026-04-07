@@ -10,6 +10,10 @@ import {
   Clock,
   FileText,
   CheckCircle,
+  Camera, // <-- IMPORTADO
+  Lock,
+  RefreshCw,
+  Eye,
 } from "lucide-react";
 
 const HistorialTurnos = ({
@@ -25,6 +29,8 @@ const HistorialTurnos = ({
   handleConfirmarAntiguo,
   toggleObservaciones,
   obsExpandidas,
+  handleSubirEvidenciaAposteriori, // <-- NUEVA PROP
+  handleVerFoto,
 }) => {
   return (
     <div className="xl:col-span-2 space-y-6">
@@ -168,19 +174,91 @@ const HistorialTurnos = ({
                     Personal:{" "}
                     <span className="text-[#367933]">{c.personalFarmacia}</span>
                   </span>
-                  {c.observacionesJornada && (
-                    <button
-                      onClick={() => toggleObservaciones(c.id)}
-                      className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors ${
-                        obsExpandidas[c.id]
-                          ? "bg-[#062e3a] text-white"
-                          : "bg-[#b1cb0c]/20 text-[#367933] hover:bg-[#b1cb0c]/40"
-                      }`}
-                    >
-                      <FileText size={14} />
-                      {obsExpandidas[c.id] ? "Ocultar Notas" : "Ver Notas"}
-                    </button>
-                  )}
+
+                  <div className="ml-auto flex items-center gap-2">
+                    {/* 👇 SI HAY FOTO, PONEMOS EL BOTÓN DE VERLA 👇 */}
+                    {c.evidenciaUrl && (
+                      <button
+                        onClick={() => handleVerFoto(c.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#062e3a]/10 hover:bg-[#062e3a]/20 text-[#062e3a] text-[10px] font-black uppercase tracking-widest transition-colors"
+                        title="Ver evidencia fotográfica"
+                      >
+                        <Eye size={14} /> Ver Foto
+                      </button>
+                    )}
+
+                    {/* 👇 LA LÓGICA DE SUBIR / SUSTITUIR / CANDADO 👇 */}
+                    {!c.evidenciaUrl ? (
+                      <label className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-200 hover:bg-gray-300 text-[#062e3a] text-[10px] font-black uppercase tracking-widest transition-colors border border-gray-300">
+                        <Camera size={14} /> Adjuntar Foto
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files.length > 0) {
+                              if (
+                                window.confirm(
+                                  `¿Subir la imagen seleccionada como evidencia del turno?`,
+                                )
+                              ) {
+                                handleSubirEvidenciaAposteriori(
+                                  c.id,
+                                  e.target.files[0],
+                                );
+                              }
+                            }
+                          }}
+                        />
+                      </label>
+                    ) : c.estado !== "VALIDADA" ? (
+                      <label
+                        className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest transition-colors border border-amber-200"
+                        title="Sustituir foto antes de que central valide"
+                      >
+                        <RefreshCw size={14} /> Sustituir Foto
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files.length > 0) {
+                              if (
+                                window.confirm(
+                                  `¿Seguro que quieres reemplazar la evidencia actual?`,
+                                )
+                              ) {
+                                handleSubirEvidenciaAposteriori(
+                                  c.id,
+                                  e.target.files[0],
+                                );
+                              }
+                            }
+                          }}
+                        />
+                      </label>
+                    ) : (
+                      <div
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#b1cb0c]/20 text-[#367933] text-[10px] font-black uppercase tracking-widest border border-[#b1cb0c]/50"
+                        title="Evidencia bloqueada."
+                      >
+                        <Lock size={14} /> Evidencia Sellada
+                      </div>
+                    )}
+                    {c.observacionesJornada && (
+                      <button
+                        onClick={() => toggleObservaciones(c.id)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors text-[10px] font-black uppercase tracking-widest border ${
+                          obsExpandidas[c.id]
+                            ? "bg-[#062e3a] text-white border-[#062e3a]"
+                            : "bg-[#b1cb0c]/20 text-[#367933] hover:bg-[#b1cb0c]/40 border-transparent"
+                        }`}
+                      >
+                        <FileText size={14} />
+                        {obsExpandidas[c.id] ? "Ocultar Notas" : "Ver Notas"}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {obsExpandidas[c.id] && c.observacionesJornada && (

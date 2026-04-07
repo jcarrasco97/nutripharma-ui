@@ -1,16 +1,13 @@
 import React from "react";
 import { Loader2 } from "lucide-react";
 
-// 1. Importamos el Cerebro
 import { useConsultas } from "../hooks/useConsultas";
-
-// 2. Importamos los Órganos Visuales (Ajusta las rutas según donde los hayas guardado)
 import FormularioRegistro from "../components/FormularioRegistro";
 import HistorialTurnos from "../components/HistorialTurnos";
 import ModalResumenTurno from "../components/ModalResumenTurno";
+import ModalVerEvidencia from "../components/ModalVerEvidencia";
 
 const VistaConsultas = () => {
-  // Invocamos el cerebro. Nos devuelve solo lo que necesitamos.
   const hook = useConsultas();
 
   if (hook.cargando) {
@@ -23,6 +20,12 @@ const VistaConsultas = () => {
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 animate-fade-in relative">
+      {/* 👇 AÑADIMOS EL MODAL VISOR AQUÍ 👇 */}
+      <ModalVerEvidencia
+        urlEvidencia={hook.urlEvidenciaModal}
+        onClose={hook.cerrarModalEvidencia}
+      />
+
       <ModalResumenTurno
         mostrar={hook.mostrarModal}
         onCerrar={() => hook.setMostrarModal(false)}
@@ -30,6 +33,8 @@ const VistaConsultas = () => {
         guardando={hook.guardando}
         formulario={hook.formulario}
         farmaciaNombre={hook.farmaciaSeleccionadaNombre}
+        // 👇 ESTA LÍNEA ES LA QUE FALTABA PARA VER LA MINIATURA 👇
+        previewUrl={hook.previewUrl}
       />
 
       <FormularioRegistro
@@ -37,6 +42,9 @@ const VistaConsultas = () => {
         formulario={hook.formulario}
         onChange={hook.handleChange}
         onPreSubmit={() => hook.setMostrarModal(true)}
+        // 👇 ESTO ERA LO QUE FALTABA 👇
+        archivoEvidencia={hook.archivoEvidencia}
+        handleArchivoChange={hook.handleArchivoChange}
       />
 
       <HistorialTurnos
@@ -52,6 +60,9 @@ const VistaConsultas = () => {
         handleConfirmarAntiguo={hook.handleConfirmarAntiguo}
         toggleObservaciones={hook.toggleObservaciones}
         obsExpandidas={hook.obsExpandidas}
+        // 👇 Y ESTO ERA LO QUE FALTABA AQUÍ 👇
+        handleSubirEvidenciaAposteriori={hook.handleSubirEvidenciaAposteriori}
+        handleVerFoto={hook.handleVerFoto}
       />
     </div>
   );

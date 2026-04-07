@@ -7,6 +7,8 @@ import {
   ShieldCheck,
   Wallet,
   Banknote,
+  Camera,
+  Trash2,
 } from "lucide-react";
 
 const ModalDetalleValidacion = ({
@@ -20,6 +22,8 @@ const ModalDetalleValidacion = ({
   onEditarYValidar,
   calcularTotalesPedido,
   agruparLineasPorProducto,
+  onVerFoto,
+  onBorrarEvidencia,
 }) => {
   if (!detalle) return null;
 
@@ -128,6 +132,37 @@ const ModalDetalleValidacion = ({
                   </p>
                 </div>
               )}
+
+              {/* 👇 NUEVO BLOQUE: EVIDENCIA PARA EL ADMIN 👇 */}
+              <div className="mt-4 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                <p className="text-xs font-black text-[#342c1e]/60 uppercase mb-2">
+                  Evidencia (Foto de Agenda)
+                </p>
+                {detalle.evidenciaUrl ? (
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => onVerFoto(detalle.id)}
+                      className="flex-1 py-2 bg-[#b1cb0c]/20 text-[#367933] hover:bg-[#b1cb0c]/40 font-black text-xs uppercase tracking-widest rounded-lg flex justify-center items-center gap-2 transition-colors border border-[#b1cb0c]/50"
+                    >
+                      <Eye size={16} /> Ver Foto
+                    </button>
+                    {detalle.estado !== "CANCELADA" && (
+                      <button
+                        onClick={() => onBorrarEvidencia(detalle.id)}
+                        disabled={enviando}
+                        className="py-2 px-4 bg-red-50 text-red-600 hover:bg-red-100 font-black text-xs uppercase tracking-widest rounded-lg flex justify-center items-center transition-colors border border-red-200 disabled:opacity-50"
+                        title="Rechazar y borrar foto"
+                      >
+                        <XCircle size={16} />
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm font-bold text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200">
+                    <Camera size={16} /> Sin evidencia adjunta
+                  </div>
+                )}
+              </div>
 
               {detalle.estado !== "CANCELADA" && (
                 <div className="flex flex-col md:flex-row gap-3 mt-6 pt-4 border-t border-gray-100">

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { consultasService } from "../services/consultasService"; // Ajusta esta ruta según donde lo guardes
-import { farmaciaService } from "../../administracion/services/farmaciaService"; // Ajusta ruta
-import { nutricionistasService } from "../../administracion/services/nutricionistasService"; // Ajusta ruta
+import { consultasService } from "../services/consultasService";
+import { farmaciaService } from "../../administracion/services/farmaciaService";
+import { nutricionistasService } from "../../administracion/services/nutricionistasService";
 
 export const useConsultas = () => {
   const [consultas, setConsultas] = useState([]);
@@ -17,6 +17,12 @@ export const useConsultas = () => {
   const [guardando, setGuardando] = useState(false);
 
   const [obsExpandidas, setObsExpandidas] = useState({});
+
+  // --- NUEVO ESTADO PARA LA FOTO DE LA AGENDA ---
+  const [archivoEvidencia, setArchivoEvidencia] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null); // <-- AÑADIMOS ESTO
+  // --- ESTADO PARA EL MODAL DE VER LA FOTO ---
+  const [urlEvidenciaModal, setUrlEvidenciaModal] = useState(null);
 
   const [formulario, setFormulario] = useState({
     farmaciaId: "",
@@ -89,6 +95,18 @@ export const useConsultas = () => {
     setFormulario({ ...formulario, [name]: value });
   };
 
+  // --- FUNCIÓN PARA CAPTURAR LA FOTO ---
+  const handleArchivoChange = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      setArchivoEvidencia(file);
+
+      // Creamos la URL visual en el mismo instante que el usuario elige el archivo
+      if (previewUrl) URL.revokeObjectURL(previewUrl); // Limpiamos la anterior si existía
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
   const confirmarYGuardar = async () => {
     if (!perfil) return alert("El perfil no ha cargado correctamente.");
     if (!formulario.farmaciaId) return alert("Debes seleccionar una farmacia.");
@@ -109,11 +127,21 @@ export const useConsultas = () => {
             : formulario.horaFin,
       };
 
+      // 1. Creamos y confirmamos el JSON base
       const nuevaConsulta = await consultasService.crear(payload);
       await consultasService.confirmar(nuevaConsulta.id);
 
+      // 2. Si hay foto seleccionada en el formulario, la subimos a Drive
+      if (archivoEvidencia) {
+        await consultasService.subirEvidencia(
+          nuevaConsulta.id,
+          archivoEvidencia,
+        );
+      }
+
       setMostrarModal(false);
-      cargarDatos();
+
+      // Limpiamos todo
       setFormulario((prev) => ({
         ...prev,
         nuevas: 0,
@@ -122,6 +150,16 @@ export const useConsultas = () => {
         personalFarmacia: 0,
         observacionesJornada: "",
       }));
+      setArchivoEvidencia(null);
+      if (previewUrl) URL.revokeObjectURL(previewUrl); // <-- Limpiamos memoria RAM
+      setPreviewUrl(null); // <-- Reseteamos la miniatura
+
+      cargarDatos();
+      alert(
+        archivoEvidencia
+          ? "Turno y foto registrados con éxito."
+          : "Turno registrado con éxito.",
+      );
     } catch (err) {
       const mensajeError =
         err.response?.data?.message ||
@@ -130,6 +168,20 @@ export const useConsultas = () => {
       alert(`⚠️ OPERACIÓN DENEGADA:\n\n${mensajeError}`);
     } finally {
       setGuardando(false);
+    }
+  };
+
+  // --- NUEVA FUNCIÓN PARA SUBIR FOTO DESDE EL HISTORIAL ---
+  const handleSubirEvidenciaAposteriori = async (consultaId, file) => {
+    try {
+      setCargando(true);
+      await consultasService.subirEvidencia(consultaId, file);
+      await cargarDatos();
+      alert("Evidencia fotográfica adjuntada correctamente.");
+    } catch (error) {
+      alert(error.response?.data?.message || "Error al subir la foto a Drive.");
+    } finally {
+      setCargando(false);
     }
   };
 
@@ -162,7 +214,7 @@ export const useConsultas = () => {
       await consultasService.confirmar(id);
       cargarDatos();
     } catch (error) {
-      console.error(error); // <--- Usamos la variable para quitar el warning
+      console.error(error);
       alert("Error al confirmar.");
     }
   };
@@ -171,11 +223,32 @@ export const useConsultas = () => {
     setObsExpandidas((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const handleVerFoto = async (id) => {
+    try {
+      setCargando(true); // Ponemos el spinner mientras baja de Drive
+      const url = await consultasService.verEvidencia(id);
+      setUrlEvidenciaModal(url); // Esto abrirá el Modal
+    } catch (error) {
+      console.error("Error visualizando evidencia:", error);
+      alert(
+        "Error al descargar la foto. Es posible que el archivo ya no exista en Drive.",
+      );
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  const cerrarModalEvidencia = () => {
+    if (urlEvidenciaModal) {
+      URL.revokeObjectURL(urlEvidenciaModal); // Liberamos la memoria RAM del navegador
+    }
+    setUrlEvidenciaModal(null); // Cerramos el Modal
+  };
+
   const farmaciaSeleccionadaNombre =
     farmacias.find((f) => f.id === Number(formulario.farmaciaId))?.nombre || "";
 
   return {
-    // Datos y estados
     cargando,
     farmacias,
     formulario,
@@ -188,16 +261,21 @@ export const useConsultas = () => {
     consultasFiltradas,
     obsExpandidas,
     farmaciaSeleccionadaNombre,
+    archivoEvidencia, // <-- Exportado
+    handleVerFoto,
+    urlEvidenciaModal,
+    cerrarModalEvidencia,
 
-    // Funciones
     setMesFiltro,
     setOrdenFiltro,
     setBusqueda,
     setMostrarModal,
     handleChange,
+    handleArchivoChange, // <-- Exportado
     confirmarYGuardar,
     handleIncidencia,
     handleConfirmarAntiguo,
     toggleObservaciones,
+    handleSubirEvidenciaAposteriori, // <-- Exportado
   };
 };

@@ -15,6 +15,7 @@ import {
 import { useValidaciones } from "../hooks/useValidaciones"; // <-- Tu Cerebro
 import ModalRepartoComisiones from "../components/ModalRepartoComisiones"; // <-- Tu Modal 1
 import ModalDetalleValidacion from "../components/ModalDetalleValidacion"; // <-- Tu Modal 2
+import ModalVerEvidencia from "../../consultas/components/ModalVerEvidencia"; // <-- AÑADIR IMPORTACIÓN
 
 const VistaValidaciones = () => {
   const hook = useValidaciones();
@@ -41,6 +42,12 @@ const VistaValidaciones = () => {
         }
       />
 
+      {/* 👇 AÑADE ESTO: Modal para ver la foto en grande 👇 */}
+      <ModalVerEvidencia
+        urlEvidencia={hook.urlEvidenciaModal}
+        onClose={hook.cerrarModalEvidencia}
+      />
+
       <ModalDetalleValidacion
         detalle={hook.detalleSeleccionado}
         pestañaActual={hook.pestañaActual}
@@ -52,6 +59,9 @@ const VistaValidaciones = () => {
         onEditarYValidar={hook.handleEditarYValidar}
         calcularTotalesPedido={hook.calcularTotalesPedido}
         agruparLineasPorProducto={hook.agruparLineasPorProducto}
+        // 👇 AÑADE ESTAS DOS LÍNEAS 👇
+        onVerFoto={hook.handleVerFoto}
+        onBorrarEvidencia={hook.handleBorrarEvidenciaAdmin}
       />
 
       {/* 2. CABECERA PRINCIPAL */}

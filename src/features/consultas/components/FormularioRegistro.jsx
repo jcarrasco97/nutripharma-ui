@@ -1,11 +1,14 @@
 import React from "react";
-import { Stethoscope, AlertTriangle, CheckCircle } from "lucide-react";
+import { Stethoscope, AlertTriangle, CheckCircle, Camera } from "lucide-react";
 
 const FormularioRegistro = ({
   farmacias,
   formulario,
   onChange,
   onPreSubmit,
+  archivoEvidencia,
+  handleArchivoChange,
+  previewUrl, // <-- Lo recibimos directamente del hook
 }) => {
   return (
     <div className="xl:col-span-1 bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8 h-fit">
@@ -128,6 +131,46 @@ const FormularioRegistro = ({
               </div>
             ),
           )}
+        </div>
+
+        {/* 👇 ZONA DE SUBIDA CON MINIATURA VISUAL 👇 */}
+        <div>
+          <label className="block text-xs font-bold text-[#342c1e]/70 uppercase tracking-widest mb-1.5">
+            Evidencia Fotográfica (Opcional)
+          </label>
+          <div className="relative flex items-center justify-center w-full h-32">
+            <label
+              className={`flex flex-col items-center justify-center w-full h-full border-2 border-dashed rounded-xl cursor-pointer overflow-hidden transition-all ${archivoEvidencia ? "border-[#367933] bg-[#b1cb0c]/10" : "border-gray-300 bg-gray-50 hover:bg-gray-100"}`}
+            >
+              {previewUrl ? (
+                <div className="relative w-full h-full flex items-center justify-center bg-black/5 group">
+                  <img
+                    src={previewUrl}
+                    alt="Preview"
+                    className="object-contain h-full"
+                  />
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <span className="text-white text-xs font-bold uppercase flex items-center gap-2">
+                      <Camera size={16} /> Cambiar foto
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  <Camera className="w-6 h-6 mb-2 text-gray-400" />
+                  <p className="text-xs text-[#062e3a] font-bold px-4 text-center">
+                    Subir foto de la agenda
+                  </p>
+                </div>
+              )}
+              <input
+                type="file"
+                className="hidden"
+                accept="image/*"
+                onChange={handleArchivoChange}
+              />
+            </label>
+          </div>
         </div>
 
         <div>
