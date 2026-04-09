@@ -23,6 +23,8 @@ const VistaConsultas = () => {
       {/* 👇 AÑADIMOS EL MODAL VISOR AQUÍ 👇 */}
       <ModalVerEvidencia
         urlEvidencia={hook.urlEvidenciaModal}
+        fechaConsulta={hook.consultaFotoSeleccionada?.fecha} // 👇 AHORA SÍ PASAMOS LAS FECHAS
+        evidenciaFecha={hook.consultaFotoSeleccionada?.evidenciaFecha}
         onClose={hook.cerrarModalEvidencia}
       />
 

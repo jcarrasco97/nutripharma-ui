@@ -23,6 +23,8 @@ export const useConsultas = () => {
   const [previewUrl, setPreviewUrl] = useState(null); // <-- AÑADIMOS ESTO
   // --- ESTADO PARA EL MODAL DE VER LA FOTO ---
   const [urlEvidenciaModal, setUrlEvidenciaModal] = useState(null);
+  const [consultaFotoSeleccionada, setConsultaFotoSeleccionada] =
+    useState(null);
 
   const [formulario, setFormulario] = useState({
     farmaciaId: "",
@@ -223,11 +225,13 @@ export const useConsultas = () => {
     setObsExpandidas((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const handleVerFoto = async (id) => {
+  // 👇 Cambiamos para que reciba la consulta entera, no solo el ID
+  const handleVerFoto = async (consulta) => {
     try {
-      setCargando(true); // Ponemos el spinner mientras baja de Drive
-      const url = await consultasService.verEvidencia(id);
-      setUrlEvidenciaModal(url); // Esto abrirá el Modal
+      setCargando(true);
+      const url = await consultasService.verEvidencia(consulta.id);
+      setConsultaFotoSeleccionada(consulta); // 👇 Guardamos la info de las fechas
+      setUrlEvidenciaModal(url);
     } catch (error) {
       console.error("Error visualizando evidencia:", error);
       alert(
@@ -240,9 +244,10 @@ export const useConsultas = () => {
 
   const cerrarModalEvidencia = () => {
     if (urlEvidenciaModal) {
-      URL.revokeObjectURL(urlEvidenciaModal); // Liberamos la memoria RAM del navegador
+      URL.revokeObjectURL(urlEvidenciaModal);
     }
-    setUrlEvidenciaModal(null); // Cerramos el Modal
+    setUrlEvidenciaModal(null);
+    setConsultaFotoSeleccionada(null); // 👇 Limpiamos
   };
 
   const farmaciaSeleccionadaNombre =
@@ -262,6 +267,7 @@ export const useConsultas = () => {
     obsExpandidas,
     farmaciaSeleccionadaNombre,
     archivoEvidencia, // <-- Exportado
+    consultaFotoSeleccionada,
     handleVerFoto,
     urlEvidenciaModal,
     cerrarModalEvidencia,

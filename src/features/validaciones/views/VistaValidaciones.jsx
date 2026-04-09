@@ -42,9 +42,11 @@ const VistaValidaciones = () => {
         }
       />
 
-      {/* 👇 AÑADE ESTO: Modal para ver la foto en grande 👇 */}
+      {/* 👇 Modal para ver la foto en grande (AHORA CON FECHAS) 👇 */}
       <ModalVerEvidencia
         urlEvidencia={hook.urlEvidenciaModal}
+        fechaConsulta={hook.detalleSeleccionado?.fecha}
+        evidenciaFecha={hook.detalleSeleccionado?.evidenciaFecha}
         onClose={hook.cerrarModalEvidencia}
       />
 

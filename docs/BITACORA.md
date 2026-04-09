@@ -997,3 +997,91 @@ Al pasar la consulta a estado `VALIDADA`, la interfaz aplica un bloqueo inmutabl
 ### Flujo de Desbloqueo (Unlock-by-Admin)
 
 El Administrador dispone de un visor inmersivo de evidencias en su Centro de Validaciones con capacidad destructiva. Si la evidencia es ilegible, el admin ejecuta un borrado físico en Drive que reabre la consulta automáticamente para que el nutricionista enmiende el error.
+
+## [08/04/2026] 📧 Sistema de Notificaciones Transaccionales (Event-Driven)
+
+### Arquitectura Asíncrona (Pub/Sub)
+
+Implementación del patrón Publisher-Subscriber mediante eventos de Spring (`@TransactionalEventListener` y `@Async`). El envío de correos se delega a un hilo secundario estrictamente tras el `COMMIT` de la base de datos, garantizando tiempos de respuesta instantáneos en el frontend de React.
+
+### Entornos y Mocking Seguros (Sandbox)
+
+Configuración de Mailtrap como servidor SMTP Sandbox para el entorno de desarrollo. Esto aísla los envíos, permitiendo pruebas reales de formato y adjuntos sin el riesgo de enviar correos accidentales a clientes reales.
+
+### Motor de Plantillas y Branding (Thymeleaf)
+
+Diseño de correos B2B en HTML compatible con clientes corporativos. Las variables (totales, nombres) y enlaces dinámicos al VPS se inyectan desde el backend. Se implementó la incrustación del logo corporativo mediante Content-ID (CID inline) para garantizar su visualización en Outlook y Gmail.
+
+### Infraestructura PDF (OpenPDF)
+
+Integración de OpenPDF como generador de documentos y facturas directamente en memoria RAM (`ByteArrayOutputStream`). El documento se genera al vuelo y se adjunta automáticamente al correo, evitando la persistencia temporal en el disco duro del servidor por razones de seguridad y rendimiento.
+
+## [08/04/2026] 🛡️ Arquitectura de Seguridad Empresarial: El "Gran Hermano" y Notario Digital
+
+Se ha diseñado e implementado una arquitectura de auditoría Zero-Trust (Cero Confianza) dividida en tres capas
+independientes para garantizar la trazabilidad absoluta de operaciones, datos y red, cumpliendo con los estándares
+legales B2B.
+
+### Nivel 1: Trazabilidad de Accesos y Red (Seguridad Event-Driven)
+
+Se ha implementado un registro inmutable de inicios de sesión para detectar patrones de acceso anómalos o suplantación
+de identidad.
+
+- **Mecanismo:** Patrón Pub/Sub (`@EventListener` asíncrono). El hilo principal de autenticación (JWT) delega el
+  guardado del log a un hilo secundario para mantener latencias <50ms.
+- **Datos Capturados:** Email del usuario, Dirección IP real (resolviendo cabeceras `X-Forwarded-For` de proxys
+  inversos) y Dispositivo/Navegador (`User-Agent`).
+- **Auditoría Forense (SQL):**
+  ```sql
+  SELECT ip_address, user_agent, fecha_acceso
+  FROM registro_accesos
+  WHERE usuario_email = 'sospechoso@nutripharma.es'
+  ORDER BY fecha_acceso DESC;
+  ```
+
+### Nivel 2: El Notario Digital (Hibernate Envers)
+
+Para blindar financieramente el sistema (comisiones y liquidaciones), se ha integrado Hibernate Envers configurado con
+una Entidad de Revisión Personalizada (`AuditoriaRevisionEntity`).
+
+- **Mecanismo:** Envers intercepta de forma nativa a nivel de ORM cualquier `INSERT`, `UPDATE` o `DELETE` sobre las
+  entidades críticas marcadas con `@Audited` (Consultas, Pedidos, Productos, Farmacias, etc.).
+- **Inyección de Identidad:** Mediante un `RevisionListener`, el motor lee el token JWT del contexto de seguridad de
+  Spring (`SecurityContextHolder`) y estampa el correo del autor en cada mutación de datos.
+- **Control de Telarañas de Entidades:** Se aplicó el modo de ignorado (`@NotAudited`) a catálogos estáticos como la
+  tabla de Roles, evitando cuellos de botella en la generación de tablas espejo (`_aud`).
+  - **Auditoría Forense (SQL):**
+
+  ```sql
+      -- Ejemplo para rastrear manipulaciones en Consultas Médicas
+      SELECT
+      r.id AS id_revision,
+      FROM_UNIXTIME(r.timestamp / 1000) AS fecha_del_cambio,
+      r.usuario_email AS culpable,
+      c.id AS consulta_modificada,
+      CASE c.revtype
+          WHEN 0 THEN 'CREACIÓN'
+          WHEN 1 THEN 'MODIFICACIÓN'
+          WHEN 2 THEN 'BORRADO'
+      END AS accion_realizada,
+      c.estado,
+      c.nuevas,
+      c.revisiones
+      FROM auditoria_revisiones r
+      JOIN consultas_aud c ON r.id = c.rev
+      WHERE r.usuario_email = 'sospechoso@nutripharma.es'
+      ORDER BY r.timestamp DESC;
+  ```
+
+### Nivel 3: Trazabilidad de API (Interceptor HTTP)
+
+Capa de monitoreo perimetral para registrar la actividad transaccional general de la API (excluyendo cargas útiles
+pesadas por privacidad).
+
+- **Mecanismo:** Implementación nativa de `HandlerInterceptor` de Spring MVC (`ApiAuditInterceptor`), evaluando el ciclo
+  `afterCompletion`.
+- **Filtro de Acción:** Solo procesa peticiones de mutación (`POST`, `PUT`, `DELETE`, `PATCH`), ignorando consultas de
+  lectura (`GET`) para evitar saturar los discos de almacenamiento.
+- **Salida de Logs:** Actualmente emite los registros de auditoría por salida estándar (Consola IDE). Preparado para
+  volcado a disco (`/var/log/nutripharma/api.log`) en el futuro entorno de Producción (VPS Linux) mediante perfiles de
+  Logback.

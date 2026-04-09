@@ -8,7 +8,7 @@ import {
   Wallet,
   Banknote,
   Camera,
-  Trash2,
+  Clock,
 } from "lucide-react";
 
 const ModalDetalleValidacion = ({
@@ -26,6 +26,26 @@ const ModalDetalleValidacion = ({
   onBorrarEvidencia,
 }) => {
   if (!detalle) return null;
+
+  // Formateadores de fecha nativos de JS
+  const formatFecha = (isoString) => {
+    if (!isoString) return "Desconocida";
+    return new Date(isoString).toLocaleDateString("es-ES", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
+  const formatFechaHora = (isoString) => {
+    if (!isoString) return "Pendiente";
+    return new Date(isoString).toLocaleString("es-ES", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#062e3a]/80 backdrop-blur-sm">
@@ -52,7 +72,7 @@ const ModalDetalleValidacion = ({
                     Jornada
                   </p>
                   <p className="font-black text-[#062e3a] text-lg">
-                    {detalle.fecha} ({detalle.tipoTurno})
+                    {formatFecha(detalle.fecha)} ({detalle.tipoTurno})
                   </p>
                   <p className="text-sm font-bold text-[#342c1e]/70 mt-1">
                     {detalle.horaInicio?.substring(0, 5)} -{" "}
@@ -133,29 +153,45 @@ const ModalDetalleValidacion = ({
                 </div>
               )}
 
-              {/* 👇 NUEVO BLOQUE: EVIDENCIA PARA EL ADMIN 👇 */}
+              {/* 👇 NUEVO BLOQUE: EVIDENCIA PARA EL ADMIN CON TRAZABILIDAD 👇 */}
               <div className="mt-4 bg-gray-50 p-4 rounded-xl border border-gray-200">
-                <p className="text-xs font-black text-[#342c1e]/60 uppercase mb-2">
-                  Evidencia (Foto de Agenda)
-                </p>
+                <div className="flex justify-between items-center mb-3 border-b border-gray-200 pb-2">
+                  <p className="text-xs font-black text-[#342c1e]/60 uppercase flex items-center gap-1">
+                    <ShieldCheck size={14} className="text-[#367933]" />{" "}
+                    Certificación de Prueba
+                  </p>
+                </div>
+
                 {detalle.evidenciaUrl ? (
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => onVerFoto(detalle.id)}
-                      className="flex-1 py-2 bg-[#b1cb0c]/20 text-[#367933] hover:bg-[#b1cb0c]/40 font-black text-xs uppercase tracking-widest rounded-lg flex justify-center items-center gap-2 transition-colors border border-[#b1cb0c]/50"
-                    >
-                      <Eye size={16} /> Ver Foto
-                    </button>
-                    {detalle.estado !== "CANCELADA" && (
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center text-xs font-bold text-gray-600">
+                      <span className="flex items-center gap-1">
+                        <Clock size={12} /> Momento de Subida:
+                      </span>
+                      {/* Mostrar en rojo si la subió días después, o en verde si es normal */}
+                      <span className="text-[#062e3a] bg-white px-2 py-1 rounded border border-gray-200 shadow-sm">
+                        {formatFechaHora(detalle.evidenciaFecha)}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-3 pt-2">
                       <button
-                        onClick={() => onBorrarEvidencia(detalle.id)}
-                        disabled={enviando}
-                        className="py-2 px-4 bg-red-50 text-red-600 hover:bg-red-100 font-black text-xs uppercase tracking-widest rounded-lg flex justify-center items-center transition-colors border border-red-200 disabled:opacity-50"
-                        title="Rechazar y borrar foto"
+                        onClick={() => onVerFoto(detalle.id)}
+                        className="flex-1 py-2 bg-[#b1cb0c]/20 text-[#367933] hover:bg-[#b1cb0c]/40 font-black text-xs uppercase tracking-widest rounded-lg flex justify-center items-center gap-2 transition-colors border border-[#b1cb0c]/50"
                       >
-                        <XCircle size={16} />
+                        <Eye size={16} /> Ver Foto
                       </button>
-                    )}
+                      {detalle.estado !== "CANCELADA" && (
+                        <button
+                          onClick={() => onBorrarEvidencia(detalle.id)}
+                          disabled={enviando}
+                          className="py-2 px-4 bg-red-50 text-red-600 hover:bg-red-100 font-black text-xs uppercase tracking-widest rounded-lg flex justify-center items-center transition-colors border border-red-200 disabled:opacity-50"
+                          title="Rechazar y borrar foto"
+                        >
+                          <XCircle size={16} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 text-sm font-bold text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200">
@@ -190,7 +226,8 @@ const ModalDetalleValidacion = ({
             </div>
           )}
 
-          {/* VISTA PEDIDOS */}
+          {/* VISTA PEDIDOS Y SUMINISTROS SE MANTIENE EXACTAMENTE IGUAL QUE ANTES */}
+          {/* ... (El código de pedidos y suministros que ya tenías) ... */}
           {pestañaActual === "pedidos" &&
             (() => {
               const totales = calcularTotalesPedido(detalle.lineas);
@@ -296,7 +333,6 @@ const ModalDetalleValidacion = ({
               );
             })()}
 
-          {/* VISTA SUMINISTROS */}
           {pestañaActual === "suministros" && (
             <div className="space-y-4">
               <div className="bg-[#b1cb0c]/10 p-4 rounded-2xl border border-[#b1cb0c]/30 flex justify-between items-center">

@@ -179,7 +179,7 @@ const HistorialTurnos = ({
                     {/* 👇 SI HAY FOTO, PONEMOS EL BOTÓN DE VERLA 👇 */}
                     {c.evidenciaUrl && (
                       <button
-                        onClick={() => handleVerFoto(c.id)}
+                        onClick={() => handleVerFoto(c)}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#062e3a]/10 hover:bg-[#062e3a]/20 text-[#062e3a] text-[10px] font-black uppercase tracking-widest transition-colors"
                         title="Ver evidencia fotográfica"
                       >
