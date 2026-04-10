@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Eye,
   XCircle,
@@ -9,6 +9,8 @@ import {
   Banknote,
   Camera,
   Clock,
+  Package,
+  Gift,
 } from "lucide-react";
 
 const ModalDetalleValidacion = ({
@@ -20,14 +22,53 @@ const ModalDetalleValidacion = ({
   onCerrar,
   onCancelarConsulta,
   onEditarYValidar,
-  calcularTotalesPedido,
-  agruparLineasPorProducto,
   onVerFoto,
   onBorrarEvidencia,
 }) => {
-  if (!detalle) return null;
+  // 1️⃣ PRIMERO LOS HOOKS (Siempre arriba)
+  const lineasPedidoAgrupadas = useMemo(() => {
+    if (pestañaActual !== "pedidos" || !detalle || !detalle.lineas) {
+      return { agrupadas: [], totales: { euros: 0, virtual: 0 } };
+    }
 
-  // Formateadores de fecha nativos de JS
+    const mapa = {};
+    let tEuros = 0;
+    let tVirtual = 0;
+
+    detalle.lineas.forEach((linea) => {
+      const nombre = linea.productoNombre || "Producto Desconocido";
+      const precioUd = linea.precioUnitario || linea.precioAplicado || 0;
+
+      if (!mapa[nombre]) {
+        mapa[nombre] = {
+          nombre: nombre,
+          udsCompradas: 0,
+          udsRegalo: 0,
+          udsVirtuales: 0,
+          subEuros: 0,
+          subVirtual: 0,
+        };
+      }
+
+      if (linea.bonificados) mapa[nombre].udsRegalo += linea.bonificados;
+
+      if (linea.pagadoConSaldo) {
+        mapa[nombre].udsVirtuales += linea.cantidad;
+        mapa[nombre].subVirtual += linea.cantidad * precioUd;
+        tVirtual += linea.cantidad * precioUd;
+      } else {
+        mapa[nombre].udsCompradas += linea.cantidad;
+        mapa[nombre].subEuros += linea.cantidad * precioUd;
+        tEuros += linea.cantidad * precioUd;
+      }
+    });
+
+    return {
+      agrupadas: Object.values(mapa),
+      totales: { euros: tEuros, virtual: tVirtual },
+    };
+  }, [detalle, pestañaActual]);
+
   const formatFecha = (isoString) => {
     if (!isoString) return "Desconocida";
     return new Date(isoString).toLocaleDateString("es-ES", {
@@ -47,10 +88,14 @@ const ModalDetalleValidacion = ({
     });
   };
 
+  // 3️⃣ RETURN CONDICIONAL
+  if (!detalle) return null;
+
+  // 4️⃣ RENDERIZADO VISUAL
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#062e3a]/80 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden animate-scale-in border border-[#342c1e]/20">
-        <div className="p-6 bg-gradient-to-r from-[#062e3a] to-[#342c1e] text-white flex justify-between items-center">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden animate-scale-in border border-[#342c1e]/20 flex flex-col max-h-[90vh]">
+        <div className="p-6 bg-gradient-to-r from-[#062e3a] to-[#342c1e] text-white flex justify-between items-center shrink-0">
           <h3 className="text-xl font-black flex items-center gap-2">
             <Eye size={20} className="text-[#bed000]" /> Informe Detallado
           </h3>
@@ -62,11 +107,13 @@ const ModalDetalleValidacion = ({
           </button>
         </div>
 
-        <div className="p-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+        <div className="p-6 overflow-y-auto custom-scrollbar bg-[#f4f7f4] flex-1">
+          {/* ============================================================== */}
           {/* VISTA CONSULTAS */}
+          {/* ============================================================== */}
           {pestañaActual === "consultas" && (
             <div className="space-y-4">
-              <div className="bg-[#b1cb0c]/10 p-4 rounded-2xl border border-[#b1cb0c]/30 flex justify-between items-center">
+              <div className="bg-[#b1cb0c]/10 p-4 rounded-2xl border border-[#b1cb0c]/30 flex justify-between items-center bg-white">
                 <div>
                   <p className="text-xs font-black text-[#367933] uppercase tracking-widest mb-1">
                     Jornada
@@ -92,24 +139,26 @@ const ModalDetalleValidacion = ({
                 </span>
               </div>
 
-              <p className="font-bold text-[#342c1e]">
-                Nutricionista:{" "}
-                <span className="font-black text-[#062e3a]">
-                  {detalle.nutricionistaNombre}
-                </span>
-              </p>
-              <p className="font-bold text-[#342c1e]">
-                Farmacia:{" "}
-                <span className="font-black text-[#062e3a]">
-                  {detalle.farmaciaNombre}
-                </span>
-              </p>
+              <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                <p className="font-bold text-[#342c1e]">
+                  Nutricionista:{" "}
+                  <span className="font-black text-[#062e3a]">
+                    {detalle.nutricionistaNombre}
+                  </span>
+                </p>
+                <p className="font-bold text-[#342c1e] mt-2">
+                  Farmacia:{" "}
+                  <span className="font-black text-[#062e3a]">
+                    {detalle.farmaciaNombre}
+                  </span>
+                </p>
+              </div>
 
               <div className="grid grid-cols-2 gap-3 mt-4">
                 {Object.keys(formEdicion).map((campo) => (
                   <div
                     key={campo}
-                    className="bg-[#f4f7f4] p-3 rounded-xl border border-gray-200"
+                    className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm"
                   >
                     <p className="text-xs text-[#342c1e]/60 uppercase font-black mb-2">
                       {campo
@@ -127,7 +176,7 @@ const ModalDetalleValidacion = ({
                         })
                       }
                       disabled={detalle.estado === "CANCELADA"}
-                      className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-xl font-black text-[#367933] focus:ring-2 focus:ring-[#b1cb0c] outline-none disabled:bg-transparent disabled:border-transparent"
+                      className="w-full bg-[#f4f7f4] border border-gray-300 rounded-lg px-3 py-2 text-xl font-black text-[#367933] focus:ring-2 focus:ring-[#b1cb0c] outline-none disabled:bg-transparent disabled:border-transparent"
                     />
                   </div>
                 ))}
@@ -147,33 +196,29 @@ const ModalDetalleValidacion = ({
                   <p className="text-xs font-black text-[#342c1e]/60 uppercase mb-1">
                     Notas de la Jornada
                   </p>
-                  <p className="text-sm bg-gray-50 text-gray-700 p-4 rounded-xl border border-gray-100 font-medium">
+                  <p className="text-sm bg-white text-gray-700 p-4 rounded-xl border border-gray-200 font-medium shadow-sm">
                     {detalle.observacionesJornada}
                   </p>
                 </div>
               )}
 
-              {/* 👇 NUEVO BLOQUE: EVIDENCIA PARA EL ADMIN CON TRAZABILIDAD 👇 */}
-              <div className="mt-4 bg-gray-50 p-4 rounded-xl border border-gray-200">
-                <div className="flex justify-between items-center mb-3 border-b border-gray-200 pb-2">
+              <div className="mt-4 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                <div className="flex justify-between items-center mb-3 border-b border-gray-100 pb-2">
                   <p className="text-xs font-black text-[#342c1e]/60 uppercase flex items-center gap-1">
                     <ShieldCheck size={14} className="text-[#367933]" />{" "}
                     Certificación de Prueba
                   </p>
                 </div>
-
                 {detalle.evidenciaUrl ? (
                   <div className="space-y-3">
                     <div className="flex justify-between items-center text-xs font-bold text-gray-600">
                       <span className="flex items-center gap-1">
                         <Clock size={12} /> Momento de Subida:
                       </span>
-                      {/* Mostrar en rojo si la subió días después, o en verde si es normal */}
-                      <span className="text-[#062e3a] bg-white px-2 py-1 rounded border border-gray-200 shadow-sm">
+                      <span className="text-[#062e3a] bg-[#f4f7f4] px-2 py-1 rounded border border-gray-200 shadow-sm">
                         {formatFechaHora(detalle.evidenciaFecha)}
                       </span>
                     </div>
-
                     <div className="flex items-center gap-3 pt-2">
                       <button
                         onClick={() => onVerFoto(detalle.id)}
@@ -201,11 +246,11 @@ const ModalDetalleValidacion = ({
               </div>
 
               {detalle.estado !== "CANCELADA" && (
-                <div className="flex flex-col md:flex-row gap-3 mt-6 pt-4 border-t border-gray-100">
+                <div className="flex flex-col md:flex-row gap-3 mt-6 pt-4 border-t border-gray-200">
                   <button
                     onClick={onCancelarConsulta}
                     disabled={enviando}
-                    className="flex-1 py-3 px-4 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white font-black rounded-xl transition-colors flex justify-center items-center gap-2"
+                    className="flex-1 py-3 px-4 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white font-black rounded-xl transition-colors flex justify-center items-center gap-2 shadow-sm"
                   >
                     <XCircle size={18} /> Anular
                   </button>
@@ -226,116 +271,146 @@ const ModalDetalleValidacion = ({
             </div>
           )}
 
-          {/* VISTA PEDIDOS Y SUMINISTROS SE MANTIENE EXACTAMENTE IGUAL QUE ANTES */}
-          {/* ... (El código de pedidos y suministros que ya tenías) ... */}
-          {pestañaActual === "pedidos" &&
-            (() => {
-              const totales = calcularTotalesPedido(detalle.lineas);
-              const agrupado = agruparLineasPorProducto(detalle.lineas);
-              return (
-                <div className="space-y-4">
-                  <div className="bg-[#b1cb0c]/10 p-4 rounded-2xl border border-[#b1cb0c]/30 flex justify-between items-center">
-                    <div>
-                      <p className="text-xs font-black text-[#367933] uppercase tracking-widest mb-1">
-                        Pedido #{detalle.id}
-                      </p>
-                      <p className="font-black text-[#062e3a] text-lg">
-                        {detalle.farmaciaNombre}
-                      </p>
-                    </div>
-                    <span className="bg-[#062e3a] text-white font-bold px-3 py-1 rounded-lg text-sm">
-                      {detalle.estado}
+          {/* ============================================================== */}
+          {/* VISTA PEDIDOS (ACTUALIZADA: UI UNIFICADA Y UNIDADES EN GRANDE) */}
+          {/* ============================================================== */}
+          {pestañaActual === "pedidos" && (
+            <div className="space-y-4">
+              {/* Bloque Superior: Info y Autoría */}
+              <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col gap-3">
+                <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+                  <p className="text-sm font-black text-[#367933] uppercase tracking-widest">
+                    Pedido #{detalle.id}
+                  </p>
+                  <span className="bg-[#062e3a] text-white font-bold px-3 py-1 rounded-lg text-[10px] uppercase tracking-widest">
+                    {detalle.estado}
+                  </span>
+                </div>
+                <div className="text-sm font-bold text-[#342c1e] space-y-1">
+                  <p className="flex justify-between">
+                    Fecha:{" "}
+                    <span className="font-black text-[#062e3a]">
+                      {detalle.fechaPedido || detalle.fecha}
+                    </span>
+                  </p>
+                  {/* 👇 AHORA USA EL NOMBRE REAL DEL BACKEND 👇 */}
+                  <p className="flex justify-between">
+                    Realizado por:{" "}
+                    <span className="font-black text-[#367933] bg-[#367933]/10 px-2 rounded">
+                      {detalle.creadoPorNombre}
+                    </span>
+                  </p>
+                  <p className="flex justify-between">
+                    Farmacia Destino:{" "}
+                    <span className="font-black text-[#062e3a]">
+                      {detalle.farmaciaNombre}
+                    </span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Desglose: Unidades más grandes y oscuras */}
+              <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                <p className="bg-[#e9ece9] text-[10px] font-black text-[#062e3a] uppercase p-3 border-b border-gray-200 tracking-widest flex items-center gap-2">
+                  <Package size={14} /> Desglose de Unidades
+                </p>
+                <div className="p-4 space-y-4 bg-white">
+                  {lineasPedidoAgrupadas.agrupadas.map((prod, idx) => {
+                    const totalArticulosProd =
+                      prod.udsCompradas + prod.udsRegalo + prod.udsVirtuales;
+                    return (
+                      <div
+                        key={idx}
+                        className="pb-4 border-b border-gray-100 last:border-0 last:pb-0"
+                      >
+                        <div className="flex justify-between items-center mb-2">
+                          <p className="font-black text-[#062e3a] text-sm leading-tight pr-4">
+                            {prod.nombre}
+                          </p>
+                          {/* 👇 UNIDADES: GRANDES, NEGRAS Y VISIBLES 👇 */}
+                          <div className="text-center min-w-[80px]">
+                            <p className="text-[10px] font-black text-gray-400 uppercase leading-none mb-1">
+                              Total
+                            </p>
+                            <p className="text-2xl font-black text-black bg-[#f4f7f4] px-3 py-1 rounded-lg border border-gray-300 shadow-sm">
+                              {totalArticulosProd}
+                            </p>
+                          </div>
+                        </div>
+
+                        <ul className="text-xs space-y-1 font-bold">
+                          {prod.udsCompradas > 0 && (
+                            <li className="text-[#342c1e]/70">
+                              • {prod.udsCompradas}x Compra Real (
+                              {prod.subEuros.toFixed(2)}€)
+                            </li>
+                          )}
+                          {prod.udsRegalo > 0 && (
+                            <li className="text-[#b1cb0c] flex items-center gap-1">
+                              <Gift size={12} /> {prod.udsRegalo}x Regalo/Bonif.
+                            </li>
+                          )}
+                          {prod.udsVirtuales > 0 && (
+                            <li className="text-[#367933] flex items-center gap-1">
+                              <Wallet size={12} /> {prod.udsVirtuales}x Pagado
+                              con Saldo
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Totales finales */}
+                <div className="p-4 bg-[#f4f7f4] border-t border-gray-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-black text-[#062e3a] uppercase tracking-widest">
+                      Total Abonado
+                    </span>
+                    <span className="text-2xl font-black text-[#062e3a]">
+                      {(
+                        detalle.totalPedido ||
+                        lineasPedidoAgrupadas.totales.euros
+                      ).toFixed(2)}
+                      €
                     </span>
                   </div>
-
-                  <div className="mt-4 border border-gray-200 rounded-xl overflow-hidden">
-                    <p className="bg-[#f4f7f4] text-xs font-black text-[#342c1e]/60 uppercase p-3 border-b border-gray-200">
-                      Desglose Resumido
-                    </p>
-                    <div className="p-4 space-y-4 bg-white">
-                      {agrupado.map(([nombreProd, cants], idx) => {
-                        const totalLinea =
-                          cants.real + cants.bonificados + cants.virtual;
-                        return (
-                          <div
-                            key={idx}
-                            className="pb-4 border-b border-gray-100 last:border-0 last:pb-0"
-                          >
-                            <p className="font-black text-[#062e3a] mb-1">
-                              {nombreProd}
-                            </p>
-                            <ul className="text-xs space-y-1 ml-2 font-bold">
-                              {cants.real > 0 && (
-                                <li className="text-[#342c1e]/70">
-                                  • {cants.real}x (Dinero Real)
-                                </li>
-                              )}
-                              {cants.bonificados > 0 && (
-                                <li className="text-[#367933]">
-                                  • {cants.bonificados}x (Bonificados/Gratis)
-                                </li>
-                              )}
-                              {cants.virtual > 0 && (
-                                <li className="text-[#b1cb0c]">
-                                  • {cants.virtual}x (Saldo Virtual)
-                                </li>
-                              )}
-                            </ul>
-                            <p className="text-xs font-black text-[#062e3a]/60 mt-2">
-                              TOTAL {nombreProd}: {totalLinea} uds.
-                            </p>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <div className="space-y-1 p-4 border-t border-gray-200 bg-gray-50">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-black text-[#342c1e]/60 uppercase flex items-center gap-1 tracking-widest">
-                          <Wallet size={12} /> Virtual Usado
-                        </span>
-                        <span className="text-sm font-black text-[#b1cb0c]">
-                          {totales.totalVirtual.toFixed(2)}€
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-black text-[#062e3a] uppercase flex items-center gap-1 tracking-widest">
-                          <Banknote size={12} /> Total Real
-                        </span>
-                        <span className="text-lg font-black text-[#367933]">
-                          {totales.totalReal.toFixed(2)}€
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {detalle.repartos && detalle.repartos.length > 0 && (
-                    <div className="mt-4 border border-gray-200 rounded-xl overflow-hidden">
-                      <p className="bg-[#f4f7f4] text-xs font-black text-[#342c1e]/60 uppercase p-3 border-b border-gray-200">
-                        Comisión Asignada
-                      </p>
-                      <div className="p-4 space-y-2 bg-white">
-                        {detalle.repartos.map((r, i) => (
-                          <div
-                            key={i}
-                            className="flex justify-between items-center text-sm font-black text-[#062e3a]"
-                          >
-                            <span>{r.nutricionistaNombre}</span>
-                            <span className="text-[#367933] bg-[#b1cb0c]/20 px-2 py-1 rounded-md">
-                              {r.porcentaje}%
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
-              );
-            })()}
+              </div>
 
+              {detalle.repartos && detalle.repartos.length > 0 && (
+                <div className="mt-4 border border-[#b1cb0c]/30 rounded-xl overflow-hidden shadow-sm bg-white">
+                  <p className="bg-[#b1cb0c]/10 text-[10px] font-black text-[#367933] uppercase p-3 border-b border-[#b1cb0c]/20 tracking-widest">
+                    Reparto de Comisión a Nutricionistas
+                  </p>
+                  <div className="p-4 space-y-2">
+                    {detalle.repartos.map((r, i) => (
+                      <div
+                        key={i}
+                        className="flex justify-between items-center text-sm font-black text-[#062e3a]"
+                      >
+                        <span className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#b1cb0c]"></div>
+                          {r.nutricionistaNombre}
+                        </span>
+                        <span className="text-[#367933] bg-[#b1cb0c]/20 px-3 py-1 rounded-lg">
+                          {r.porcentaje}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ============================================================== */}
+          {/* VISTA SUMINISTROS */}
+          {/* ============================================================== */}
           {pestañaActual === "suministros" && (
             <div className="space-y-4">
-              <div className="bg-[#b1cb0c]/10 p-4 rounded-2xl border border-[#b1cb0c]/30 flex justify-between items-center">
+              <div className="bg-[#b1cb0c]/10 p-4 rounded-2xl border border-[#b1cb0c]/30 flex justify-between items-center bg-white">
                 <div>
                   <p className="text-xs font-black text-[#367933] uppercase tracking-widest mb-1">
                     Petición Suministros
@@ -345,14 +420,14 @@ const ModalDetalleValidacion = ({
                   </p>
                 </div>
                 <span
-                  className={`font-black px-3 py-1 rounded-lg text-sm text-white ${detalle.estado === "APROBADO" ? "bg-emerald-600" : "bg-red-500"}`}
+                  className={`font-black px-3 py-1 rounded-lg text-[10px] uppercase tracking-widest text-white ${detalle.estado === "APROBADO" ? "bg-emerald-600" : "bg-red-500"}`}
                 >
                   {detalle.estado}
                 </span>
               </div>
 
-              <div className="mt-4 border border-gray-200 rounded-xl overflow-hidden">
-                <p className="bg-[#f4f7f4] text-xs font-black text-[#342c1e]/60 uppercase p-3 border-b border-gray-200">
+              <div className="mt-4 border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                <p className="bg-[#e9ece9] text-[10px] font-black text-[#062e3a] uppercase p-3 border-b border-gray-200 tracking-widest">
                   Materiales Enviados
                 </p>
                 <ul className="p-4 space-y-2 text-sm font-black text-[#062e3a] bg-white">
@@ -371,14 +446,6 @@ const ModalDetalleValidacion = ({
               </div>
             </div>
           )}
-        </div>
-        <div className="p-4 border-t border-gray-100 text-right bg-gray-50">
-          <button
-            onClick={onCerrar}
-            className="px-6 py-2 bg-white border border-gray-200 hover:bg-gray-200 text-[#342c1e] font-black rounded-xl transition-colors"
-          >
-            Cerrar
-          </button>
         </div>
       </div>
     </div>

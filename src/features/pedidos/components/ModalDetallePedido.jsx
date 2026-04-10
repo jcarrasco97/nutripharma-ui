@@ -1,101 +1,181 @@
-import React from "react";
-import { X, Package, History } from "lucide-react";
+import React, { useMemo } from "react";
+import { XCircle, Package, Gift, Wallet, Banknote } from "lucide-react";
 
 const ModalDetallePedido = ({ pedido, onCerrar }) => {
+  // 1️⃣ HOOKS SIEMPRE ARRIBA
+  const lineasAgrupadas = useMemo(() => {
+    if (!pedido || !pedido.lineas) return [];
+
+    const mapa = {};
+
+    pedido.lineas.forEach((linea) => {
+      const nombre = linea.productoNombre || "Producto Desconocido";
+      const precioUd = linea.precioUnitario || linea.precioAplicado || 0;
+
+      if (!mapa[nombre]) {
+        mapa[nombre] = {
+          nombre: nombre,
+          precioUnitario: precioUd,
+          udsCompradas: 0,
+          udsRegalo: 0,
+          udsVirtuales: 0,
+          subtotalEuros: 0,
+          subtotalVirtual: 0,
+        };
+      }
+
+      if (linea.bonificados) {
+        mapa[nombre].udsRegalo += linea.bonificados;
+      }
+
+      if (linea.pagadoConSaldo) {
+        mapa[nombre].udsVirtuales += linea.cantidad;
+        mapa[nombre].subtotalVirtual += linea.cantidad * precioUd;
+      } else {
+        mapa[nombre].udsCompradas += linea.cantidad;
+        mapa[nombre].subtotalEuros += linea.cantidad * precioUd;
+      }
+    });
+
+    return Object.values(mapa);
+  }, [pedido]);
+
+  const { totalEuros, totalVirtual } = useMemo(() => {
+    return lineasAgrupadas.reduce(
+      (acc, linea) => ({
+        totalEuros: acc.totalEuros + linea.subtotalEuros,
+        totalVirtual: acc.totalVirtual + linea.subtotalVirtual,
+      }),
+      { totalEuros: 0, totalVirtual: 0 },
+    );
+  }, [lineasAgrupadas]);
+
+  // 2️⃣ RETURN CONDICIONAL
   if (!pedido) return null;
 
+  // 4️⃣ RENDERIZADO VISUAL
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#062e3a]/60 backdrop-blur-md">
-      <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-2xl w-full overflow-hidden animate-scale-in">
-        <div className="bg-gradient-to-r from-[#006633] to-[#68b54e] p-8 text-white flex justify-between items-center">
-          <div>
-            <span className="bg-white/20 text-[#bed000] text-xs font-black px-3 py-1 rounded-full uppercase tracking-widest">
-              Detalle de Operación
-            </span>
-            <h3 className="text-2xl font-black mt-2 text-white">
-              Pedido #{pedido.id}
-            </h3>
-            <div className="flex items-center gap-3 mt-1 text-[#bed000] text-sm font-bold">
-              <p className="flex items-center gap-1">
-                <Package size={14} /> {pedido.lineas?.length || 0} líneas
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#062e3a]/80 backdrop-blur-sm">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden animate-scale-in border border-[#342c1e]/20 flex flex-col max-h-[90vh]">
+        {/* Cabecera Estilo Validaciones */}
+        <div className="p-6 bg-gradient-to-r from-[#062e3a] to-[#342c1e] text-white flex justify-between items-center shrink-0">
+          <h3 className="text-xl font-black flex items-center gap-2">
+            <Package size={20} className="text-[#bed000]" /> Detalle del Pedido
+          </h3>
+          <button
+            onClick={onCerrar}
+            className="text-white/50 hover:text-white transition-colors"
+          >
+            <XCircle size={24} />
+          </button>
+        </div>
+
+        <div className="p-6 overflow-y-auto custom-scrollbar bg-[#f4f7f4] flex-1 space-y-4">
+          {/* Bloque 1: Info General del Pedido */}
+          <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col gap-3">
+            <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+              <p className="text-sm font-black text-[#367933] uppercase tracking-widest">
+                Pedido #{pedido.id}
               </p>
-              <span className="text-white/50">•</span>
-              <p className="flex items-center gap-1 text-white">
-                <History size={14} /> {pedido.fechaPedido}
+              <span className="bg-[#062e3a] text-white font-bold px-3 py-1 rounded-lg text-[10px] uppercase tracking-widest">
+                {pedido.estado}
+              </span>
+            </div>
+            <div className="text-sm font-bold text-[#342c1e] space-y-1">
+              <p className="flex justify-between items-center">
+                Fecha:{" "}
+                <span className="font-black text-[#062e3a]">
+                  {pedido.fechaPedido || pedido.fecha}
+                </span>
+              </p>
+              {/* 👇 ELIMINADA LA LÍNEA DE "REALIZADO POR" 👇 */}
+              <p className="flex justify-between items-center mt-1">
+                Destino:{" "}
+                <span className="font-black text-[#062e3a]">
+                  {pedido.farmaciaNombre}
+                </span>
               </p>
             </div>
           </div>
-          <button
-            onClick={onCerrar}
-            className="bg-white/10 p-2 rounded-full hover:bg-white/20 transition-colors"
-          >
-            <X size={28} />
-          </button>
-        </div>
-        <div className="p-8 max-h-[65vh] overflow-y-auto custom-scrollbar">
-          <div className="space-y-4">
-            {pedido.lineas?.map((linea) => {
-              const precioUnidad =
-                linea.precioUnitario || linea.precioAplicado || 0;
-              const subtotal = linea.subtotal || precioUnidad * linea.cantidad;
-              return (
-                <div
-                  key={linea.id}
-                  className="bg-[#f4f7f4] rounded-2xl p-4 flex justify-between items-center border border-transparent hover:border-[#b1cb0c]/50 transition-all"
-                >
-                  <div className="flex gap-4 items-center">
-                    <div
-                      className={`p-3 rounded-xl ${linea.pagadoConSaldo ? "bg-[#b1cb0c]/20 text-[#367933]" : "bg-white text-[#367933] border border-gray-200"}`}
-                    >
-                      <Package size={20} />
+
+          {/* Bloque 2: Lista Agrupada Inteligente */}
+          <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+            <p className="bg-[#e9ece9] text-[10px] font-black text-[#062e3a] uppercase p-3 border-b border-gray-200 tracking-widest flex items-center gap-2">
+              <Package size={14} /> Desglose de Unidades
+            </p>
+            <div className="p-4 space-y-4 bg-white">
+              {lineasAgrupadas.map((prod, idx) => {
+                const totalArticulosProd =
+                  prod.udsCompradas + prod.udsRegalo + prod.udsVirtuales;
+                return (
+                  <div
+                    key={idx}
+                    className="pb-4 border-b border-gray-100 last:border-0 last:pb-0"
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <p className="font-black text-[#062e3a] text-sm leading-tight pr-4">
+                        {prod.nombre}
+                      </p>
+                      {/* 👇 UNIDADES EN GIGANTE Y OSCURO PARA MONTAR CAJAS 👇 */}
+                      <div className="text-center min-w-[80px]">
+                        <p className="text-[10px] font-black text-gray-400 uppercase leading-none mb-1">
+                          Total
+                        </p>
+                        <p className="text-2xl font-black text-black bg-[#f4f7f4] px-3 py-1 rounded-lg border border-gray-300 shadow-sm">
+                          {totalArticulosProd}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-bold text-[#062e3a]">
-                        {linea.productoNombre}
-                      </p>
-                      <p className="text-xs font-bold text-[#342c1e]/70">
-                        {linea.cantidad} uds • {precioUnidad.toFixed(2)}€/ud
-                      </p>
-                      {linea.bonificados > 0 && (
-                        <span className="inline-flex bg-[#b1cb0c] text-[#062e3a] text-[10px] px-2 py-0.5 rounded-md mt-2 font-black">
-                          🎁 +{linea.bonificados} BONIFICADOS
-                        </span>
+
+                    <ul className="text-xs space-y-1 font-bold">
+                      {prod.udsCompradas > 0 && (
+                        <li className="text-[#342c1e]/70 flex justify-between items-center">
+                          <span>• {prod.udsCompradas}x Compra Real</span>
+                          <span>{prod.subtotalEuros.toFixed(2)}€</span>
+                        </li>
                       )}
-                    </div>
+                      {prod.udsRegalo > 0 && (
+                        <li className="text-[#b1cb0c] flex items-center gap-1 mt-1">
+                          <Gift size={12} /> {prod.udsRegalo}x Regalo/Bonif.
+                        </li>
+                      )}
+                      {prod.udsVirtuales > 0 && (
+                        <li className="text-[#367933] flex justify-between items-center mt-1">
+                          <span className="flex items-center gap-1">
+                            <Wallet size={12} /> {prod.udsVirtuales}x Pagado con
+                            Saldo
+                          </span>
+                          <span>{prod.subtotalVirtual.toFixed(2)}€</span>
+                        </li>
+                      )}
+                    </ul>
                   </div>
-                  <div className="text-right">
-                    <p
-                      className={`font-black text-lg ${linea.pagadoConSaldo ? "text-[#367933]" : "text-[#062e3a]"}`}
-                    >
-                      {subtotal.toFixed(2)}€
-                    </p>
-                    {linea.pagadoConSaldo && (
-                      <p className="text-[10px] font-black text-[#367933]/70 uppercase">
-                        Saldo
-                      </p>
-                    )}
-                  </div>
+                );
+              })}
+            </div>
+
+            {/* Resumen de Totales */}
+            <div className="space-y-2 p-4 border-t border-gray-200 bg-[#f4f7f4]">
+              {totalVirtual > 0 && (
+                <div className="flex justify-between items-center pb-2 border-b border-gray-200/50">
+                  <span className="text-[10px] font-black text-[#367933] uppercase flex items-center gap-1 tracking-widest">
+                    <Wallet size={12} /> Saldo Consumido
+                  </span>
+                  <span className="text-sm font-black text-[#367933]">
+                    {totalVirtual.toFixed(2)}€
+                  </span>
                 </div>
-              );
-            })}
+              )}
+              <div className="flex justify-between items-center pt-1">
+                <span className="text-xs font-black text-[#062e3a] uppercase flex items-center gap-1 tracking-widest">
+                  <Banknote size={16} /> Total Abonado
+                </span>
+                <span className="text-2xl font-black text-[#062e3a]">
+                  {(pedido.totalPedido || totalEuros).toFixed(2)}€
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="p-6 bg-[#062e3a] text-white flex justify-between items-center">
-          <div>
-            <p className="text-[#b1cb0c] text-xs font-black uppercase mb-1">
-              Total abonado real
-            </p>
-            <p className="text-4xl font-black">
-              {(pedido.totalPedido || 0).toFixed(2)}
-              <span className="text-xl ml-1 text-[#bed000]">€</span>
-            </p>
-          </div>
-          <button
-            onClick={onCerrar}
-            className="px-8 py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-black rounded-xl transition-colors"
-          >
-            Cerrar
-          </button>
         </div>
       </div>
     </div>

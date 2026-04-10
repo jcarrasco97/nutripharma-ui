@@ -1085,3 +1085,18 @@ pesadas por privacidad).
 - **Salida de Logs:** Actualmente emite los registros de auditoría por salida estándar (Consola IDE). Preparado para
   volcado a disco (`/var/log/nutripharma/api.log`) en el futuro entorno de Producción (VPS Linux) mediante perfiles de
   Logback.
+
+  ## [10/04/2026] 🛠️ Unificación UX y Auditoría de Identidad en Pedidos
+
+Se ha llevado a cabo una refactorización crítica en el módulo de Pedidos para unificar la experiencia de usuario (UX) y garantizar la trazabilidad de la autoría.
+
+- **El Súper-Modal Inteligente (Facturación Clara):** Se ha rediseñado completamente el `ModalDetallePedido` y la vista de pedidos en el `ModalDetalleValidacion`. El sistema ahora incluye un motor interno (vía `useMemo`) que agrupa dinámicamente las líneas de pedido.
+  - _Mejora UX:_ Las unidades compradas, bonificadas (regalo) y pagadas con saldo virtual se agrupan bajo un único producto con un desglose natural.
+  - _Operativa de Almacén:_ Se ha priorizado visualmente el número total de unidades por artículo (cajas grandes y oscuras) para facilitar la preparación física de los paquetes sin errores.
+
+- **Auditoría "Identity-Aware" (Resolución del Bug Proxy):**
+  Se ha solucionado un fallo de suplantación visual donde los pedidos realizados por el Administrador (Proxy) aparecían firmados por la Farmacia.
+  - _Backend:_ El `PedidoService` ahora cruza el email almacenado en el registro de auditoría (`creado_por`) con los repositorios de perfiles (`AdministradorRepository`, `NutricionistaRepository`, `FarmaciaRepository`) para inyectar el Nombre y Apellidos reales del operador en la respuesta JSON (`creadoPorNombre`).
+
+- **Próximos Pasos (Roadmap Lunes):**
+  Implementar el flujo de revisión obligatoria en el Gatekeeper. Bloquear las acciones directas de "Enviar/Aprobar" en las tarjetas externas, obligando al Admin a abrir el Modal de Detalles para revisar la mercancía antes de ejecutar la acción.
