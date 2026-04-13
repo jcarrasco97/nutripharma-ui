@@ -211,6 +211,7 @@ export const useValidaciones = () => {
       await pedidosService.marcarComoEnviadoAdmin(pedidoId, listaRepartosFinal);
       setMostrarModalReparto(false);
       setPedidoEnProceso(null);
+      setDetalleSeleccionado(null); // <-- CIERRA EL MODAL AL TERMINAR
       cargarDatos();
     } catch (error) {
       console.error(error);
@@ -225,12 +226,16 @@ export const useValidaciones = () => {
   // =========================================================================
   const handleEstadoSuministro = async (id, estado) => {
     if (!window.confirm(`¿Seguro que quieres ${estado} esta petición?`)) return;
+    setEnviando(true);
     try {
       await suministrosService.cambiarEstadoPeticion(id, estado);
+      setDetalleSeleccionado(null); // <-- CIERRA EL MODAL AL TERMINAR
       cargarDatos();
     } catch (error) {
       console.error(error);
       alert("Error al actualizar suministro");
+    } finally {
+      setEnviando(false);
     }
   };
 
@@ -315,8 +320,8 @@ export const useValidaciones = () => {
     try {
       const consultaActualizada =
         await consultasService.eliminarEvidenciaAdmin(id);
-      setDetalleSeleccionado(consultaActualizada); // Actualiza el modal en tiempo real
-      cargarDatos(); // Refresca las tablas de fondo
+      setDetalleSeleccionado(consultaActualizada);
+      cargarDatos();
       alert(
         "Evidencia eliminada correctamente. El candado del nutricionista se ha abierto.",
       );

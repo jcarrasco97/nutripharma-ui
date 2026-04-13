@@ -24,8 +24,9 @@ const ModalDetalleValidacion = ({
   onEditarYValidar,
   onVerFoto,
   onBorrarEvidencia,
+  onIniciarEnvio,
+  onEstadoSuministro, // <-- Nuevas funciones recibidas desde la vista
 }) => {
-  // 1️⃣ PRIMERO LOS HOOKS (Siempre arriba)
   const lineasPedidoAgrupadas = useMemo(() => {
     if (pestañaActual !== "pedidos" || !detalle || !detalle.lineas) {
       return { agrupadas: [], totales: { euros: 0, virtual: 0 } };
@@ -88,10 +89,8 @@ const ModalDetalleValidacion = ({
     });
   };
 
-  // 3️⃣ RETURN CONDICIONAL
   if (!detalle) return null;
 
-  // 4️⃣ RENDERIZADO VISUAL
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#062e3a]/80 backdrop-blur-sm">
       <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden animate-scale-in border border-[#342c1e]/20 flex flex-col max-h-[90vh]">
@@ -244,39 +243,14 @@ const ModalDetalleValidacion = ({
                   </div>
                 )}
               </div>
-
-              {detalle.estado !== "CANCELADA" && (
-                <div className="flex flex-col md:flex-row gap-3 mt-6 pt-4 border-t border-gray-200">
-                  <button
-                    onClick={onCancelarConsulta}
-                    disabled={enviando}
-                    className="flex-1 py-3 px-4 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white font-black rounded-xl transition-colors flex justify-center items-center gap-2 shadow-sm"
-                  >
-                    <XCircle size={18} /> Anular
-                  </button>
-                  <button
-                    onClick={onEditarYValidar}
-                    disabled={enviando}
-                    className="flex-[2] py-3 px-4 bg-[#367933] text-white hover:bg-[#006633] font-black rounded-xl transition-colors flex justify-center items-center gap-2 shadow-lg shadow-[#367933]/20"
-                  >
-                    {enviando ? (
-                      <Loader2 className="animate-spin" size={18} />
-                    ) : (
-                      <ShieldCheck size={18} />
-                    )}{" "}
-                    Guardar y Validar
-                  </button>
-                </div>
-              )}
             </div>
           )}
 
           {/* ============================================================== */}
-          {/* VISTA PEDIDOS (ACTUALIZADA: UI UNIFICADA Y UNIDADES EN GRANDE) */}
+          {/* VISTA PEDIDOS */}
           {/* ============================================================== */}
           {pestañaActual === "pedidos" && (
             <div className="space-y-4">
-              {/* Bloque Superior: Info y Autoría */}
               <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col gap-3">
                 <div className="flex justify-between items-center border-b border-gray-100 pb-3">
                   <p className="text-sm font-black text-[#367933] uppercase tracking-widest">
@@ -293,15 +267,14 @@ const ModalDetalleValidacion = ({
                       {detalle.fechaPedido || detalle.fecha}
                     </span>
                   </p>
-                  {/* 👇 AHORA USA EL NOMBRE REAL DEL BACKEND 👇 */}
                   <p className="flex justify-between">
                     Realizado por:{" "}
                     <span className="font-black text-[#367933] bg-[#367933]/10 px-2 rounded">
-                      {detalle.creadoPorNombre}
+                      {detalle.creadoPorNombre || "Desconocido"}
                     </span>
                   </p>
                   <p className="flex justify-between">
-                    Farmacia Destino:{" "}
+                    Destino:{" "}
                     <span className="font-black text-[#062e3a]">
                       {detalle.farmaciaNombre}
                     </span>
@@ -309,7 +282,6 @@ const ModalDetalleValidacion = ({
                 </div>
               </div>
 
-              {/* Desglose: Unidades más grandes y oscuras */}
               <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                 <p className="bg-[#e9ece9] text-[10px] font-black text-[#062e3a] uppercase p-3 border-b border-gray-200 tracking-widest flex items-center gap-2">
                   <Package size={14} /> Desglose de Unidades
@@ -327,7 +299,6 @@ const ModalDetalleValidacion = ({
                           <p className="font-black text-[#062e3a] text-sm leading-tight pr-4">
                             {prod.nombre}
                           </p>
-                          {/* 👇 UNIDADES: GRANDES, NEGRAS Y VISIBLES 👇 */}
                           <div className="text-center min-w-[80px]">
                             <p className="text-[10px] font-black text-gray-400 uppercase leading-none mb-1">
                               Total
@@ -340,20 +311,22 @@ const ModalDetalleValidacion = ({
 
                         <ul className="text-xs space-y-1 font-bold">
                           {prod.udsCompradas > 0 && (
-                            <li className="text-[#342c1e]/70">
-                              • {prod.udsCompradas}x Compra Real (
-                              {prod.subEuros.toFixed(2)}€)
+                            <li className="text-[#342c1e]/70 flex justify-between">
+                              <span>• {prod.udsCompradas}x Real</span>
+                              <span>{prod.subEuros.toFixed(2)}€</span>
                             </li>
                           )}
                           {prod.udsRegalo > 0 && (
                             <li className="text-[#b1cb0c] flex items-center gap-1">
-                              <Gift size={12} /> {prod.udsRegalo}x Regalo/Bonif.
+                              <Gift size={10} /> {prod.udsRegalo}x Regalo/Bonif.
                             </li>
                           )}
                           {prod.udsVirtuales > 0 && (
-                            <li className="text-[#367933] flex items-center gap-1">
-                              <Wallet size={12} /> {prod.udsVirtuales}x Pagado
-                              con Saldo
+                            <li className="text-[#367933] flex justify-between">
+                              <span className="flex items-center gap-1">
+                                <Wallet size={10} /> {prod.udsVirtuales}x Saldo
+                              </span>
+                              <span>{prod.subVirtual.toFixed(2)}€</span>
                             </li>
                           )}
                         </ul>
@@ -362,11 +335,20 @@ const ModalDetalleValidacion = ({
                   })}
                 </div>
 
-                {/* Totales finales */}
-                <div className="p-4 bg-[#f4f7f4] border-t border-gray-200">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs font-black text-[#062e3a] uppercase tracking-widest">
-                      Total Abonado
+                <div className="space-y-2 p-4 border-t border-gray-200 bg-[#f4f7f4]">
+                  {lineasPedidoAgrupadas.totales.virtual > 0 && (
+                    <div className="flex justify-between items-center pb-2 border-b border-gray-200/50">
+                      <span className="text-[10px] font-black text-[#367933] uppercase flex items-center gap-1 tracking-widest">
+                        <Wallet size={12} /> Saldo Consumido
+                      </span>
+                      <span className="text-sm font-black text-[#367933]">
+                        {lineasPedidoAgrupadas.totales.virtual.toFixed(2)}€
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center pt-1">
+                    <span className="text-xs font-black text-[#062e3a] uppercase flex items-center gap-1 tracking-widest">
+                      <Banknote size={16} /> Total Abonado
                     </span>
                     <span className="text-2xl font-black text-[#062e3a]">
                       {(
@@ -445,6 +427,79 @@ const ModalDetalleValidacion = ({
                 </ul>
               </div>
             </div>
+          )}
+        </div>
+
+        {/* 👇 FOOTER CONTEXTUAL INTELIGENTE 👇 */}
+        <div className="p-4 border-t border-gray-100 bg-white shrink-0 flex gap-3 justify-end items-center">
+          {pestañaActual === "consultas" &&
+          ["PENDIENTE_VALIDACION", "CON_INCIDENCIA"].includes(
+            detalle.estado,
+          ) ? (
+            <>
+              <button
+                onClick={onCancelarConsulta}
+                disabled={enviando}
+                className="py-3 px-6 bg-red-50 text-red-600 font-black rounded-xl hover:bg-red-100 flex items-center gap-2 transition-colors"
+              >
+                <XCircle size={18} /> Anular
+              </button>
+              <button
+                onClick={onEditarYValidar}
+                disabled={enviando}
+                className="py-3 px-6 bg-[#367933] text-white font-black rounded-xl hover:bg-[#006633] flex items-center gap-2 transition-colors shadow-lg shadow-[#367933]/20"
+              >
+                {enviando ? (
+                  <Loader2 className="animate-spin" size={18} />
+                ) : (
+                  <ShieldCheck size={18} />
+                )}{" "}
+                Guardar y Validar
+              </button>
+            </>
+          ) : pestañaActual === "pedidos" &&
+            detalle.estado === "PENDIENTE_ENVIO" ? (
+            <>
+              <button
+                onClick={onCerrar}
+                className="py-3 px-6 bg-[#f4f7f4] border border-gray-200 text-[#342c1e] font-black rounded-xl hover:bg-gray-100 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={onIniciarEnvio}
+                disabled={enviando}
+                className="flex-1 py-3 px-6 bg-[#367933] text-white font-black rounded-xl hover:bg-[#006633] flex justify-center items-center gap-2 transition-colors shadow-lg shadow-[#367933]/20"
+              >
+                <Package size={18} /> Confirmar Envío
+              </button>
+            </>
+          ) : pestañaActual === "suministros" &&
+            detalle.estado === "SOLICITADO" ? (
+            <>
+              <button
+                onClick={() => onEstadoSuministro(detalle.id, "CANCELADO")}
+                disabled={enviando}
+                className="py-3 px-6 bg-red-50 text-red-600 font-black rounded-xl hover:bg-red-100 flex items-center gap-2 transition-colors"
+              >
+                <XCircle size={18} /> Denegar
+              </button>
+              <button
+                onClick={() => onEstadoSuministro(detalle.id, "APROBADO")}
+                disabled={enviando}
+                className="flex-1 py-3 px-6 bg-[#367933] text-white font-black rounded-xl hover:bg-[#006633] flex justify-center items-center gap-2 transition-colors shadow-lg shadow-[#367933]/20"
+              >
+                <ShieldCheck size={18} /> Aprobar Envío
+              </button>
+            </>
+          ) : (
+            // Vista de Historial por defecto (Solo botón Cerrar)
+            <button
+              onClick={onCerrar}
+              className="w-full py-3 bg-[#f4f7f4] border border-gray-200 hover:bg-gray-200 text-[#342c1e] font-black rounded-xl transition-colors"
+            >
+              Cerrar Ventana
+            </button>
           )}
         </div>
       </div>

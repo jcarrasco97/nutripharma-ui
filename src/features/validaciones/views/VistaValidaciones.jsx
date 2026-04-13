@@ -6,16 +6,14 @@ import {
   Stethoscope,
   Loader2,
   ShieldCheck,
-  XCircle,
   FileBox,
   Search,
-  MapPin,
 } from "lucide-react";
 
-import { useValidaciones } from "../hooks/useValidaciones"; // <-- Tu Cerebro
-import ModalRepartoComisiones from "../components/ModalRepartoComisiones"; // <-- Tu Modal 1
-import ModalDetalleValidacion from "../components/ModalDetalleValidacion"; // <-- Tu Modal 2
-import ModalVerEvidencia from "../../consultas/components/ModalVerEvidencia"; // <-- AÑADIR IMPORTACIÓN
+import { useValidaciones } from "../hooks/useValidaciones";
+import ModalRepartoComisiones from "../components/ModalRepartoComisiones";
+import ModalDetalleValidacion from "../components/ModalDetalleValidacion";
+import ModalVerEvidencia from "../../consultas/components/ModalVerEvidencia";
 
 const VistaValidaciones = () => {
   const hook = useValidaciones();
@@ -42,7 +40,6 @@ const VistaValidaciones = () => {
         }
       />
 
-      {/* 👇 Modal para ver la foto en grande (AHORA CON FECHAS) 👇 */}
       <ModalVerEvidencia
         urlEvidencia={hook.urlEvidenciaModal}
         fechaConsulta={hook.detalleSeleccionado?.fecha}
@@ -61,9 +58,13 @@ const VistaValidaciones = () => {
         onEditarYValidar={hook.handleEditarYValidar}
         calcularTotalesPedido={hook.calcularTotalesPedido}
         agruparLineasPorProducto={hook.agruparLineasPorProducto}
-        // 👇 AÑADE ESTAS DOS LÍNEAS 👇
         onVerFoto={hook.handleVerFoto}
         onBorrarEvidencia={hook.handleBorrarEvidenciaAdmin}
+        // 👇 AÑADIDAS LAS FUNCIONES DE ENVÍO DIRECTAS AL MODAL 👇
+        onIniciarEnvio={() =>
+          hook.iniciarProcesoEnvio(hook.detalleSeleccionado)
+        }
+        onEstadoSuministro={hook.handleEstadoSuministro}
       />
 
       {/* 2. CABECERA PRINCIPAL */}
@@ -125,6 +126,7 @@ const VistaValidaciones = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {/* --- TARJETAS CONSULTAS --- */}
             {hook.pestañaActual === "consultas" &&
               hook.pendientes.map((c) => (
                 <div
@@ -135,8 +137,9 @@ const VistaValidaciones = () => {
                     <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-3 py-1 rounded-full uppercase flex items-center gap-1">
                       <Clock size={12} /> Pendiente
                     </span>
-                    <span className="text-xs font-bold text-[#342c1e]/60">
-                      {c.fecha}
+                    {/* AÑADIDO: Fecha y Turno juntos */}
+                    <span className="text-xs font-bold text-[#342c1e]/60 flex items-center gap-1">
+                      {c.fecha} • {c.tipoTurno || "Turno"}
                     </span>
                   </div>
                   <h3 className="text-lg font-black text-[#062e3a]">
@@ -154,6 +157,7 @@ const VistaValidaciones = () => {
                 </div>
               ))}
 
+            {/* --- TARJETAS PEDIDOS --- */}
             {hook.pestañaActual === "pedidos" &&
               hook.pendientes.map((p) => (
                 <div
@@ -172,17 +176,19 @@ const VistaValidaciones = () => {
                     Pedido #{p.id}
                   </h3>
                   <p className="text-sm font-bold text-[#367933] mb-4">
-                    Farmacia: {p.farmaciaNombre}
+                    📦 Destino: {p.farmaciaNombre}
                   </p>
+                  {/* MODIFICADO: Ahora abre el modal */}
                   <button
-                    onClick={() => hook.iniciarProcesoEnvio(p)}
+                    onClick={() => hook.setDetalleSeleccionado(p)}
                     className="w-full bg-[#367933] hover:bg-[#006633] text-white font-black py-4 rounded-xl flex justify-center items-center gap-2 mt-auto shadow-lg shadow-[#367933]/20 active:scale-[0.98]"
                   >
-                    <Package size={18} /> Marcar como Enviado
+                    <Search size={18} /> Revisar Pedido
                   </button>
                 </div>
               ))}
 
+            {/* --- TARJETAS SUMINISTROS --- */}
             {hook.pestañaActual === "suministros" &&
               hook.pendientes.map((s) => (
                 <div
@@ -197,27 +203,16 @@ const VistaValidaciones = () => {
                       {new Date(s.fechaPeticion).toLocaleDateString()}
                     </span>
                   </div>
-                  <h3 className="text-lg font-black text-[#062e3a] mb-6">
+                  <h3 className="text-lg font-black text-[#062e3a] mb-4">
                     {s.nutricionistaNombre}
                   </h3>
-                  <div className="flex gap-2 mt-auto">
-                    <button
-                      onClick={() =>
-                        hook.handleEstadoSuministro(s.id, "CANCELADO")
-                      }
-                      className="px-4 bg-red-50 text-red-600 font-bold rounded-xl flex justify-center items-center"
-                    >
-                      <XCircle size={18} />
-                    </button>
-                    <button
-                      onClick={() =>
-                        hook.handleEstadoSuministro(s.id, "APROBADO")
-                      }
-                      className="flex-1 bg-[#367933] text-white font-black py-4 rounded-xl flex justify-center items-center gap-2"
-                    >
-                      <CheckCircle size={18} /> Aprobar
-                    </button>
-                  </div>
+                  {/* MODIFICADO: Ahora abre el modal y hemos quitado los botones directos */}
+                  <button
+                    onClick={() => hook.setDetalleSeleccionado(s)}
+                    className="w-full bg-[#367933] hover:bg-[#006633] text-white font-black py-4 rounded-xl flex justify-center items-center gap-2 mt-auto shadow-lg shadow-[#367933]/20 active:scale-[0.98]"
+                  >
+                    <Search size={18} /> Revisar Petición
+                  </button>
                 </div>
               ))}
           </div>
@@ -225,6 +220,7 @@ const VistaValidaciones = () => {
       </div>
 
       {/* 5. TABLA HISTORIAL */}
+      {/* ... (El Historial se mantiene igual, no lo toco para ahorrar espacio) ... */}
       <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <div>

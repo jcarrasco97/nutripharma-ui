@@ -1100,3 +1100,11 @@ Se ha llevado a cabo una refactorización crítica en el módulo de Pedidos para
 
 - **Próximos Pasos (Roadmap Lunes):**
   Implementar el flujo de revisión obligatoria en el Gatekeeper. Bloquear las acciones directas de "Enviar/Aprobar" en las tarjetas externas, obligando al Admin a abrir el Modal de Detalles para revisar la mercancía antes de ejecutar la acción.
+
+## [13/04/2026] 🛡️ Refactorización de Workflow (Filtro de Auditoría Obligatorio)
+
+Se han eliminado las acciones directas ("Marcar como Enviado", "Aprobar") desde las tarjetas principales del Centro de Validaciones.
+
+- **Motivo:** Evitar la aprobación a ciegas por parte del Administrador (Gatekeeper).
+- **Solución:** Las tarjetas ahora actúan exclusivamente como un acceso ("Revisar Elemento"). Todas las acciones de estado se han encapsulado dentro del Súper-Modal, obligando al usuario a ver el desglose de productos/materiales antes de poder confirmar o cancelar una operación.
+- Esto blinda el flujo de trabajo contra errores humanos en el empaquetado de pedidos.
