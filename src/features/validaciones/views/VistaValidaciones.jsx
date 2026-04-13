@@ -14,6 +14,7 @@ import { useValidaciones } from "../hooks/useValidaciones";
 import ModalRepartoComisiones from "../components/ModalRepartoComisiones";
 import ModalDetalleValidacion from "../components/ModalDetalleValidacion";
 import ModalVerEvidencia from "../../consultas/components/ModalVerEvidencia";
+import HistorialValidaciones from "../components/HistorialValidaciones"; // <-- AÑADIDO IMPORT
 
 const VistaValidaciones = () => {
   const hook = useValidaciones();
@@ -60,11 +61,11 @@ const VistaValidaciones = () => {
         agruparLineasPorProducto={hook.agruparLineasPorProducto}
         onVerFoto={hook.handleVerFoto}
         onBorrarEvidencia={hook.handleBorrarEvidenciaAdmin}
-        // 👇 AÑADIDAS LAS FUNCIONES DE ENVÍO DIRECTAS AL MODAL 👇
         onIniciarEnvio={() =>
           hook.iniciarProcesoEnvio(hook.detalleSeleccionado)
         }
         onEstadoSuministro={hook.handleEstadoSuministro}
+        onCancelarPedido={hook.handleCancelarPedido}
       />
 
       {/* 2. CABECERA PRINCIPAL */}
@@ -137,7 +138,6 @@ const VistaValidaciones = () => {
                     <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-3 py-1 rounded-full uppercase flex items-center gap-1">
                       <Clock size={12} /> Pendiente
                     </span>
-                    {/* AÑADIDO: Fecha y Turno juntos */}
                     <span className="text-xs font-bold text-[#342c1e]/60 flex items-center gap-1">
                       {c.fecha} • {c.tipoTurno || "Turno"}
                     </span>
@@ -178,7 +178,6 @@ const VistaValidaciones = () => {
                   <p className="text-sm font-bold text-[#367933] mb-4">
                     📦 Destino: {p.farmaciaNombre}
                   </p>
-                  {/* MODIFICADO: Ahora abre el modal */}
                   <button
                     onClick={() => hook.setDetalleSeleccionado(p)}
                     className="w-full bg-[#367933] hover:bg-[#006633] text-white font-black py-4 rounded-xl flex justify-center items-center gap-2 mt-auto shadow-lg shadow-[#367933]/20 active:scale-[0.98]"
@@ -203,10 +202,13 @@ const VistaValidaciones = () => {
                       {new Date(s.fechaPeticion).toLocaleDateString()}
                     </span>
                   </div>
-                  <h3 className="text-lg font-black text-[#062e3a] mb-4">
+                  <h3 className="text-lg font-black text-[#062e3a] leading-tight">
                     {s.nutricionistaNombre}
                   </h3>
-                  {/* MODIFICADO: Ahora abre el modal y hemos quitado los botones directos */}
+                  <p className="text-sm font-bold text-[#367933] mb-4">
+                    📦 {s.materiales ? s.materiales.length : 0} artículos
+                    solicitados
+                  </p>
                   <button
                     onClick={() => hook.setDetalleSeleccionado(s)}
                     className="w-full bg-[#367933] hover:bg-[#006633] text-white font-black py-4 rounded-xl flex justify-center items-center gap-2 mt-auto shadow-lg shadow-[#367933]/20 active:scale-[0.98]"
@@ -219,109 +221,17 @@ const VistaValidaciones = () => {
         )}
       </div>
 
-      {/* 5. TABLA HISTORIAL */}
-      {/* ... (El Historial se mantiene igual, no lo toco para ahorrar espacio) ... */}
-      <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-          <div>
-            <h3 className="text-xl font-black text-[#062e3a] capitalize">
-              Historial de {hook.pestañaActual}
-            </h3>
-            <p className="text-sm text-[#342c1e]/70 font-bold mt-1">
-              Registro de operaciones ya procesadas
-            </p>
-          </div>
-          <div className="flex items-center bg-[#f4f7f4] px-4 py-3 rounded-xl border border-gray-200 w-full md:w-auto">
-            <Search size={18} className="text-gray-400 mr-2" />
-            <input
-              type="text"
-              placeholder="Filtrar por nombre o fecha..."
-              value={hook.busqueda}
-              onChange={(e) => hook.setBusqueda(e.target.value)}
-              className="bg-transparent outline-none text-sm w-full font-bold text-[#062e3a]"
-            />
-          </div>
-        </div>
-
-        <div className="overflow-x-auto custom-scrollbar pb-4">
-          <table className="w-full text-left border-collapse min-w-[600px]">
-            <thead>
-              <tr className="border-b-2 border-gray-100">
-                <th className="pb-3 text-[10px] font-black text-[#342c1e]/50 uppercase tracking-widest">
-                  Fecha
-                </th>
-                <th className="pb-3 text-[10px] font-black text-[#342c1e]/50 uppercase tracking-widest">
-                  Usuario
-                </th>
-                <th className="pb-3 text-[10px] font-black text-[#342c1e]/50 uppercase tracking-widest text-center">
-                  Estado
-                </th>
-                <th className="pb-3 text-[10px] font-black text-[#342c1e]/50 uppercase tracking-widest text-right pr-4">
-                  Acción
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {hook.historialFiltrado.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan="4"
-                    className="py-12 text-center text-[#342c1e]/60 font-bold bg-[#f4f7f4]/50 rounded-b-xl"
-                  >
-                    No hay registros que coincidan.
-                  </td>
-                </tr>
-              ) : (
-                hook.historialFiltrado.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-[#f4f7f4] transition-colors group"
-                  >
-                    <td className="py-4 text-sm font-bold text-[#342c1e]/70 pl-2">
-                      {hook.pestañaActual === "suministros"
-                        ? new Date(item.fechaPeticion).toLocaleDateString()
-                        : item.fecha || item.fechaPedido}
-                    </td>
-                    <td className="py-4 text-sm font-black text-[#062e3a]">
-                      {item.nutricionistaNombre || item.farmaciaNombre}
-                    </td>
-                    <td className="py-4 text-center">
-                      <span
-                        className={`text-[9px] font-black px-3 py-1 rounded-md uppercase tracking-widest ${
-                          [
-                            "VALIDADA",
-                            "ENVIADO",
-                            "LIQUIDADO",
-                            "APROBADO",
-                          ].includes(item.estado)
-                            ? "bg-[#b1cb0c]/20 text-[#367933]"
-                            : ["CANCELADA", "RECHAZADA"].includes(item.estado)
-                              ? "bg-red-100 text-red-700"
-                              : "bg-amber-100 text-amber-700"
-                        }`}
-                      >
-                        {item.estado.replace("_", " ")}
-                      </span>
-                    </td>
-                    <td className="py-4 text-right pr-2">
-                      <button
-                        onClick={() =>
-                          hook.pestañaActual === "consultas"
-                            ? hook.abrirDetalleConsulta(item)
-                            : hook.setDetalleSeleccionado(item)
-                        }
-                        className="bg-white border border-gray-200 text-[#342c1e] hover:bg-[#062e3a] hover:text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm"
-                      >
-                        Detalles
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* 5. TABLA HISTORIAL (AHORA MODULAR Y ESCALABLE) */}
+      <HistorialValidaciones
+        key={hook.pestañaActual} // 👇 ESTA ES LA MAGIA: Obliga a React a desmontar y montar una tabla nueva y limpia cada vez que cambias de pestaña
+        historial={hook.historial}
+        pestañaActual={hook.pestañaActual}
+        onVerDetalle={(item) =>
+          hook.pestañaActual === "consultas"
+            ? hook.abrirDetalleConsulta(item)
+            : hook.setDetalleSeleccionado(item)
+        }
+      />
     </div>
   );
 };

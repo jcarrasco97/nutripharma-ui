@@ -22,10 +22,10 @@ export const pedidosService = {
     return response.data;
   },
 
-  // Liquida un pedido existente
-  liquidar: async (id) => {
+  // Añade esto debajo de obtenerTodos o donde prefieras:
+  cancelarPedidoAdmin: async (id) => {
     const response = await axios.put(
-      `${API_URL}/${id}/liquidar`,
+      `${API_URL}/${id}/cancelar`,
       {},
       getConfig(),
     );

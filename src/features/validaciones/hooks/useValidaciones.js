@@ -14,7 +14,6 @@ export const useValidaciones = () => {
   const [pendientes, setPendientes] = useState([]);
   const [historial, setHistorial] = useState([]);
   const [cargando, setCargando] = useState(false);
-  const [busqueda, setBusqueda] = useState("");
   const [listaNutrisGlobal, setListaNutrisGlobal] = useState([]);
 
   // 2. ESTADOS DE MODALES Y EDICIÓN
@@ -77,7 +76,6 @@ export const useValidaciones = () => {
   }, [pestañaActual]);
 
   useEffect(() => {
-    setBusqueda("");
     cargarDatos();
   }, [cargarDatos]);
 
@@ -147,6 +145,29 @@ export const useValidaciones = () => {
   // =========================================================================
   // LÓGICA DE PEDIDOS (Comisiones Multicapa)
   // =========================================================================
+
+  const handleCancelarPedido = async (id) => {
+    if (
+      !window.confirm(
+        "🚨 ¡ATENCIÓN! ¿Seguro que deseas CANCELAR este pedido? Se revertirá el saldo virtual a la farmacia si se utilizó.",
+      )
+    )
+      return;
+
+    setEnviando(true);
+    try {
+      await pedidosService.cancelarPedidoAdmin(id);
+      setDetalleSeleccionado(null);
+      cargarDatos();
+      alert("Pedido anulado correctamente.");
+    } catch (error) {
+      console.error(error);
+      alert("Error al anular el pedido.");
+    } finally {
+      setEnviando(false);
+    }
+  };
+
   const iniciarProcesoEnvio = (pedido) => {
     setPedidoEnProceso(pedido);
     const nutrisDeEstaFarmacia = listaNutrisGlobal.filter((n) =>
@@ -211,7 +232,7 @@ export const useValidaciones = () => {
       await pedidosService.marcarComoEnviadoAdmin(pedidoId, listaRepartosFinal);
       setMostrarModalReparto(false);
       setPedidoEnProceso(null);
-      setDetalleSeleccionado(null); // <-- CIERRA EL MODAL AL TERMINAR
+      setDetalleSeleccionado(null);
       cargarDatos();
     } catch (error) {
       console.error(error);
@@ -229,7 +250,7 @@ export const useValidaciones = () => {
     setEnviando(true);
     try {
       await suministrosService.cambiarEstadoPeticion(id, estado);
-      setDetalleSeleccionado(null); // <-- CIERRA EL MODAL AL TERMINAR
+      setDetalleSeleccionado(null);
       cargarDatos();
     } catch (error) {
       console.error(error);
@@ -240,7 +261,7 @@ export const useValidaciones = () => {
   };
 
   // =========================================================================
-  // UTILIDADES (Filtros y Agrupaciones)
+  // UTILIDADES
   // =========================================================================
   const calcularTotalesPedido = (lineas = []) => {
     let totalReal = 0,
@@ -265,25 +286,6 @@ export const useValidaciones = () => {
     });
     return Object.entries(agrupado);
   };
-
-  const historialFiltrado = historial.filter((item) => {
-    const termino = busqueda.toLowerCase();
-    if (pestañaActual === "consultas")
-      return (
-        item.nutricionistaNombre?.toLowerCase().includes(termino) ||
-        item.farmaciaNombre?.toLowerCase().includes(termino) ||
-        item.fecha?.includes(termino)
-      );
-    if (pestañaActual === "pedidos")
-      return (
-        item.farmaciaNombre?.toLowerCase().includes(termino) ||
-        item.fechaPedido?.includes(termino) ||
-        item.id?.toString().includes(termino)
-      );
-    if (pestañaActual === "suministros")
-      return item.nutricionistaNombre?.toLowerCase().includes(termino);
-    return true;
-  });
 
   const sumaReparto = repartosActuales.reduce(
     (sum, r) => sum + r.porcentaje,
@@ -338,11 +340,9 @@ export const useValidaciones = () => {
     pestañaActual,
     setPestañaActual,
     pendientes,
-    historialFiltrado,
+    historial, // <--- Dato en bruto inyectado correctamente
     cargando,
     enviando,
-    busqueda,
-    setBusqueda,
     detalleSeleccionado,
     setDetalleSeleccionado,
     mostrarModalReparto,
@@ -358,6 +358,7 @@ export const useValidaciones = () => {
     abrirDetalleConsulta,
     handleEditarYValidar,
     handleCancelarConsulta,
+    handleCancelarPedido,
     iniciarProcesoEnvio,
     handleCambioSlider,
     setRepartoEquitativo,

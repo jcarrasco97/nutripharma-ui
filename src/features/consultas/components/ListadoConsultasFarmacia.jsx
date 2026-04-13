@@ -15,7 +15,7 @@ const ListadoConsultasFarmacia = ({ consultasFiltradas }) => {
         consultasFiltradas.map((c) => (
           <div
             key={c.id}
-            className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-lg hover:border-[#b1cb0c]/50 transition-all group"
+            className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-lg hover:border-[#b1cb0c]/50 transition-all group flex flex-col"
           >
             <div className="flex justify-between items-start mb-6">
               <div className="bg-[#b1cb0c]/20 p-3 rounded-2xl text-[#367933] group-hover:bg-[#367933] group-hover:text-white transition-colors">
@@ -31,33 +31,20 @@ const ListadoConsultasFarmacia = ({ consultasFiltradas }) => {
             <h3 className="text-lg font-black text-[#062e3a] mb-1">
               {c.nutricionistaNombre}
             </h3>
-            <div className="flex items-center gap-2 text-[#342c1e]/60 mb-6">
-              <Calendar size={14} />
-              <span className="text-xs font-bold uppercase">{c.fecha}</span>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-6 border-t border-gray-50">
-              <div className="flex flex-col">
-                <span className="text-[10px] font-black text-[#342c1e]/50 uppercase tracking-tighter">
-                  Horario
-                </span>
-                <div className="flex items-center gap-1 text-[#062e3a] font-bold text-sm mt-1">
-                  <Clock size={14} className="text-[#367933]" />
-                  {c.horaInicio?.substring(0, 5)} - {c.horaFin?.substring(0, 5)}
-                </div>
+            <div className="flex items-center justify-between pt-4 mt-auto border-t border-gray-50">
+              <div className="flex items-center gap-2 text-[#342c1e]/80">
+                <Calendar size={14} className="text-[#367933]" />
+                <span className="text-xs font-bold">{c.fecha}</span>
               </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] font-black text-[#342c1e]/50 uppercase tracking-tighter">
-                  Turno
-                </span>
-                <span className="text-[#062e3a] font-bold text-sm uppercase mt-1">
-                  {c.tipoTurno}
-                </span>
+              <div className="flex items-center gap-1 text-[#062e3a] font-bold text-sm">
+                <Clock size={14} className="text-[#367933]" />
+                {c.horaInicio?.substring(0, 5)} - {c.horaFin?.substring(0, 5)}
               </div>
             </div>
 
             {/* Recuadro de Comisión Generada */}
-            <div className="mt-6 bg-[#f4f7f4] p-4 rounded-2xl flex justify-between items-center border border-transparent group-hover:border-[#b1cb0c]/30 transition-colors">
+            <div className="mt-4 bg-[#f4f7f4] p-4 rounded-2xl flex justify-between items-center border border-transparent group-hover:border-[#b1cb0c]/30 transition-colors">
               <div className="flex items-center gap-2">
                 <TrendingUp size={16} className="text-[#367933]" />
                 <span className="text-xs font-bold text-[#062e3a]">

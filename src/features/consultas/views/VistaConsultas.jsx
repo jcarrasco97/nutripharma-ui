@@ -35,7 +35,6 @@ const VistaConsultas = () => {
         guardando={hook.guardando}
         formulario={hook.formulario}
         farmaciaNombre={hook.farmaciaSeleccionadaNombre}
-        // 👇 ESTA LÍNEA ES LA QUE FALTABA PARA VER LA MINIATURA 👇
         previewUrl={hook.previewUrl}
       />
 
@@ -43,26 +42,20 @@ const VistaConsultas = () => {
         farmacias={hook.farmacias}
         formulario={hook.formulario}
         onChange={hook.handleChange}
-        onPreSubmit={() => hook.setMostrarModal(true)}
-        // 👇 ESTO ERA LO QUE FALTABA 👇
+        onPreSubmit={hook.handlePreSubmit} // 👈 Cambiado: ahora valida antes de abrir modal
         archivoEvidencia={hook.archivoEvidencia}
+        previewUrl={hook.previewUrl}
         handleArchivoChange={hook.handleArchivoChange}
+        horasOcupadasHoy={hook.horasOcupadasHoy} // 👈 Añadido: para mostrar los bloques ocupados
+        onVerPreview={hook.handleVerPreview}
       />
 
       <HistorialTurnos
-        consultasFiltradas={hook.consultasFiltradas}
-        mesesDisponibles={hook.mesesDisponibles}
-        mesFiltro={hook.mesFiltro}
-        setMesFiltro={hook.setMesFiltro}
-        ordenFiltro={hook.ordenFiltro}
-        setOrdenFiltro={hook.setOrdenFiltro}
-        busqueda={hook.busqueda}
-        setBusqueda={hook.setBusqueda}
+        consultasTotales={hook.consultas} // 👈 Le pasamos TODAS en bruto, él se encarga de filtrar
         handleIncidencia={hook.handleIncidencia}
         handleConfirmarAntiguo={hook.handleConfirmarAntiguo}
         toggleObservaciones={hook.toggleObservaciones}
         obsExpandidas={hook.obsExpandidas}
-        // 👇 Y ESTO ERA LO QUE FALTABA AQUÍ 👇
         handleSubirEvidenciaAposteriori={hook.handleSubirEvidenciaAposteriori}
         handleVerFoto={hook.handleVerFoto}
       />

@@ -1,8 +1,7 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import {
-  Filter,
-  ArrowUpDown,
   Search,
+  ArrowUpDown,
   MapPin,
   Edit,
   AlertTriangle,
@@ -10,93 +9,210 @@ import {
   Clock,
   FileText,
   CheckCircle,
-  Camera, // <-- IMPORTADO
+  Camera,
   Lock,
   RefreshCw,
   Eye,
+  Filter,
+  ChevronDown,
 } from "lucide-react";
 
 const HistorialTurnos = ({
-  consultasFiltradas,
-  mesesDisponibles,
-  mesFiltro,
-  setMesFiltro,
-  ordenFiltro,
-  setOrdenFiltro,
-  busqueda,
-  setBusqueda,
+  consultasTotales = [],
   handleIncidencia,
   handleConfirmarAntiguo,
   toggleObservaciones,
   obsExpandidas,
-  handleSubirEvidenciaAposteriori, // <-- NUEVA PROP
+  handleSubirEvidenciaAposteriori,
   handleVerFoto,
 }) => {
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroMesAno, setFiltroMesAno] = useState("INITIAL");
+  const [orden, setOrden] = useState("FECHA_DESC");
+
+  const opciones = useMemo(() => {
+    const mesesUnicos = new Set();
+    consultasTotales.forEach((item) => {
+      if (item.fecha && typeof item.fecha === "string") {
+        const parts = item.fecha.split("-");
+        if (parts.length >= 2) {
+          mesesUnicos.add(`${parts[0]}-${parts[1]}`);
+        }
+      }
+    });
+    return {
+      meses: Array.from(mesesUnicos).sort((a, b) => b.localeCompare(a)),
+    };
+  }, [consultasTotales]);
+
+  const mesActivo =
+    filtroMesAno === "INITIAL"
+      ? opciones.meses.length > 0
+        ? opciones.meses[0]
+        : "ALL"
+      : filtroMesAno;
+
+  const filtradosYOrdenados = useMemo(() => {
+    const filtrados = consultasTotales.filter((item) => {
+      const termino = busqueda.toLowerCase();
+      let pasaTexto = true;
+      if (termino) {
+        const targetStr = (item.farmaciaNombre || "").toLowerCase();
+        pasaTexto = targetStr.includes(termino);
+      }
+
+      let pasaFecha = true;
+      if (mesActivo !== "ALL") {
+        pasaFecha = item.fecha?.startsWith(mesActivo);
+      }
+
+      return pasaTexto && pasaFecha;
+    });
+
+    return filtrados.sort((a, b) => {
+      const timeA = new Date(a.fecha).getTime();
+      const timeB = new Date(b.fecha).getTime();
+
+      switch (orden) {
+        case "FECHA_ASC":
+          return timeA - timeB;
+        case "FECHA_DESC":
+          return timeB - timeA;
+        case "CANCELADOS_PRIMERO": {
+          const pesoA = ["CANCELADA", "CANCELADO", "RECHAZADA"].includes(
+            a.estado,
+          )
+            ? 0
+            : 1;
+          const pesoB = ["CANCELADA", "CANCELADO", "RECHAZADA"].includes(
+            b.estado,
+          )
+            ? 0
+            : 1;
+          if (pesoA !== pesoB) return pesoA - pesoB;
+          return timeB - timeA;
+        }
+        case "EXITOSOS_PRIMERO": {
+          const pesoA = [
+            "VALIDADA",
+            "ENVIADO",
+            "LIQUIDADO",
+            "APROBADO",
+            "CONFIRMADA",
+          ].includes(a.estado)
+            ? 0
+            : 1;
+          const pesoB = [
+            "VALIDADA",
+            "ENVIADO",
+            "LIQUIDADO",
+            "APROBADO",
+            "CONFIRMADA",
+          ].includes(b.estado)
+            ? 0
+            : 1;
+          if (pesoA !== pesoB) return pesoA - pesoB;
+          return timeB - timeA;
+        }
+        default:
+          return 0;
+      }
+    });
+  }, [consultasTotales, busqueda, mesActivo, orden]);
+
+  const formatoMesCorto = (key) => {
+    const [year, month] = key.split("-");
+    const nombre = new Date(year, month - 1).toLocaleString("es-ES", {
+      month: "short",
+    });
+    return `${nombre.charAt(0).toUpperCase() + nombre.slice(1).replace(".", "")} ${year}`;
+  };
+
   return (
-    <div className="xl:col-span-2 space-y-6">
-      <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-4 border-b border-gray-100">
-          <h2 className="text-2xl font-black text-[#062e3a]">
-            Historial de Turnos
-          </h2>
-          <div className="flex gap-2 w-full md:w-auto">
-            <div className="relative flex-1 md:w-40">
-              <Filter
-                size={14}
-                className="absolute left-3 top-3.5 text-gray-400"
-              />
+    <div className="xl:col-span-2 space-y-6 flex flex-col h-full animate-fade-in">
+      <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col gap-6">
+        {/* CABECERA Y FILTROS COMPACTOS */}
+        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-4 pb-4 border-b border-gray-100">
+          <div className="shrink-0">
+            <h2 className="text-2xl font-black text-[#062e3a] leading-tight flex items-center gap-3">
+              Historial de Turnos
+              <span className="bg-[#f4f7f4] text-[#367933] text-xs px-2.5 py-1 rounded-lg">
+                {filtradosYOrdenados.length}
+              </span>
+            </h2>
+            <p className="text-[11px] font-bold text-[#342c1e]/50 uppercase tracking-widest mt-1">
+              Registro de actividad por farmacia
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto justify-end">
+            <div className="relative bg-[#f4f7f4] px-3 py-2 rounded-xl border border-transparent focus-within:border-[#b1cb0c] transition-all shrink-0">
               <select
-                value={mesFiltro}
-                onChange={(e) => setMesFiltro(e.target.value)}
-                className="w-full pl-9 pr-2 py-3 text-xs font-bold text-[#062e3a] border border-gray-200 rounded-xl bg-[#f4f7f4] focus:bg-white focus:border-[#b1cb0c] outline-none appearance-none"
+                value={mesActivo}
+                onChange={(e) => setFiltroMesAno(e.target.value)}
+                className="bg-transparent outline-none text-[11px] font-black text-[#062e3a] uppercase tracking-widest cursor-pointer pr-4 appearance-none"
               >
-                {mesesDisponibles.map((mes) => (
-                  <option key={mes} value={mes}>
-                    {mes === "Todos" ? "Todos los meses" : mes}
+                <option value="ALL">Todas las Fechas</option>
+                {opciones.meses.map((m) => (
+                  <option key={m} value={m}>
+                    {formatoMesCorto(m)}
                   </option>
                 ))}
               </select>
-            </div>
-            <div className="relative flex-1 md:w-40">
-              <ArrowUpDown
+              <ChevronDown
                 size={14}
-                className="absolute left-3 top-3.5 text-gray-400"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[#062e3a]/40 pointer-events-none"
               />
+            </div>
+
+            <div className="flex items-center bg-[#f4f7f4] px-3 py-2 rounded-xl border border-transparent focus-within:border-[#b1cb0c] transition-all flex-1 min-w-[180px]">
+              <Search size={14} className="text-[#062e3a]/40 mr-2 shrink-0" />
+              <input
+                type="text"
+                placeholder="Buscar farmacia..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="bg-transparent outline-none text-xs w-full font-bold text-[#062e3a] placeholder:text-[#062e3a]/30"
+              />
+            </div>
+
+            <div className="relative flex items-center bg-[#f4f7f4] px-3 py-2 rounded-xl border border-transparent focus-within:border-[#b1cb0c] transition-all shrink-0">
+              <ArrowUpDown size={14} className="text-[#062e3a] mr-2 shrink-0" />
               <select
-                value={ordenFiltro}
-                onChange={(e) => setOrdenFiltro(e.target.value)}
-                className="w-full pl-9 pr-2 py-3 text-xs font-bold text-[#062e3a] border border-gray-200 rounded-xl bg-[#f4f7f4] focus:bg-white focus:border-[#b1cb0c] outline-none appearance-none"
+                value={orden}
+                onChange={(e) => setOrden(e.target.value)}
+                className="bg-transparent outline-none text-[11px] font-black text-[#062e3a] uppercase tracking-widest cursor-pointer pr-4 appearance-none"
               >
-                <option value="recientes">Más Recientes</option>
-                <option value="antiguos">Más Antiguos</option>
+                <option value="FECHA_DESC">Más recientes</option>
+                <option value="FECHA_ASC">Más antiguos</option>
+                <option value="EXITOSOS_PRIMERO">Validados primero</option>
+                <option value="CANCELADOS_PRIMERO">Cancelados primero</option>
               </select>
+              <ChevronDown
+                size={14}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[#062e3a]/40 pointer-events-none"
+              />
             </div>
           </div>
         </div>
 
-        <div className="relative mb-6">
-          <Search size={16} className="absolute left-4 top-3.5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Buscar por nombre de farmacia..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            className="w-full pl-11 pr-4 py-3 bg-[#f4f7f4] border border-gray-200 rounded-xl text-sm text-[#062e3a] focus:bg-white focus:border-[#b1cb0c] outline-none transition-colors"
-          />
-        </div>
-
-        <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-          {consultasFiltradas.length === 0 ? (
-            <div className="bg-[#f4f7f4] p-8 rounded-[1.5rem] border-2 border-dashed border-gray-200 text-center text-[#342c1e]/60 font-bold">
-              No se encontraron turnos con estos filtros.
+        {/* LISTADO DE TURNOS */}
+        <div className="space-y-5 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+          {filtradosYOrdenados.length === 0 ? (
+            <div className="bg-[#f4f7f4] p-10 rounded-[2rem] border-2 border-dashed border-gray-200 text-center flex flex-col items-center">
+              <Filter size={32} className="text-[#062e3a]/20 mb-3" />
+              <p className="text-[11px] font-black text-[#062e3a]/40 uppercase tracking-widest">
+                No hay turnos que coincidan con la búsqueda.
+              </p>
             </div>
           ) : (
-            consultasFiltradas.map((c) => (
+            filtradosYOrdenados.map((c) => (
               <div
                 key={c.id}
-                className="bg-white rounded-[1.5rem] shadow-sm border border-gray-100 p-6 flex flex-col transition-all hover:shadow-md hover:border-[#b1cb0c]/50"
+                className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-6 md:p-8 flex flex-col transition-all hover:shadow-md hover:border-[#b1cb0c]/30"
               >
-                <div className="flex justify-between items-start mb-2">
+                {/* FILA 1: ESTADO Y ACCIONES RÁPIDAS */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
                   <div className="flex flex-wrap items-center gap-3">
                     <span
                       className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
@@ -112,139 +228,82 @@ const HistorialTurnos = ({
                       {c.estado.replace("_", " ")}
                     </span>
                     <span className="text-lg font-black text-[#062e3a] flex items-center gap-1.5 truncate">
-                      <MapPin size={16} className="text-[#367933]" />{" "}
+                      <MapPin size={16} className="text-[#367933]" />
                       {c.farmaciaNombre}
                     </span>
                   </div>
 
-                  {(c.estado === "PENDIENTE_VALIDACION" ||
-                    c.estado === "VALIDADA" ||
-                    c.estado === "CON_INCIDENCIA") && (
-                    <button
-                      onClick={() =>
-                        handleIncidencia(c.id, c.mensajeIncidencia, c.estado)
-                      }
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors ${
-                        c.estado === "CON_INCIDENCIA"
-                          ? "bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-200"
-                          : "bg-[#f4f7f4] text-[#342c1e]/70 hover:bg-gray-200 border border-gray-200"
-                      }`}
-                    >
-                      {c.estado === "CON_INCIDENCIA" ? (
-                        <Edit size={14} />
-                      ) : (
-                        <AlertTriangle size={14} />
-                      )}
-                      {c.estado === "CON_INCIDENCIA"
-                        ? "Editar Incidencia"
-                        : "Reportar Error"}
-                    </button>
-                  )}
-
-                  {c.estado === "CANCELADA" && (
-                    <span className="text-red-500" title="Turno Anulado">
-                      <Ban size={20} />
-                    </span>
-                  )}
-                </div>
-
-                <div className="text-sm text-[#342c1e]/80 flex items-center gap-3 mb-3 font-medium">
-                  <span className="flex items-center gap-1">
-                    <Clock size={14} className="text-[#062e3a]/50" /> {c.fecha}{" "}
-                    ({c.tipoTurno})
-                  </span>
-                  <span>
-                    {c.horaInicio.substring(0, 5)} - {c.horaFin.substring(0, 5)}
-                  </span>
-                </div>
-
-                <div className="bg-[#f4f7f4] p-3 rounded-xl border border-gray-100 text-xs text-[#062e3a] font-bold flex flex-wrap items-center gap-4">
-                  <span>
-                    Nuevas: <span className="text-[#367933]">{c.nuevas}</span>
-                  </span>
-                  <span>
-                    Revisiones:{" "}
-                    <span className="text-[#367933]">{c.revisiones}</span>
-                  </span>
-                  <span>
-                    Promo:{" "}
-                    <span className="text-[#367933]">{c.promociones}</span>
-                  </span>
-                  <span>
-                    Personal:{" "}
-                    <span className="text-[#367933]">{c.personalFarmacia}</span>
-                  </span>
-
-                  <div className="ml-auto flex items-center gap-2">
-                    {/* 👇 SI HAY FOTO, PONEMOS EL BOTÓN DE VERLA 👇 */}
-                    {c.evidenciaUrl && (
+                  <div className="flex items-center gap-2">
+                    {(c.estado === "PENDIENTE_VALIDACION" ||
+                      c.estado === "VALIDADA" ||
+                      c.estado === "CON_INCIDENCIA") && (
                       <button
-                        onClick={() => handleVerFoto(c)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#062e3a]/10 hover:bg-[#062e3a]/20 text-[#062e3a] text-[10px] font-black uppercase tracking-widest transition-colors"
-                        title="Ver evidencia fotográfica"
+                        onClick={() =>
+                          handleIncidencia(c.id, c.mensajeIncidencia, c.estado)
+                        }
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors ${
+                          c.estado === "CON_INCIDENCIA"
+                            ? "bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-200"
+                            : "bg-[#f4f7f4] text-[#342c1e]/70 hover:bg-gray-200 border border-transparent"
+                        }`}
                       >
-                        <Eye size={14} /> Ver Foto
+                        {c.estado === "CON_INCIDENCIA" ? (
+                          <Edit size={14} />
+                        ) : (
+                          <AlertTriangle size={14} />
+                        )}
+                        {c.estado === "CON_INCIDENCIA"
+                          ? "Editar Incidencia"
+                          : "Reportar Error"}
                       </button>
                     )}
-
-                    {/* 👇 LA LÓGICA DE SUBIR / SUSTITUIR / CANDADO 👇 */}
-                    {!c.evidenciaUrl ? (
-                      <label className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-200 hover:bg-gray-300 text-[#062e3a] text-[10px] font-black uppercase tracking-widest transition-colors border border-gray-300">
-                        <Camera size={14} /> Adjuntar Foto
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept="image/*"
-                          onChange={(e) => {
-                            if (e.target.files && e.target.files.length > 0) {
-                              if (
-                                window.confirm(
-                                  `¿Subir la imagen seleccionada como evidencia del turno?`,
-                                )
-                              ) {
-                                handleSubirEvidenciaAposteriori(
-                                  c.id,
-                                  e.target.files[0],
-                                );
-                              }
-                            }
-                          }}
-                        />
-                      </label>
-                    ) : c.estado !== "VALIDADA" ? (
-                      <label
-                        className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest transition-colors border border-amber-200"
-                        title="Sustituir foto antes de que central valide"
-                      >
-                        <RefreshCw size={14} /> Sustituir Foto
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept="image/*"
-                          onChange={(e) => {
-                            if (e.target.files && e.target.files.length > 0) {
-                              if (
-                                window.confirm(
-                                  `¿Seguro que quieres reemplazar la evidencia actual?`,
-                                )
-                              ) {
-                                handleSubirEvidenciaAposteriori(
-                                  c.id,
-                                  e.target.files[0],
-                                );
-                              }
-                            }
-                          }}
-                        />
-                      </label>
-                    ) : (
-                      <div
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#b1cb0c]/20 text-[#367933] text-[10px] font-black uppercase tracking-widest border border-[#b1cb0c]/50"
-                        title="Evidencia bloqueada."
-                      >
-                        <Lock size={14} /> Evidencia Sellada
-                      </div>
+                    {c.estado === "CANCELADA" && (
+                      <span className="text-red-500" title="Turno Anulado">
+                        <Ban size={20} />
+                      </span>
                     )}
+                  </div>
+                </div>
+
+                {/* FILA 2: FECHAS Y MÉTRICAS */}
+                <div className="flex flex-col xl:flex-row justify-between items-start gap-4">
+                  <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+                    <span className="flex items-center gap-1 bg-[#062e3a]/5 px-2 py-1 rounded-lg">
+                      <Clock size={14} className="text-[#062e3a]/50" />
+                      <span className="font-bold text-[#062e3a]">
+                        {c.fecha}
+                      </span>
+                    </span>
+                    <span className="bg-[#367933]/10 text-[#367933] px-2 py-1 rounded-lg font-black">
+                      {c.horaInicio.substring(0, 5)} -{" "}
+                      {c.horaFin.substring(0, 5)}
+                    </span>
+                  </div>
+
+                  <div className="bg-[#f4f7f4] p-3 rounded-xl border border-gray-100 text-xs text-[#062e3a] font-bold flex flex-wrap items-center gap-4 w-full xl:w-auto">
+                    <span>
+                      Nuevas: <span className="text-[#367933]">{c.nuevas}</span>
+                    </span>
+                    <span>
+                      Revisiones:{" "}
+                      <span className="text-[#367933]">{c.revisiones}</span>
+                    </span>
+                    <span>
+                      Promo:{" "}
+                      <span className="text-[#367933]">{c.promociones}</span>
+                    </span>
+                    <span>
+                      Personal:{" "}
+                      <span className="text-[#367933]">
+                        {c.personalFarmacia}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* FILA 3: NOTAS Y FOTOS */}
+                <div className="flex flex-wrap items-center justify-between gap-4 pt-4 mt-4 border-t border-gray-100">
+                  <div className="flex gap-2">
                     {c.observacionesJornada && (
                       <button
                         onClick={() => toggleObservaciones(c.id)}
@@ -259,10 +318,65 @@ const HistorialTurnos = ({
                       </button>
                     )}
                   </div>
+
+                  <div className="flex items-center gap-2 ml-auto">
+                    {/* Botón Ver Foto - Solo si hay foto */}
+                    {c.evidenciaUrl && (
+                      <button
+                        onClick={() => handleVerFoto(c)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#062e3a]/10 hover:bg-[#062e3a]/20 text-[#062e3a] text-[10px] font-black uppercase tracking-widest transition-colors"
+                        title="Ver evidencia fotográfica"
+                      >
+                        <Eye size={14} /> Ver Foto
+                      </button>
+                    )}
+
+                    {/* Lógica de Subida/Sustitución/Sellado */}
+                    {c.estado === "VALIDADA" ? (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#b1cb0c]/20 text-[#367933] text-[10px] font-black uppercase tracking-widest border border-[#b1cb0c]/50">
+                        <Lock size={14} /> Evidencia Sellada
+                      </div>
+                    ) : (
+                      <label className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-200 hover:bg-gray-300 text-[#062e3a] text-[10px] font-black uppercase tracking-widest transition-colors border border-gray-300">
+                        {c.evidenciaUrl ? (
+                          <>
+                            <RefreshCw size={14} /> Sustituir Foto
+                          </>
+                        ) : (
+                          <>
+                            <Camera size={14} /> Añadir Foto
+                          </>
+                        )}
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onClick={(e) => (e.target.value = null)} // Resetea el click para subir la misma foto si se desea
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files.length > 0) {
+                              const accion = c.evidenciaUrl
+                                ? "reemplazar"
+                                : "subir";
+                              if (
+                                window.confirm(
+                                  `¿Seguro que quieres ${accion} la evidencia de este turno?`,
+                                )
+                              ) {
+                                handleSubirEvidenciaAposteriori(
+                                  c.id,
+                                  e.target.files[0],
+                                );
+                              }
+                            }
+                          }}
+                        />
+                      </label>
+                    )}
+                  </div>
                 </div>
 
                 {obsExpandidas[c.id] && c.observacionesJornada && (
-                  <div className="mt-3 p-4 bg-amber-50 rounded-xl text-sm text-amber-800 border border-amber-100 animate-fade-in font-medium">
+                  <div className="mt-4 p-4 bg-amber-50 rounded-xl text-sm text-amber-800 border border-amber-100 animate-fade-in font-medium">
                     <strong className="block text-[10px] uppercase tracking-widest text-amber-600 mb-1">
                       Notas de la jornada:
                     </strong>
@@ -271,7 +385,7 @@ const HistorialTurnos = ({
                 )}
 
                 {c.mensajeIncidencia && (
-                  <div className="mt-3 text-sm text-amber-700 bg-amber-50 p-3 rounded-xl border border-amber-100 flex items-start gap-2">
+                  <div className="mt-4 text-sm text-amber-700 bg-amber-50 p-3 rounded-xl border border-amber-100 flex items-start gap-2">
                     <AlertTriangle size={16} className="shrink-0 mt-0.5" />
                     <span>
                       <strong>Incidencia reportada:</strong>{" "}
@@ -281,7 +395,7 @@ const HistorialTurnos = ({
                 )}
 
                 {c.estado === "BORRADOR" && (
-                  <div className="flex justify-end mt-4">
+                  <div className="flex justify-end mt-4 pt-4 border-t border-gray-100">
                     <button
                       onClick={() => handleConfirmarAntiguo(c.id)}
                       className="px-6 py-3 bg-[#b1cb0c]/20 text-[#367933] hover:bg-[#367933] hover:text-white rounded-xl font-black transition-colors flex items-center justify-center gap-2"

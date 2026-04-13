@@ -9,19 +9,12 @@ export const useConsultas = () => {
   const [perfil, setPerfil] = useState(null);
   const [cargando, setCargando] = useState(true);
 
-  const [mesFiltro, setMesFiltro] = useState("Todos");
-  const [ordenFiltro, setOrdenFiltro] = useState("recientes");
-  const [busqueda, setBusqueda] = useState("");
-
   const [mostrarModal, setMostrarModal] = useState(false);
   const [guardando, setGuardando] = useState(false);
-
   const [obsExpandidas, setObsExpandidas] = useState({});
 
-  // --- NUEVO ESTADO PARA LA FOTO DE LA AGENDA ---
   const [archivoEvidencia, setArchivoEvidencia] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null); // <-- AÑADIMOS ESTO
-  // --- ESTADO PARA EL MODAL DE VER LA FOTO ---
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [urlEvidenciaModal, setUrlEvidenciaModal] = useState(null);
   const [consultaFotoSeleccionada, setConsultaFotoSeleccionada] =
     useState(null);
@@ -29,7 +22,6 @@ export const useConsultas = () => {
   const [formulario, setFormulario] = useState({
     farmaciaId: "",
     fecha: new Date().toISOString().split("T")[0],
-    tipoTurno: "MANANA",
     horaInicio: "09:00",
     horaFin: "14:00",
     nuevas: 0,
@@ -72,41 +64,56 @@ export const useConsultas = () => {
     cargarDatos();
   }, []);
 
-  const mesesDisponibles = [
-    "Todos",
-    ...new Set(consultas.map((c) => c.fecha.substring(0, 7))),
-  ].sort((a, b) => b.localeCompare(a));
+  const horasOcupadasHoy = consultas
+    .filter((c) => c.fecha === formulario.fecha && c.estado !== "CANCELADA")
+    .map((c) => ({
+      inicio: c.horaInicio.substring(0, 5),
+      fin: c.horaFin.substring(0, 5),
+    }))
+    .sort((a, b) => a.inicio.localeCompare(b.inicio));
 
-  const consultasFiltradas = consultas
-    .filter((c) => {
-      const coincideMes =
-        mesFiltro === "Todos" || c.fecha.startsWith(mesFiltro);
-      const coincideBusqueda = c.farmaciaNombre
-        .toLowerCase()
-        .includes(busqueda.toLowerCase());
-      return coincideMes && coincideBusqueda;
-    })
-    .sort((a, b) => {
-      if (ordenFiltro === "recientes")
-        return new Date(b.fecha) - new Date(a.fecha);
-      return new Date(a.fecha) - new Date(b.fecha);
-    });
+  const comprobarSolapamientoReact = () => {
+    const start = formulario.horaInicio;
+    const end = formulario.horaFin;
+    for (let ocupado of horasOcupadasHoy) {
+      if (start < ocupado.fin && end > ocupado.inicio) {
+        return true;
+      }
+    }
+    return false;
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormulario({ ...formulario, [name]: value });
   };
 
-  // --- FUNCIÓN PARA CAPTURAR LA FOTO ---
   const handleArchivoChange = (e) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
-      setArchivoEvidencia(file);
-
-      // Creamos la URL visual en el mismo instante que el usuario elige el archivo
-      if (previewUrl) URL.revokeObjectURL(previewUrl); // Limpiamos la anterior si existía
-      setPreviewUrl(URL.createObjectURL(file));
+    if (!e.target.files || e.target.files.length === 0) {
+      setArchivoEvidencia(null);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+      return;
     }
+
+    const file = e.target.files[0];
+    setArchivoEvidencia(file);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const handlePreSubmit = () => {
+    if (formulario.horaFin <= formulario.horaInicio) {
+      return alert(
+        "Error: La hora de fin debe ser posterior a la hora de inicio.",
+      );
+    }
+    if (comprobarSolapamientoReact()) {
+      return alert(
+        "🚨 CONFLICTO DE AGENDA: El horario seleccionado se solapa con un turno que ya tienes registrado este día.",
+      );
+    }
+    setMostrarModal(true);
   };
 
   const confirmarYGuardar = async () => {
@@ -129,11 +136,9 @@ export const useConsultas = () => {
             : formulario.horaFin,
       };
 
-      // 1. Creamos y confirmamos el JSON base
       const nuevaConsulta = await consultasService.crear(payload);
       await consultasService.confirmar(nuevaConsulta.id);
 
-      // 2. Si hay foto seleccionada en el formulario, la subimos a Drive
       if (archivoEvidencia) {
         await consultasService.subirEvidencia(
           nuevaConsulta.id,
@@ -142,8 +147,6 @@ export const useConsultas = () => {
       }
 
       setMostrarModal(false);
-
-      // Limpiamos todo
       setFormulario((prev) => ({
         ...prev,
         nuevas: 0,
@@ -153,8 +156,8 @@ export const useConsultas = () => {
         observacionesJornada: "",
       }));
       setArchivoEvidencia(null);
-      if (previewUrl) URL.revokeObjectURL(previewUrl); // <-- Limpiamos memoria RAM
-      setPreviewUrl(null); // <-- Reseteamos la miniatura
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
 
       cargarDatos();
       alert(
@@ -173,7 +176,6 @@ export const useConsultas = () => {
     }
   };
 
-  // --- NUEVA FUNCIÓN PARA SUBIR FOTO DESDE EL HISTORIAL ---
   const handleSubirEvidenciaAposteriori = async (consultaId, file) => {
     try {
       setCargando(true);
@@ -225,12 +227,11 @@ export const useConsultas = () => {
     setObsExpandidas((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // 👇 Cambiamos para que reciba la consulta entera, no solo el ID
   const handleVerFoto = async (consulta) => {
     try {
       setCargando(true);
       const url = await consultasService.verEvidencia(consulta.id);
-      setConsultaFotoSeleccionada(consulta); // 👇 Guardamos la info de las fechas
+      setConsultaFotoSeleccionada(consulta);
       setUrlEvidenciaModal(url);
     } catch (error) {
       console.error("Error visualizando evidencia:", error);
@@ -242,46 +243,52 @@ export const useConsultas = () => {
     }
   };
 
+  const handleVerPreview = () => {
+    if (previewUrl) {
+      setConsultaFotoSeleccionada({
+        fecha: formulario.fecha,
+        evidenciaFecha: new Date().toISOString(),
+      });
+      setUrlEvidenciaModal(previewUrl);
+    }
+  };
+
   const cerrarModalEvidencia = () => {
-    if (urlEvidenciaModal) {
+    if (urlEvidenciaModal && urlEvidenciaModal !== previewUrl) {
       URL.revokeObjectURL(urlEvidenciaModal);
     }
     setUrlEvidenciaModal(null);
-    setConsultaFotoSeleccionada(null); // 👇 Limpiamos
+    setConsultaFotoSeleccionada(null);
   };
 
   const farmaciaSeleccionadaNombre =
     farmacias.find((f) => f.id === Number(formulario.farmaciaId))?.nombre || "";
 
   return {
+    consultas, // 👈 Exportado aquí
     cargando,
     farmacias,
     formulario,
     guardando,
     mostrarModal,
-    mesFiltro,
-    ordenFiltro,
-    busqueda,
-    mesesDisponibles,
-    consultasFiltradas,
     obsExpandidas,
     farmaciaSeleccionadaNombre,
-    archivoEvidencia, // <-- Exportado
+    archivoEvidencia,
+    previewUrl,
     consultaFotoSeleccionada,
+    horasOcupadasHoy,
     handleVerFoto,
     urlEvidenciaModal,
+    handleVerPreview,
     cerrarModalEvidencia,
-
-    setMesFiltro,
-    setOrdenFiltro,
-    setBusqueda,
     setMostrarModal,
     handleChange,
-    handleArchivoChange, // <-- Exportado
+    handleArchivoChange,
+    handlePreSubmit,
     confirmarYGuardar,
     handleIncidencia,
     handleConfirmarAntiguo,
     toggleObservaciones,
-    handleSubirEvidenciaAposteriori, // <-- Exportado
+    handleSubirEvidenciaAposteriori,
   };
 };

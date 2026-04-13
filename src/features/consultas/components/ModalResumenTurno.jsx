@@ -30,12 +30,6 @@ const ModalResumenTurno = ({
               <span className="font-bold text-[#367933]">{farmaciaNombre}</span>
             </p>
             <p>
-              <strong className="text-[#062e3a]">Fecha:</strong>{" "}
-              <span className="font-bold text-[#342c1e]">
-                {formulario.fecha} ({formulario.tipoTurno.replace("_", " ")})
-              </span>
-            </p>
-            <p>
               <strong className="text-[#062e3a]">Horario:</strong>{" "}
               <span className="font-bold text-[#342c1e]">
                 {formulario.horaInicio} a {formulario.horaFin}
