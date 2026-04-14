@@ -1,11 +1,5 @@
 import React from "react";
-import {
-  ShoppingBag,
-  ChevronRight,
-  Plus,
-  Wallet,
-  AlertCircle,
-} from "lucide-react";
+import { ShoppingBag, Plus, Wallet, Check, Banknote } from "lucide-react";
 
 const CatalogoProductos = ({
   productos,
@@ -18,11 +12,14 @@ const CatalogoProductos = ({
   agregarAlCarrito,
   umbralAlcanzado,
   saldoRestante,
+  totalReal,
   getPrecioAplicado,
 }) => (
-  <div className="xl:col-span-7 space-y-6">
-    <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-      <div className="flex justify-between items-center gap-6">
+  <div className="space-y-6">
+    {/* BLOQUE SUPERIOR UNIFICADO: Selector + Monedero */}
+    <div className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col gap-6">
+      {/* Cabecera y Selector */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div className="flex items-center gap-4">
           <div
             className={`p-4 rounded-3xl text-white ${esAdmin ? "bg-[#062e3a]" : "bg-[#367933]"}`}
@@ -41,11 +38,12 @@ const CatalogoProductos = ({
             </p>
           </div>
         </div>
+
         {!esFarmacia && (
           <select
             value={farmaciaSeleccionada}
             onChange={(e) => setFarmaciaSeleccionada(e.target.value)}
-            className="p-4 bg-[#f4f7f4] border-2 border-transparent rounded-2xl text-sm font-bold text-[#062e3a] outline-none focus:border-[#b1cb0c]"
+            className="w-full md:w-auto p-4 bg-[#f4f7f4] border-2 border-transparent rounded-2xl text-sm font-bold text-[#062e3a] outline-none focus:border-[#b1cb0c] cursor-pointer"
           >
             {farmacias.map((f) => (
               <option key={f.id} value={f.id}>
@@ -55,9 +53,60 @@ const CatalogoProductos = ({
           </select>
         )}
       </div>
+
+      {/* Tarjeta Monedero Integrada */}
+      <div
+        className={`relative overflow-hidden rounded-[2rem] p-6 text-white shadow-lg ${umbralAlcanzado ? "bg-gradient-to-r from-[#006633] to-[#68b54e]" : "bg-gradient-to-r from-[#062e3a] to-[#342c1e]"}`}
+      >
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="flex items-center gap-5 w-full md:w-auto">
+            <div className="bg-white/20 p-3 rounded-[1.25rem] backdrop-blur-md">
+              <Wallet size={28} />
+            </div>
+            <div>
+              <p className="text-[#bed000] text-[10px] font-black uppercase tracking-widest mb-1">
+                Monedero Farmacia
+              </p>
+              <p className="text-4xl font-black">{saldoRestante.toFixed(2)}€</p>
+            </div>
+          </div>
+
+          {umbralAlcanzado ? (
+            <div className="bg-[#b1cb0c]/20 border border-[#b1cb0c]/30 px-5 py-2.5 rounded-2xl flex items-center gap-3 w-full md:w-auto justify-center">
+              <Check className="text-[#b1cb0c]" size={18} strokeWidth={4} />
+              <p className="text-xs font-black uppercase text-[#b1cb0c]">
+                Saldo Desbloqueado
+              </p>
+            </div>
+          ) : (
+            <div className="text-right w-full md:w-auto flex flex-col items-end">
+              <div className="bg-white/10 px-5 py-2.5 rounded-2xl mb-2 w-full text-center md:text-right">
+                <p className="text-[11px] font-bold text-white/80 uppercase tracking-widest">
+                  Faltan{" "}
+                  <span className="text-[#bed000] font-black text-sm">
+                    {(80 - totalReal).toFixed(2)}€
+                  </span>{" "}
+                  para usar saldo
+                </p>
+              </div>
+              <div className="w-full md:w-48 bg-white/10 h-1.5 rounded-full overflow-hidden">
+                <div
+                  className="bg-[#b1cb0c] h-full rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${Math.min((totalReal / 80) * 100, 100)}%` }}
+                ></div>
+              </div>
+            </div>
+          )}
+        </div>
+        <Banknote
+          size={150}
+          className="absolute -right-10 -bottom-16 text-white opacity-10 rotate-12 pointer-events-none"
+        />
+      </div>
     </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {/* GRID DE PRODUCTOS (Ahora con scroll interno) */}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[65vh] overflow-y-auto pr-2 custom-scrollbar pb-6">
       {productos
         .filter((p) => p.hayExistencias)
         .map((prod) => (
@@ -85,7 +134,7 @@ const CatalogoProductos = ({
               <button
                 onClick={() => agregarAlCarrito(prod, false)}
                 disabled={!farmaciaSeleccionada}
-                className="w-full bg-[#062e3a] text-white py-4 rounded-[1.25rem] font-black text-sm flex items-center justify-center gap-3"
+                className="w-full bg-[#062e3a] text-white py-4 rounded-[1.25rem] font-black text-sm flex items-center justify-center gap-3 active:scale-[0.98] transition-transform"
               >
                 <Plus size={18} /> Añadir a Cesta Real
               </button>
@@ -93,7 +142,7 @@ const CatalogoProductos = ({
                 <button
                   onClick={() => agregarAlCarrito(prod, true)}
                   disabled={saldoRestante < getPrecioAplicado(prod)}
-                  className="w-full bg-[#b1cb0c]/10 text-[#367933] border border-[#b1cb0c]/50 py-4 rounded-[1.25rem] font-black text-sm flex items-center justify-center gap-3"
+                  className="w-full bg-[#b1cb0c]/10 text-[#367933] border border-[#b1cb0c]/50 py-4 rounded-[1.25rem] font-black text-sm flex items-center justify-center gap-3 active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Wallet size={18} /> Comprar con Saldo
                 </button>

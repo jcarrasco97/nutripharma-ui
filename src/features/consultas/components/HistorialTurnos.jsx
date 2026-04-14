@@ -78,15 +78,20 @@ const HistorialTurnos = ({
           return timeA - timeB;
         case "FECHA_DESC":
           return timeB - timeA;
-        case "CANCELADOS_PRIMERO": {
-          const pesoA = ["CANCELADA", "CANCELADO", "RECHAZADA"].includes(
-            a.estado,
-          )
+        // 👇 NUEVO CASO: PENDIENTES PRIMERO 👇
+        case "PENDIENTES_PRIMERO": {
+          const pesoA = [
+            "BORRADOR",
+            "PENDIENTE_VALIDACION",
+            "CON_INCIDENCIA",
+          ].includes(a.estado)
             ? 0
             : 1;
-          const pesoB = ["CANCELADA", "CANCELADO", "RECHAZADA"].includes(
-            b.estado,
-          )
+          const pesoB = [
+            "BORRADOR",
+            "PENDIENTE_VALIDACION",
+            "CON_INCIDENCIA",
+          ].includes(b.estado)
             ? 0
             : 1;
           if (pesoA !== pesoB) return pesoA - pesoB;
@@ -109,6 +114,20 @@ const HistorialTurnos = ({
             "APROBADO",
             "CONFIRMADA",
           ].includes(b.estado)
+            ? 0
+            : 1;
+          if (pesoA !== pesoB) return pesoA - pesoB;
+          return timeB - timeA;
+        }
+        case "CANCELADOS_PRIMERO": {
+          const pesoA = ["CANCELADA", "CANCELADO", "RECHAZADA"].includes(
+            a.estado,
+          )
+            ? 0
+            : 1;
+          const pesoB = ["CANCELADA", "CANCELADO", "RECHAZADA"].includes(
+            b.estado,
+          )
             ? 0
             : 1;
           if (pesoA !== pesoB) return pesoA - pesoB;
@@ -146,11 +165,12 @@ const HistorialTurnos = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto justify-end">
-            <div className="relative bg-[#f4f7f4] px-3 py-2 rounded-xl border border-transparent focus-within:border-[#b1cb0c] transition-all shrink-0">
+            {/* 1. FECHA (MES) */}
+            <div className="relative bg-[#f4f7f4] px-3 py-2 rounded-xl border border-transparent focus-within:border-[#b1cb0c] transition-all flex-1 sm:flex-none min-w-[130px]">
               <select
                 value={mesActivo}
                 onChange={(e) => setFiltroMesAno(e.target.value)}
-                className="bg-transparent outline-none text-[11px] font-black text-[#062e3a] uppercase tracking-widest cursor-pointer pr-4 appearance-none"
+                className="w-full bg-transparent outline-none text-[11px] font-black text-[#062e3a] uppercase tracking-widest cursor-pointer pr-4 appearance-none"
               >
                 <option value="ALL">Todas las Fechas</option>
                 {opciones.meses.map((m) => (
@@ -165,7 +185,31 @@ const HistorialTurnos = ({
               />
             </div>
 
-            <div className="flex items-center bg-[#f4f7f4] px-3 py-2 rounded-xl border border-transparent focus-within:border-[#b1cb0c] transition-all flex-1 min-w-[180px]">
+            {/* 2. FILTRO (NUEVA POSICIÓN Y NUEVA OPCIÓN) */}
+            <div className="relative flex items-center bg-[#f4f7f4] px-3 py-2 rounded-xl border border-transparent focus-within:border-[#b1cb0c] transition-all flex-1 sm:flex-none min-w-[140px]">
+              <ArrowUpDown size={14} className="text-[#062e3a] mr-2 shrink-0" />
+              <select
+                value={orden}
+                onChange={(e) => setOrden(e.target.value)}
+                className="w-full bg-transparent outline-none text-[11px] font-black text-[#062e3a] uppercase tracking-widest cursor-pointer pr-4 appearance-none"
+              >
+                <option value="FECHA_DESC">Más recientes</option>
+                <option value="FECHA_ASC">Más antiguos</option>
+                <option value="PENDIENTES_PRIMERO">
+                  Pendientes primero
+                </option>{" "}
+                {/* 👈 Añadido aquí */}
+                <option value="EXITOSOS_PRIMERO">Validados primero</option>
+                <option value="CANCELADOS_PRIMERO">Cancelados primero</option>
+              </select>
+              <ChevronDown
+                size={14}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[#062e3a]/40 pointer-events-none"
+              />
+            </div>
+
+            {/* 3. BUSCADOR (NUEVA POSICIÓN) */}
+            <div className="flex items-center bg-[#f4f7f4] px-3 py-2 rounded-xl border border-transparent focus-within:border-[#b1cb0c] transition-all w-full sm:w-auto sm:flex-1 min-w-[180px]">
               <Search size={14} className="text-[#062e3a]/40 mr-2 shrink-0" />
               <input
                 type="text"
@@ -173,24 +217,6 @@ const HistorialTurnos = ({
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
                 className="bg-transparent outline-none text-xs w-full font-bold text-[#062e3a] placeholder:text-[#062e3a]/30"
-              />
-            </div>
-
-            <div className="relative flex items-center bg-[#f4f7f4] px-3 py-2 rounded-xl border border-transparent focus-within:border-[#b1cb0c] transition-all shrink-0">
-              <ArrowUpDown size={14} className="text-[#062e3a] mr-2 shrink-0" />
-              <select
-                value={orden}
-                onChange={(e) => setOrden(e.target.value)}
-                className="bg-transparent outline-none text-[11px] font-black text-[#062e3a] uppercase tracking-widest cursor-pointer pr-4 appearance-none"
-              >
-                <option value="FECHA_DESC">Más recientes</option>
-                <option value="FECHA_ASC">Más antiguos</option>
-                <option value="EXITOSOS_PRIMERO">Validados primero</option>
-                <option value="CANCELADOS_PRIMERO">Cancelados primero</option>
-              </select>
-              <ChevronDown
-                size={14}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-[#062e3a]/40 pointer-events-none"
               />
             </div>
           </div>
@@ -314,13 +340,13 @@ const HistorialTurnos = ({
                         }`}
                       >
                         <FileText size={14} />
-                        {obsExpandidas[c.id] ? "Ocultar Notas" : "Ver Notas"}
+                        {obsExpandidas[c.id] ? "Cerrar" : "Notas"}
                       </button>
                     )}
                   </div>
 
                   <div className="flex items-center gap-2 ml-auto">
-                    {/* Botón Ver Foto - Solo si hay foto */}
+                    {/* 1. Botón Ver Foto - Solo aparece si HAY foto */}
                     {c.evidenciaUrl && (
                       <button
                         onClick={() => handleVerFoto(c)}
@@ -331,35 +357,21 @@ const HistorialTurnos = ({
                       </button>
                     )}
 
-                    {/* Lógica de Subida/Sustitución/Sellado */}
-                    {c.estado === "VALIDADA" ? (
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#b1cb0c]/20 text-[#367933] text-[10px] font-black uppercase tracking-widest border border-[#b1cb0c]/50">
-                        <Lock size={14} /> Evidencia Sellada
-                      </div>
-                    ) : (
+                    {/* 2. Lógica de Subida/Sustitución/Sellado */}
+                    {!c.evidenciaUrl ? (
+                      // CASO A: NO hay foto -> Siempre permitimos añadir (incluso si está validada y el admin la borró)
                       <label className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-200 hover:bg-gray-300 text-[#062e3a] text-[10px] font-black uppercase tracking-widest transition-colors border border-gray-300">
-                        {c.evidenciaUrl ? (
-                          <>
-                            <RefreshCw size={14} /> Sustituir Foto
-                          </>
-                        ) : (
-                          <>
-                            <Camera size={14} /> Añadir Foto
-                          </>
-                        )}
+                        <Camera size={14} /> Añadir Foto
                         <input
                           type="file"
                           className="hidden"
                           accept="image/*"
-                          onClick={(e) => (e.target.value = null)} // Resetea el click para subir la misma foto si se desea
+                          onClick={(e) => (e.target.value = null)}
                           onChange={(e) => {
                             if (e.target.files && e.target.files.length > 0) {
-                              const accion = c.evidenciaUrl
-                                ? "reemplazar"
-                                : "subir";
                               if (
                                 window.confirm(
-                                  `¿Seguro que quieres ${accion} la evidencia de este turno?`,
+                                  `¿Subir la imagen seleccionada como evidencia del turno?`,
                                 )
                               ) {
                                 handleSubirEvidenciaAposteriori(
@@ -371,6 +383,36 @@ const HistorialTurnos = ({
                           }}
                         />
                       </label>
+                    ) : c.estado !== "VALIDADA" ? (
+                      // CASO B: SÍ hay foto y NO está validada -> Permitimos sustituir
+                      <label className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest transition-colors border border-amber-200">
+                        <RefreshCw size={14} /> Sustituir
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onClick={(e) => (e.target.value = null)}
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files.length > 0) {
+                              if (
+                                window.confirm(
+                                  `¿Seguro que quieres reemplazar la evidencia actual?`,
+                                )
+                              ) {
+                                handleSubirEvidenciaAposteriori(
+                                  c.id,
+                                  e.target.files[0],
+                                );
+                              }
+                            }
+                          }}
+                        />
+                      </label>
+                    ) : (
+                      // CASO C: SÍ hay foto y SÍ está validada -> Evidencia Sellada
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#b1cb0c]/20 text-[#367933] text-[10px] font-black uppercase tracking-widest border border-[#b1cb0c]/50">
+                        <Lock size={14} /> Bloqueada
+                      </div>
                     )}
                   </div>
                 </div>

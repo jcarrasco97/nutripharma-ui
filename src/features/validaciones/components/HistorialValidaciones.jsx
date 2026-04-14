@@ -170,16 +170,17 @@ const HistorialValidaciones = ({
         </div>
 
         {/* BARRA DE CONTROLES SÚPER COMPACTA */}
-        <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto justify-end">
+        {/* Añadido xl:flex-1 para que ocupe el resto del espacio junto al título */}
+        <div className="flex flex-wrap md:flex-nowrap items-center gap-2 w-full xl:flex-1 justify-end">
           {/* Selector Fecha */}
-          <div className="bg-[#f4f7f4] px-3 py-2 rounded-xl border border-gray-200 shrink-0">
+          <div className="flex items-center h-10 bg-[#f4f7f4] px-3 rounded-xl border border-gray-200 shrink-0 w-auto">
             <select
               value={mesActivo}
               onChange={(e) => {
                 setFiltroMesAno(e.target.value);
                 setPaginaActual(1);
               }}
-              className="bg-transparent outline-none text-[11px] font-black text-[#062e3a] uppercase tracking-widest cursor-pointer"
+              className="h-full bg-transparent outline-none text-[11px] font-black text-[#062e3a] uppercase tracking-widest cursor-pointer"
             >
               <option value="ALL">Todas las Fechas</option>
               {opciones.meses.map((m) => (
@@ -190,8 +191,28 @@ const HistorialValidaciones = ({
             </select>
           </div>
 
+          {/* Selector Ordenar (ESTILO CORPORATIVO UNIFICADO) */}
+          <div className="flex items-center h-10 bg-[#f4f7f4] px-3 rounded-xl border border-gray-200 shrink-0 w-auto">
+            <ArrowUpDown size={14} className="text-[#062e3a] mr-2 shrink-0" />
+            <select
+              value={orden}
+              onChange={(e) => {
+                setOrden(e.target.value);
+                setPaginaActual(1);
+              }}
+              className="h-full bg-transparent outline-none text-[11px] font-black text-[#062e3a] uppercase tracking-widest cursor-pointer"
+            >
+              <option value="FECHA_DESC">Más recientes</option>
+              <option value="FECHA_ASC">Más antiguos</option>
+              <option value="RESPONSABLE_ASC">Responsable (A-Z)</option>
+              <option value="RESPONSABLE_DESC">Responsable (Z-A)</option>
+              <option value="CANCELADOS_PRIMERO">Cancelados primero</option>
+              <option value="EXITOSOS_PRIMERO">Exitosos primero</option>
+            </select>
+          </div>
+
           {/* Buscador de Texto */}
-          <div className="flex items-center bg-[#f4f7f4] px-3 py-2 rounded-xl border border-gray-200 flex-1 min-w-[180px]">
+          <div className="flex items-center h-10 bg-[#f4f7f4] px-3 rounded-xl border border-gray-200 flex-1 min-w-[180px]">
             <Search size={14} className="text-gray-400 mr-2 shrink-0" />
             <input
               type="text"
@@ -201,28 +222,8 @@ const HistorialValidaciones = ({
                 setBusqueda(e.target.value);
                 setPaginaActual(1);
               }}
-              className="bg-transparent outline-none text-xs w-full font-bold text-[#062e3a]"
+              className="h-full w-full bg-transparent outline-none text-xs font-bold text-[#062e3a]"
             />
-          </div>
-
-          {/* Selector Ordenar (ESTILO CORPORATIVO UNIFICADO) */}
-          <div className="flex items-center bg-[#f4f7f4] px-3 py-2 rounded-xl border border-gray-200 shrink-0">
-            <ArrowUpDown size={14} className="text-[#062e3a] mr-2 shrink-0" />
-            <select
-              value={orden}
-              onChange={(e) => {
-                setOrden(e.target.value);
-                setPaginaActual(1);
-              }}
-              className="bg-transparent outline-none text-[11px] font-black text-[#062e3a] uppercase tracking-widest cursor-pointer"
-            >
-              <option value="FECHA_DESC">Más recientes</option>
-              <option value="FECHA_ASC">Más antiguos</option>
-              <option value="RESPONSABLE_ASC">Responsable (A-Z)</option>
-              <option value="RESPONSABLE_DESC">Responsable (Z-A)</option>
-              <option value="CANCELADOS_PRIMERO">Cancelados primero</option>
-              <option value="EXITOSOS_PRIMERO">Exitosos primero</option>
-            </select>
           </div>
         </div>
       </div>

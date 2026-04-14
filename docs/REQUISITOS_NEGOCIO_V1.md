@@ -1,6 +1,6 @@
 # 📋 Especificación de Requisitos de Negocio (PRD) - NutriPharma MVP
 
-**Versión:** 2.2 (Consolidada: Arquitectura N:M, Gatekeeper, RBAC, Reglas Geográficas, Comisiones Variables, Gestión de Admins y Soft Delete/Visibilidad)
+**Versión:** 4.0 (Consolidada: Arquitectura N:M, Gatekeeper, Auditoría, UI/UX y Roadmap a Producción)  
 **Objetivo:** Servir de fuente de verdad absoluta para el desarrollo, justificando el porqué de las decisiones técnicas y de negocio (alineado con BITACORA.md).
 
 ---
@@ -9,7 +9,7 @@
 
 ### 1.1. Relación Base del Negocio
 
-El sistema abandona la relación 1:N simple para adoptar una arquitectura Bidireccional (N:M) entre Nutricionistas y Farmacias. La relación N:M incluye atributos propios, como la distancia en Kilómetros entre la residencia del empleado y el local comercial.
+El sistema abandona la relación 1:N simple para adoptar una arquitectura **Bidireccional (N:M)** entre Nutricionistas y Farmacias. La relación N:M incluye atributos propios, como la distancia en Kilómetros entre la residencia del empleado y el local comercial.
 
 - **Asignación Manual:** El Administrador asigna explícitamente en qué Farmacia(s) opera cada Nutricionista.
 - **Aislamiento de Datos:** Un Nutricionista solo puede interactuar (pedidos, consultas) con las farmacias que tenga en su perfil.
@@ -29,14 +29,13 @@ El menú y los componentes de React mutan dinámicamente según el JWT del usuar
 | **Documentación**         |    ✅ Subida y Borrado (Drive)     |    ✅ Lectura / Descarga     |     ✅ Lectura / Descarga      |
 | **Admin Maestro (CRUD)**  |          ✅ Gestión Total          |         ❌ Bloqueado         |          ❌ Bloqueado          |
 
-### 1.3. Jerarquía Extendida y Gestión de Datos Históricos (Soft Delete) 🆕 [NUEVO]
+### 1.3. Jerarquía Extendida y Gestión de Datos Históricos (Soft Delete)
 
-Para preservar la integridad de las auditorías y la trazabilidad (facturas, consultas y pedidos pasados), el sistema implementa un **Borrado Lógico (Soft Delete)** en todas las entidades principales (Usuarios, Farmacias, Nutricionistas, Productos). Nunca se hace un `DELETE` físico en la base de datos.
+Para preservar la integridad de las auditorías y la trazabilidad (facturas, consultas y pedidos pasados), el sistema implementa un **Borrado Lógico (Soft Delete)** en todas las entidades principales. Nunca se hace un `DELETE` físico en la base de datos.
 
-- **Reglas de Visibilidad por Rol:**
-  - **Rol SUPERADMIN:** Usuario fundador/dueño. Tiene acceso y control total. Es el **único** que puede ver, crear, suspender o restaurar a otros Administradores.
-  - **Rol ADMIN (Personal de Central):** Tienen visibilidad del historial completo de Farmacias, Nutricionistas y Productos (tanto activos como dados de baja/descatalogados) para fines de auditoría y restauración. **No** tienen visibilidad ni control sobre otros usuarios con rol Admin.
-  - **Roles Operativos (FARMACIA y NUTRICIONISTA):** Operan en "abstracción total". Solo visualizan entidades `activas` (farmacias vigentes, nutricionistas en plantilla y productos catalogados).
+- **Rol SUPERADMIN:** Único que puede ver, crear, suspender o restaurar a otros Administradores.
+- **Rol ADMIN:** Visibilidad de historial completo de Farmacias, Nutricionistas y Productos para fines de auditoría. No controla a otros Admins.
+- **Roles Operativos:** Solo visualizan entidades `activas` (farmacias vigentes, nutricionistas en plantilla y productos catalogados).
 
 ---
 
@@ -44,24 +43,21 @@ Para preservar la integridad de las auditorías y la trazabilidad (facturas, con
 
 ### 2.1. Módulo: Administración y Gatekeeper (Control de Flujo)
 
-- **El "Gatekeeper" (Centro de Validaciones):** Bandeja de entrada centralizada. Los pedidos y consultas no afectan a las finanzas ni a los objetivos hasta que el Admin los valida manualmente. Actúa como filtro antifraude y de calidad.
-- **Administración Maestro:** CRUD completo para gestionar Farmacias (Fiscal, Dirección, **Porcentaje de Comisión Acordado**), Nutricionistas (Contratos) y Productos (Catálogo, PVP, PVF). El borrado será lógico para no dejar datos huérfanos.
-- **Gestión de Personal Interno:** Capacidad exclusiva del `SUPERADMIN` para crear y dar de alta a nuevos usuarios con el rol `ADMIN` directamente desde la interfaz del panel.
+- **El "Gatekeeper" (Centro de Validaciones):** Bandeja de entrada centralizada. Los pedidos y consultas no afectan a las finanzas ni a los objetivos hasta que el Admin los valida manualmente.
+- **Administración Maestro:** CRUD completo para gestionar Farmacias, Nutricionistas (Contratos) y Productos (PVP, PVF).
+- **Gestión de Personal Interno:** Capacidad exclusiva del SUPERADMIN para gestionar usuarios con rol ADMIN.
 
 ### 2.2. Módulo: Turnos y Consultas (Motor de Datos Médicos)
 
-- **Estructura Diaria:** Se permite registrar "Turno Mañana" y/o "Turno Tarde".
-- **KPIs Recolectados:** Nuevas, Revisiones, Promo (Gratis), Personal Farmacia (Gratis).
-- **Máquina de Estados:**
-  1.  **Borrador:** Editable por el creador.
-  2.  **Confirmada:** Bloqueada. Pasa al Gatekeeper del Admin.
-  3.  **Con Incidencia:** El nutricionista reporta un error; solo el Admin puede desbloquear/corregir.
+- **Estructura:** Registro de "Turno Mañana" y/o "Turno Tarde".
+- **KPIs:** Nuevas, Revisiones, Promo, Personal Farmacia.
+- **Certificación de Pruebas:** Sellado de tiempo obligatorio en fotos de agenda para evitar reportes extemporáneos.
+- **Estados:** `Borrador` (Editable) ➔ `Confirmada` (Pasa a Gatekeeper) ➔ `Con Incidencia` (Error reportado).
 
 ### 2.3. Módulo: Suministros y Material corporativo
 
-- Catálogo de consumibles (folletos, bolígrafos) con cantidades predefinidas por central.
-- **Máquina de Estados:** `SOLICITADO` ➔ `APROBADO` (Admin) ➔ `CANCELADO`.
-- **Regla Anti-Spam:** Si un ítem está "Solicitado", desaparece del catálogo del usuario hasta que el Admin resuelva la petición, evitando duplicidades.
+- Catálogo de consumibles con cantidades predefinidas.
+- **Regla Anti-Spam:** Si un ítem está "Solicitado", desaparece del catálogo hasta que el Admin resuelva la petición.
 
 ---
 
@@ -69,108 +65,81 @@ Para preservar la integridad de las auditorías y la trazabilidad (facturas, con
 
 ### 3.1. Delegación Administrativa (Pedidos Proxy)
 
-- El Administrador puede suplantar la acción de compra realizando pedidos telefónicos en nombre de una Farmacia.
-- **Trazabilidad:** La Base de Datos registra la autoría real (`creadoPorAdmin: true/false`). Las comisiones generadas por este pedido proxy van igualmente destinadas a las nutricionistas de esa farmacia.
+El Admin puede realizar pedidos en nombre de una Farmacia. La DB registra la autoría real (`creadoPorAdmin` y `creadoPorNombre`).
 
 ### 3.2. Política de Precios Geográfica
 
-- **PVF vs PVP:** Los productos tienen dos tarifas. El sistema decide cuál aplicar en el carrito en tiempo real basándose en la ubicación de la Farmacia.
-- **Regla:** Farmacias ubicadas en "Almería" ➔ Aplica **P.V.F.**. Farmacias fuera de Almería ➔ Aplica **P.V.P.**
+- **Almería:** Aplica tarifa **P.V.F.** (Punto de Venta Farmacia).
+- **Resto de España:** Aplica tarifa **P.V.P.**
 
-### 3.3. La "Doble Cesta" y Regla de los 80€ (Legalidad Andaluza)
+### 3.3. La "Doble Cesta" y Regla de los 80€
 
-Por normativa, NutriPharma (Servicio Externo) no puede transferir comisiones en efectivo a la Farmacia, sino en especie (Saldo Virtual).
-
-1.  **Cesta Principal (Pago Real):** Productos pagados en euros. Solo estos computan para el bonus de la nutricionista.
-2.  **Desbloqueo (Umbral Mínimo):** Si la Cesta Principal es `< 80€`, el sistema bloquea el uso del monedero. Al superar los 80€, se habilita la segunda cesta.
-3.  **Cesta de Liquidación (Pago con Saldo):** Productos adquiridos gratis descontando su valor del "Saldo Virtual" de la farmacia. Estos no suman bonus a la nutricionista.
+1.  **Cesta Principal (Pago Real):** Solo computa para el bonus de la nutricionista.
+2.  **Desbloqueo:** Si la Cesta Principal es `< 80€`, el sistema bloquea el uso del monedero (Saldo Virtual).
+3.  **Cesta de Liquidación (Pago con Saldo):** Productos adquiridos en especie. No suman bonus.
 
 ### 3.4. Regla Comercial de Unidades Bonificadas
 
-Algoritmo automático en la Cesta Principal para proteger márgenes (sobrescribible por el Admin):
-
-- 100 uds ➔ 20 gratis | 20 uds ➔ 5 gratis | 10 uds ➔ 2 gratis | 6 uds ➔ 1 gratis.
-
-### 3.5. Gestión de Catálogo y Estados de Producto 🆕 [NUEVO]
-
-Los productos poseen una doble capa de disponibilidad para mantener la consistencia operativa y visual:
-
-- **Catálogo (Activo vs Descatalogado):** Determina si el producto existe a nivel comercial. Si un producto se descataloga, desaparece de la vista operativa, pero sus registros históricos en pedidos antiguos se conservan intactos por el Borrado Lógico.
-- **Inventario (En Stock vs Agotado):** Atributo dinámico para productos activos. Si no hay stock, el producto **sí** se muestra a Farmacias y Nutricionistas, pero su diseño es en escala de grises con el botón de añadir a la cesta deshabilitado (Agotado).
+Algoritmo automático: 100 uds ➔ 20 gratis | 20 uds ➔ 5 gratis | 10 uds ➔ 2 gratis | 6 uds ➔ 1 gratis.
 
 ---
 
-## 4. MODELO FINANCIERO Y COMISIONES (Repartos y Nóminas)
+## 4. MODELO FINANCIERO Y COMISIONES
 
 ### 4.1. Generación Económica en Consultas
 
-El servicio médico a pacientes genera dinero directo a repartir:
-
 - **Tarifario:** Consulta Nueva (25€), Revisión (20€).
-- **Modelo de Comisión Variable:** El importe total generado se reparte entre NutriPharma y la Farmacia por cesión de espacio. El porcentaje que se transforma en Saldo Virtual para la Farmacia ya no es un 30% fijo, sino un valor numérico configurable y renegociable de manera individual para cada establecimiento (Ej. 20%, 30%, 40%) en su ficha de Administración.
+- **Comisión Variable:** El porcentaje que va a la Farmacia es configurable individualmente (ej. 20%, 30%).
 
 ### 4.2. Sistema de Incentivos de Nutricionistas (Bonus)
 
-El salario se complementa mediante cálculos basados en una jornada estándar de 40h (se aplica un multiplicador según horas reales de contrato).
+Basado en jornada de 40h (escalable por contrato):
 
-- **Facturación Computable:** (Consultas Nuevas + Revisiones) + Ventas B2B de Cesta Principal.
-- **Tramos de Bonus (Base 40h):**
-  - **OB1:** Meta 5.000€ (Mín. Prod 800€) ➔ Bono 200€
-  - **OB2:** Meta 6.800€ (Mín. Prod 1.000€) ➔ Bono 400€ + 5% del exceso.
-  - **OB3:** Meta 8.700€ (Mín. Prod 1.200€) ➔ Bono 600€ + 10% del exceso.
+- **OB1:** Meta 5.000€ (Mín. Prod 800€) ➔ Bono 200€
+- **OB2:** Meta 6.800€ (Mín. Prod 1.000€) ➔ Bono 400€ + 5% del exceso.
+- **OB3:** Meta 8.700€ (Mín. Prod 1.200€) ➔ Bono 600€ + 10% del exceso.
 
 ### 4.3. Motor de Comisiones por Ventas B2B
 
-Cuando una Farmacia (o el Admin como Proxy) compra productos (Cesta Principal), se genera una comisión para el Nutricionista.
-
-- **Escenario Normal (1 Nutricionista):** El 100% de la comisión asignada a esa farmacia se imputa automáticamente al nutricionista vinculado.
-- **Escenario Complejo (2+ Nutricionistas en la misma Farmacia):** El sistema intercepta el pedido (sea hecho por la Farmacia o por el Admin) y obliga mediante un Modal a establecer manualmente el porcentaje de reparto (Ej. 50-50, 70-30) entre los profesionales asociados a ese local para ese pedido en concreto.
+Si hay 2+ nutricionistas en la misma Farmacia, el sistema obliga mediante un Modal a establecer el porcentaje de reparto para ese pedido.
 
 ### 4.4. Compensación por Desplazamiento (Kilometraje)
 
-El sistema debe llevar un registro automático del desgaste por desplazamiento para su posterior compensación económica extra-plataforma.
-
-- **Atributo Relacional:** La distancia (en kilómetros) se define de forma única para cada par `[Nutricionista ↔ Farmacia]`. El Administrador debe especificar este valor numérico en el momento de asignar una farmacia al perfil de la nutricionista.
-- **Cálculo de Acumulación Mensual:** Cada vez que una nutricionista registra un turno (consulta) con estado `CONFIRMADA` en una farmacia, el sistema computa un "Viaje" (Ida y Vuelta).
-- **Visibilidad:** El "Resumen Operativo" de la Nutricionista debe mostrar el Total de Kilómetros Acumulados en el mes en curso, calculado como: `Σ (Consultas Confirmadas en Farmacia X * Distancia a Farmacia X)`. La aplicación no calcula euros por gasolina, solo acumula la métrica de distancia bruta.
+Registro de distancia única por par `[Nutricionista ↔ Farmacia]`. Se computa viaje de ida y vuelta por cada turno `CONFIRMADO`.
 
 ---
 
 ## 5. DISEÑO UI/UX Y BRANDING CORPORATIVO
 
-El sistema abandona los colores genéricos de las librerías CSS para adoptar una identidad visual 100% alineada con la marca NutriPharma. La implementación se realiza inyectando los valores hexadecimales exactos en la capa de presentación (vía Tailwind CSS).
+- **Primario:** `#367933` (Acción/Éxito)
+- **Secundario:** `#062e3a` (Institucional)
+- **Acento:** `#b1cb0c` (Resalte con opacidad)
+- **Gris:** `#342c1e` (Texto/Bordes)
 
-### 5.1. Paleta de Colores Base (Por orden de jerarquía)
+---
 
-- **Color Principal (Acción/Primario):** `#367933` (Verde oscuro)
-  - _Uso:_ Botones de acción principal, elementos activos del menú lateral, barras de progreso y textos clave de éxito. Transmite salud y crecimiento.
-- **Color Secundario (Institucional/Contraste):** `#062e3a` (Azul oscuro)
-  - _Uso:_ Encabezados (Header/Sidebar), títulos principales (H1/H2), tipografía de alto contraste y fondos de tarjetas de control. Aporta seriedad, profesionalidad y peso visual.
-- **Color Terciario (Acento/Resalte):** `#b1cb0c` (Verde claro/Lima)
-  - _Uso:_ Combinado frecuentemente con opacidad (ej. fondos al 20%) para destacar selecciones, iluminar iconos clave, notificaciones y elementos que requieren atención rápida sin ser agresivos.
-- **Color Cuaternario (Apoyo/Neutro):** `#342c1e` (Gris oscuro/Pardo)
-  - _Uso:_ Tipografía secundaria, subtítulos, etiquetas (labels) de formularios y bordes estructurales.
+## 6. COMUNICACIONES Y AUDITORÍA DE DATOS
 
-### 5.2. Gradientes Corporativos
+- **Asincronía:** Arquitectura Event-Driven para envío de correos y PDFs (Thymeleaf + OpenPDF).
+- **Notario Digital:** Historial de cambios inmutable (Hibernate Envers) con sellado de tiempo y autoría.
+- **Trazabilidad:** Registro de IPs y User-Agents en cada login.
 
-Se utilizan exclusivamente en zonas de alto impacto (Hero Cards) para romper la monotonía visual y resaltar métricas financieras o de rendimiento, logrando armonía con la estructura de la aplicación:
+---
 
-- **Gradiente Claro:** De `#bed000` a `#85ac1c`
-- **Gradiente Oscuro:** De `#006633` a `#68b54e`
+## 7. CALIDAD PROFESIONAL Y DESPLIEGUE (ROADMAP) 🆕
 
-## 6. COMUNICACIONES Y AUDITORÍA DE DATOS 🆕 [NUEVO]
+### 7.1. Estándares de Código
 
-### 6.1. Notificaciones Transaccionales B2B
+- **Clean Code & SOLID:** Refactorización a componentes atómicos en `core/components`.
+- **SDD (Spec-Driven Development):** Uso de archivos de especificación para guiar la generación de código.
 
-- **Arquitectura Event-Driven:** Los envíos de correo (ej. confirmación de pedidos, envío de facturas) se ejecutan en hilos asíncronos (background) para no bloquear la experiencia de usuario en el frontend.
-- **Formato Corporativo y Adjuntos:** Los correos utilizan plantillas HTML renderizadas en servidor (Thymeleaf) que incrustan el branding (logos CID) y adjuntan documentos PDF generados al vuelo (OpenPDF) parametrizando los enlaces según el entorno de despliegue (DEV/PROD).
+### 7.2. Aseguramiento de la Calidad (Testing)
 
-### 6.2. El "Notario Digital" (Trazabilidad Inmutable)
+- **Backend:** JUnit 5 y Mockito para lógica financiera.
+- **Frontend:** Vitest para componentes y Playwright para flujos críticos (E2E).
 
-- **Historial de Cambios (Audit Logs):** Implementación de tablas "espejo" inmutables que registran automáticamente cualquier `INSERT`, `UPDATE` o `DELETE` realizado sobre entidades críticas (Consultas y Pedidos).
-- **Identidad Fuerte y Valor Pericial:** Cada revisión almacena la fecha, el milisegundo exacto y el correo electrónico del usuario responsable de la mutación de los datos, garantizando trazabilidad absoluta ante auditorías financieras o posibles juicios.
+### 7.3. Estrategia de Despliegue
 
-### 6.3. Trazabilidad de Red y Accesos
-
-- Registro sistemático y persistente de la dirección IP y el dispositivo (User-Agent) de cada usuario en el momento de realizar un login exitoso.
-- Trazabilidad de operaciones críticas en el backend mediante interceptores, registrando el autor, la ruta y el resultado de las acciones de escritura en la API.
+- **Contenerización:** Docker Compose para orquestar App, DB y Nginx.
+- **Infraestructura:** VPS Ubuntu Server, SSL (Let's Encrypt), Proxy Inverso y blindaje UFW.
+- **Objetivo de Producción:** 15 de Mayo.

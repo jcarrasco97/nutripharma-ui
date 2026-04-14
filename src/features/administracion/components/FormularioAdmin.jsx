@@ -1,74 +1,113 @@
-import React from "react";
-import { Plus, Mail, Lock, User, Loader2 } from "lucide-react";
+import React, { useState } from "react";
+import { Plus, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
+import Button from "../../../core/components/ui/Button";
+import Input from "../../../core/components/ui/Input";
 
 const FormularioAdmin = ({ formData, handleChange, handleCrear, enviando }) => {
+  // Estados locales para controlar la visibilidad de las contraseñas
+  const [mostrarPassword, setMostrarPassword] = useState(false);
+  const [mostrarConfirmPassword, setMostrarConfirmPassword] = useState(false);
+
   return (
-    <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm h-fit xl:sticky xl:top-6">
+    <div className="bg-surface rounded-3xl border border-gray-100 p-6 shadow-sm h-fit xl:sticky xl:top-6">
       <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
-        <div className="bg-[#b1cb0c]/20 p-2 rounded-xl">
-          <Plus size={20} className="text-[#367933]" />
+        <div className="bg-accent/20 p-2 rounded-xl">
+          <Plus size={20} className="text-primary" />
         </div>
-        <h3 className="text-lg font-black text-[#062e3a]">Dar de Alta Admin</h3>
+        <h3 className="text-lg font-black text-secondary">Dar de Alta Admin</h3>
       </div>
 
       <form onSubmit={handleCrear} className="space-y-4">
+        {/* CORREO CORPORATIVO */}
+        <Input
+          icon={Mail}
+          type="email"
+          name="email"
+          value={formData.email}
+          onChange={handleChange}
+          required
+          placeholder="Correo corporativo"
+        />
+
+        {/* CONTRASEÑA */}
         <div className="relative">
-          <Mail size={16} className="absolute left-4 top-3.5 text-gray-400" />
-          <input
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-            placeholder="Correo corporativo"
-            className="w-full bg-[#f4f7f4] border border-gray-200 rounded-xl pl-11 pr-4 py-3 text-sm focus:ring-2 focus:ring-[#b1cb0c] outline-none text-[#062e3a]"
-          />
-        </div>
-        <div className="relative">
-          <Lock size={16} className="absolute left-4 top-3.5 text-gray-400" />
-          <input
-            type="password"
+          <Input
+            icon={Lock}
+            type={mostrarPassword ? "text" : "password"}
             name="password"
             value={formData.password}
             onChange={handleChange}
             required
-            placeholder="Contraseña inicial"
-            className="w-full bg-[#f4f7f4] border border-gray-200 rounded-xl pl-11 pr-4 py-3 text-sm focus:ring-2 focus:ring-[#b1cb0c] outline-none text-[#062e3a]"
+            placeholder="Contraseña"
+            // Añadimos pr-11 para que el texto no se pise con el icono del ojo
+            inputClassName="pr-11"
           />
+          <button
+            type="button"
+            onClick={() => setMostrarPassword(!mostrarPassword)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-secondary/40 hover:text-secondary transition-colors"
+            title={mostrarPassword ? "Ocultar contraseña" : "Ver contraseña"}
+          >
+            {mostrarPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
         </div>
+
+        {/* CONFIRMAR CONTRASEÑA */}
         <div className="relative">
-          <User size={16} className="absolute left-4 top-3.5 text-gray-400" />
-          <input
-            type="text"
-            name="nombre"
-            value={formData.nombre}
+          <Input
+            icon={Lock}
+            type={mostrarConfirmPassword ? "text" : "password"}
+            name="confirmPassword"
+            value={formData.confirmPassword || ""} // Aseguramos que no rompa si el padre aún no tiene el campo
             onChange={handleChange}
+            onPaste={(e) => e.preventDefault()} // 👈 Bloquea copiar y pegar
             required
-            placeholder="Nombre"
-            className="w-full bg-[#f4f7f4] border border-gray-200 rounded-xl pl-11 pr-4 py-3 text-sm focus:ring-2 focus:ring-[#b1cb0c] outline-none text-[#062e3a]"
+            placeholder="Confirmar Contraseña"
+            inputClassName="pr-11"
           />
+          <button
+            type="button"
+            onClick={() => setMostrarConfirmPassword(!mostrarConfirmPassword)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-secondary/40 hover:text-secondary transition-colors"
+            title={
+              mostrarConfirmPassword ? "Ocultar contraseña" : "Ver contraseña"
+            }
+          >
+            {mostrarConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
         </div>
-        <input
+
+        {/* NOMBRE */}
+        <Input
+          icon={User}
+          type="text"
+          name="nombre"
+          value={formData.nombre}
+          onChange={handleChange}
+          required
+          placeholder="Nombre"
+        />
+
+        {/* APELLIDOS */}
+        <Input
+          icon={User}
           type="text"
           name="apellidos"
           value={formData.apellidos}
           onChange={handleChange}
           required
           placeholder="Apellidos"
-          className="w-full bg-[#f4f7f4] border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#b1cb0c] outline-none text-[#062e3a]"
         />
 
-        <button
+        {/* BOTÓN DE ENVÍO */}
+        <Button
           type="submit"
-          disabled={enviando}
-          className="w-full bg-[#367933] hover:bg-[#006633] text-white font-black py-4 rounded-xl mt-6 flex justify-center items-center shadow-lg shadow-[#367933]/20 transition-transform hover:scale-[1.02]"
+          variant="primary"
+          isLoading={enviando}
+          className="w-full mt-6"
         >
-          {enviando ? (
-            <Loader2 className="animate-spin" size={20} />
-          ) : (
-            "Generar Credenciales"
-          )}
-        </button>
+          Generar Credenciales
+        </Button>
       </form>
     </div>
   );

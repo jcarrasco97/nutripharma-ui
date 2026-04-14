@@ -16,7 +16,7 @@ export const usePedidos = () => {
   const [enviando, setEnviando] = useState(false);
   const [errorCarga, setErrorCarga] = useState(null);
 
-  const [mesFiltro, setMesFiltro] = useState("Todos");
+  const [mesFiltro, setMesFiltro] = useState("INITIAL");
   const [ordenFiltro, setOrdenFiltro] = useState("recientes");
   const [carrito, setCarrito] = useState([]);
   const [farmaciaSeleccionada, setFarmaciaSeleccionada] = useState("");
@@ -86,6 +86,7 @@ export const usePedidos = () => {
   useEffect(() => {
     cargarDatos();
   }, [cargarDatos]);
+
   useEffect(() => {
     if (!esFarmacia) setCarrito([]);
   }, [farmaciaSeleccionada, esFarmacia]);
@@ -120,9 +121,12 @@ export const usePedidos = () => {
       );
       if (idx >= 0) {
         const newC = [...prev];
-        newC[idx].cantidad += 1;
-        if (!usarSaldo)
-          newC[idx].bonificados = calcularBonificados(newC[idx].cantidad);
+        const nuevaCantidad = newC[idx].cantidad + 1;
+        newC[idx] = {
+          ...newC[idx],
+          cantidad: nuevaCantidad,
+          bonificados: usarSaldo ? 0 : calcularBonificados(nuevaCantidad),
+        };
         return newC;
       }
       return [
@@ -200,13 +204,56 @@ export const usePedidos = () => {
     }
   };
 
+  // --- MOTOR DE HISTORIAL ---
+
+  // 1. Extraemos meses únicos de los pedidos (ej. ['2026-04', '2026-03'])
+  const mesesDisponibles = [
+    ...new Set(
+      pedidos.map((p) => p.fechaPedido?.substring(0, 7)).filter(Boolean),
+    ),
+  ].sort((a, b) => b.localeCompare(a));
+
+  // 2. Lógica para asignar el mes por defecto al cargar (el más reciente)
+  const mesActivo =
+    mesFiltro === "INITIAL"
+      ? mesesDisponibles.length > 0
+        ? mesesDisponibles[0]
+        : "Todos"
+      : mesFiltro;
+
+  // 3. Filtrado y Ordenación Combinada
   const pedidosFiltrados = pedidos
-    .filter((p) => mesFiltro === "Todos" || p.fechaPedido.startsWith(mesFiltro))
+    .filter(
+      (p) => mesActivo === "Todos" || p.fechaPedido?.startsWith(mesActivo),
+    )
+    .filter((p) => {
+      // Filtrado extra por Estado
+      // Filtrado extra por Estado
+      if (ordenFiltro === "pendientes")
+        return p.estado === "PENDIENTE_ENVIO" || p.estado === "PENDIENTE";
+      if (ordenFiltro === "enviados")
+        return p.estado === "ENVIADO" || p.estado === "LIQUIDADO";
+      if (ordenFiltro === "cancelados")
+        return p.estado === "CANCELADO" || p.estado === "CANCELADA";
+      return true;
+    })
     .sort((a, b) => {
-      if (ordenFiltro === "recientes")
-        return new Date(b.fechaPedido) - new Date(a.fechaPedido);
-      return (b.totalPedido || 0) - (a.totalPedido || 0);
+      // Ordenación matemática
+      if (ordenFiltro === "antiguos")
+        return new Date(a.fechaPedido) - new Date(b.fechaPedido);
+      if (ordenFiltro === "precio_desc")
+        return (b.totalPedido || 0) - (a.totalPedido || 0);
+      if (ordenFiltro === "precio_asc")
+        return (a.totalPedido || 0) - (b.totalPedido || 0);
+
+      // Por defecto y "recientes"
+      return new Date(b.fechaPedido) - new Date(a.fechaPedido);
     });
+
+  // Manejador del cambio de mes
+  const handleSetMesFiltro = (nuevoMes) => {
+    setMesFiltro(nuevoMes);
+  };
 
   return {
     productos,
@@ -218,10 +265,6 @@ export const usePedidos = () => {
     cargando,
     enviando,
     errorCarga,
-    mesFiltro,
-    setMesFiltro,
-    ordenFiltro,
-    setOrdenFiltro,
     carrito,
     farmaciaSeleccionada,
     setFarmaciaSeleccionada,
@@ -236,5 +279,11 @@ export const usePedidos = () => {
     handleRealizarPedido,
     getPrecioAplicado,
     cargarDatos,
+    // Exportamos los datos actualizados del Historial
+    mesesDisponibles,
+    mesFiltro: mesActivo,
+    setMesFiltro: handleSetMesFiltro,
+    ordenFiltro,
+    setOrdenFiltro,
   };
 };

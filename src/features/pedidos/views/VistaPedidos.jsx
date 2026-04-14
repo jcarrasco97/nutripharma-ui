@@ -2,7 +2,6 @@ import React from "react";
 import { Loader2, AlertCircle } from "lucide-react";
 
 import { usePedidos } from "../hooks/usePedidos";
-import TarjetaMonedero from "../components/TarjetaMonedero";
 import CatalogoProductos from "../components/CatalogoProductos";
 import CestaPedidos from "../components/CestaPedidos";
 import ModalDetallePedido from "../components/ModalDetallePedido";
@@ -39,13 +38,14 @@ const VistaPedidos = () => {
   }
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 animate-fade-in relative pb-10">
+    <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 animate-fade-in relative pb-10 h-full">
       <ModalDetallePedido
         pedido={hook.pedidoSeleccionado}
         onCerrar={() => hook.setPedidoSeleccionado(null)}
       />
 
-      <div className="xl:col-span-7 space-y-6">
+      {/* COLUMNA IZQUIERDA: Catálogo y Monedero Integrado */}
+      <div className="xl:col-span-7">
         <CatalogoProductos
           productos={hook.productos}
           farmaciaActual={hook.farmaciaActual}
@@ -58,14 +58,11 @@ const VistaPedidos = () => {
           umbralAlcanzado={hook.umbralAlcanzado}
           saldoRestante={hook.saldoRestante}
           getPrecioAplicado={hook.getPrecioAplicado}
-        />
-        <TarjetaMonedero
-          saldoRestante={hook.saldoRestante}
-          umbralAlcanzado={hook.umbralAlcanzado}
           totalReal={hook.totalReal}
         />
       </div>
 
+      {/* COLUMNA DERECHA: Cesta e Historial */}
       <div className="xl:col-span-5 space-y-8">
         <CestaPedidos
           carrito={hook.carrito}

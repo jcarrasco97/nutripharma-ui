@@ -125,7 +125,7 @@ const ModalDetalleValidacion = ({
                     Jornada
                   </p>
                   <p className="font-black text-[#062e3a] text-lg">
-                    {formatFecha(detalle.fecha)} ({detalle.tipoTurno})
+                    {formatFecha(detalle.fecha)}
                   </p>
                   <p className="text-sm font-bold text-[#342c1e]/70 mt-1">
                     {detalle.horaInicio?.substring(0, 5)} -{" "}
