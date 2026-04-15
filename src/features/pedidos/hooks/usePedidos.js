@@ -142,12 +142,30 @@ export const usePedidos = () => {
     });
   };
 
-  const calcularBonificados = (q) => {
-    if (q >= 100) return 20;
-    if (q >= 20) return 5;
-    if (q >= 10) return 2;
-    if (q >= 6) return 1;
-    return 0;
+  const calcularBonificados = (cantidad) => {
+    let q = cantidad; // Copiamos la cantidad para ir restándole
+    let totalRegalos = 0;
+
+    // Tramo 1: Grupos de 100
+    const tramo100 = Math.floor(q / 100);
+    totalRegalos += tramo100 * 25;
+    q = q % 100; // Nos quedamos con el resto
+
+    // Tramo 2: Grupos de 20
+    const tramo20 = Math.floor(q / 20);
+    totalRegalos += tramo20 * 5;
+    q = q % 20;
+
+    // Tramo 3: Grupos de 10
+    const tramo10 = Math.floor(q / 10);
+    totalRegalos += tramo10 * 2;
+    q = q % 10;
+
+    // Tramo 4: Grupos de 6
+    const tramo6 = Math.floor(q / 6);
+    totalRegalos += tramo6 * 1;
+
+    return totalRegalos;
   };
 
   const modificarCantidad = (id, delta, pagadoConSaldo) => {
@@ -158,13 +176,24 @@ export const usePedidos = () => {
             item.productoId === id &&
             item.pagadoConSaldo === pagadoConSaldo
           ) {
-            if (
-              pagadoConSaldo &&
-              delta > 0 &&
-              saldoRestante < getPrecioAplicado(item.productoInfo)
-            )
-              return item;
-            const newQ = Math.max(0, item.cantidad + delta);
+            let deltaFinal = delta;
+
+            // 🛡️ BLINDAJE: Si intentan sumar cajas usando saldo virtual
+            if (pagadoConSaldo && deltaFinal > 0) {
+              const precio = getPrecioAplicado(item.productoInfo);
+              const costeTotalDeseado = deltaFinal * precio;
+
+              // Si lo que intenta añadir cuesta más del saldo que le queda...
+              if (costeTotalDeseado > saldoRestante) {
+                // Calculamos cuántas cajas SÍ puede permitirse con el saldo actual
+                deltaFinal = Math.floor(saldoRestante / precio);
+
+                // Si no le llega ni para una caja, cancelamos la acción
+                if (deltaFinal <= 0) return item;
+              }
+            }
+
+            const newQ = Math.max(0, item.cantidad + deltaFinal);
             return {
               ...item,
               cantidad: newQ,

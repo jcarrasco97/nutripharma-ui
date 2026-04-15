@@ -11,6 +11,7 @@ import {
   Clock,
   Package,
   Gift,
+  Database,
 } from "lucide-react";
 
 const ModalDetalleValidacion = ({
@@ -159,6 +160,18 @@ const ModalDetalleValidacion = ({
                   </span>
                 </p>
               </div>
+
+              {detalle.fechaCreacion && (
+                <div className="flex items-center gap-2 bg-gray-100/80 border border-gray-200 rounded-xl px-3 py-2">
+                  <Database size={13} className="text-[#062e3a]/50 shrink-0" />
+                  <p className="text-[11px] font-bold text-[#342c1e]/60">
+                    Registrado en el sistema:{" "}
+                    <span className="font-black text-[#062e3a]">
+                      {formatFechaHora(detalle.fechaCreacion)}
+                    </span>
+                  </p>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3 mt-4">
                 {Object.keys(formEdicion).map((campo) => (

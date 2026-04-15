@@ -15,6 +15,7 @@ import {
   Eye,
   Filter,
   ChevronDown,
+  Database,
 } from "lucide-react";
 
 const HistorialTurnos = ({
@@ -259,7 +260,7 @@ const HistorialTurnos = ({
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex gap-2">
                     {(c.estado === "PENDIENTE_VALIDACION" ||
                       c.estado === "VALIDADA" ||
                       c.estado === "CON_INCIDENCIA") && (
@@ -342,6 +343,19 @@ const HistorialTurnos = ({
                         <FileText size={14} />
                         {obsExpandidas[c.id] ? "Cerrar" : "Notas"}
                       </button>
+                    )}
+                    {c.fechaCreacion && (
+                      <span className="flex items-center gap-1 text-[10px] font-bold text-[#342c1e]/40">
+                        <Database size={11} className="shrink-0" />
+                        Registrado:{" "}
+                        {new Date(c.fechaCreacion).toLocaleString("es-ES", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
                     )}
                   </div>
 
