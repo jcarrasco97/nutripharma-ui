@@ -1,9 +1,10 @@
 import React from "react";
-import { History, ShieldCheck } from "lucide-react";
-import Badge from "../../../core/components/ui/Badge"; // Integración del nuevo componente atómico
+import { History, ShieldCheck, User } from "lucide-react";
+import Badge from "../../../core/components/ui/Badge";
 
 const HistorialPedidosUsuario = ({
   esAdmin,
+  esNutricionista,
   pedidosFiltrados,
   mesFiltro,
   setMesFiltro,
@@ -37,7 +38,6 @@ const HistorialPedidosUsuario = ({
     return `${nombre.charAt(0).toUpperCase() + nombre.slice(1).replace(".", "")} ${year}`;
   };
 
-  // Novedad: Formateador para embellecer los estados del Backend
   const embellecerEstado = (estadoRaw) => {
     if (!estadoRaw) return "";
     const est = estadoRaw.toUpperCase();
@@ -45,12 +45,11 @@ const HistorialPedidosUsuario = ({
     return est;
   };
 
-  // Asignación semántica de colores para el Badge según el estado
   const getBadgeVariant = (estado) => {
     const est = estado?.toUpperCase() || "";
     if (est === "ENVIADO" || est === "LIQUIDADO") return "success";
     if (est === "CANCELADO" || est === "CANCELADA") return "danger";
-    if (est === "PENDIENTE_ENVIO" || est === "PENDIENTE") return "warning"; // <-- Corregido aquí también
+    if (est === "PENDIENTE_ENVIO" || est === "PENDIENTE") return "warning";
     return "default";
   };
 
@@ -58,10 +57,23 @@ const HistorialPedidosUsuario = ({
     <div className="bg-surface p-8 rounded-[3rem] shadow-sm border border-gray-100">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
-          <div className="bg-accent/20 p-2 rounded-xl text-primary">
-            <History size={20} />
+          <div
+            className={`p-2 rounded-xl ${
+              esNutricionista
+                ? "bg-primary/10 text-primary"
+                : "bg-accent/20 text-primary"
+            }`}
+          >
+            {esNutricionista ? <User size={20} /> : <History size={20} />}
           </div>
-          <h3 className="text-lg font-black text-secondary">Mis pedidos</h3>
+          <div>
+            <h3 className="text-lg font-black text-secondary">Mis pedidos</h3>
+            {esNutricionista && (
+              <p className="text-[10px] font-bold text-neutral/50 uppercase tracking-wide">
+                Pedidos realizados por mí
+              </p>
+            )}
+          </div>
         </div>
         <span className="bg-secondary/10 text-secondary text-[10px] font-black px-3 py-1 rounded-full">
           {pedidosFiltrados.length} REG.
@@ -120,6 +132,13 @@ const HistorialPedidosUsuario = ({
                   <p className="text-[10px] font-bold text-neutral/60">
                     {ped.fechaPedido}
                   </p>
+                  {/* Para nutricionistas: mostrar la farmacia destinataria del pedido */}
+                  {esNutricionista && ped.nombreFarmacia && (
+                    <p className="text-[10px] font-bold text-primary/70 mt-0.5 flex items-center gap-1">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/50" />
+                      {ped.nombreFarmacia}
+                    </p>
+                  )}
                 </div>
                 <div className="text-right flex flex-col items-end gap-1.5">
                   <p className="font-black text-secondary">

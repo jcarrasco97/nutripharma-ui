@@ -12,12 +12,15 @@ export const usePedidos = () => {
   const [perfil, setPerfil] = useState(null);
   const [esFarmacia, setEsFarmacia] = useState(false);
   const [esAdmin, setEsAdmin] = useState(false);
+  const [esNutricionista, setEsNutricionista] = useState(false);
+  const [miEmail, setMiEmail] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [errorCarga, setErrorCarga] = useState(null);
 
   const [mesFiltro, setMesFiltro] = useState("INITIAL");
   const [ordenFiltro, setOrdenFiltro] = useState("recientes");
+  const [ordenProductos, setOrdenProductos] = useState("recomendados");
   const [carrito, setCarrito] = useState([]);
   const [farmaciaSeleccionada, setFarmaciaSeleccionada] = useState("");
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
@@ -28,6 +31,7 @@ export const usePedidos = () => {
     try {
       const token = localStorage.getItem("token");
       const decoded = jwtDecode(token);
+      setMiEmail(decoded.sub || decoded.email || null);
       const userRoles = Array.isArray(decoded.roles)
         ? decoded.roles.map((r) => (typeof r === "string" ? r : r.authority))
         : [];
@@ -36,8 +40,10 @@ export const usePedidos = () => {
       const soyAdmin =
         userRoles.includes("ROLE_ADMIN") ||
         userRoles.includes("ROLE_SUPERADMIN");
+      const soyNutricionista = !soyFarmacia && !soyAdmin;
       setEsFarmacia(soyFarmacia);
       setEsAdmin(soyAdmin);
+      setEsNutricionista(soyNutricionista);
 
       const [datosProds, datosPeds] = await Promise.all([
         productosService.listarTodos().catch(() => []),
@@ -235,6 +241,19 @@ export const usePedidos = () => {
 
   // --- MOTOR DE HISTORIAL ---
 
+  const productosFiltrados = [...productos].sort((a, b) => {
+    if (ordenProductos === "recomendados") {
+      const saved = JSON.parse(localStorage.getItem("orden_recomendados_nutripharma") || "[]");
+      const idxA = saved.indexOf(a.id);
+      const idxB = saved.indexOf(b.id);
+      if (idxA === -1 && idxB === -1) return (a.nombreProducto || "").localeCompare(b.nombreProducto || "");
+      if (idxA === -1) return 1;
+      if (idxB === -1) return -1;
+      return idxA - idxB;
+    }
+    return (a.nombreProducto || "").localeCompare(b.nombreProducto || "");
+  });
+
   // 1. Extraemos meses únicos de los pedidos (ej. ['2026-04', '2026-03'])
   const mesesDisponibles = [
     ...new Set(
@@ -252,6 +271,19 @@ export const usePedidos = () => {
 
   // 3. Filtrado y Ordenación Combinada
   const pedidosFiltrados = pedidos
+    .filter((p) => {
+      // Restricción de autoría para nutricionistas
+      if (!esFarmacia && !esAdmin) {
+        // Si el email aún no se ha cargado, no mostrar nada (seguridad)
+        if (!miEmail) return false;
+        // 1. La farmacia del pedido debe coincidir con la seleccionada
+        const perteneceAFarmacia = p.farmaciaNombre === farmaciaActual?.nombre;
+        // 2. El pedido debe haber sido creado por la nutricionista logueada
+        const esMio = p.creadoPor === miEmail;
+        return perteneceAFarmacia && esMio;
+      }
+      return true; // Admins y Farmacias siguen su flujo normal
+    })
     .filter(
       (p) => mesActivo === "Todos" || p.fechaPedido?.startsWith(mesActivo),
     )
@@ -285,12 +317,13 @@ export const usePedidos = () => {
   };
 
   return {
-    productos,
+    productos: productosFiltrados,
     pedidosFiltrados,
     farmacias,
     farmaciaActual,
     esFarmacia,
     esAdmin,
+    esNutricionista,
     cargando,
     enviando,
     errorCarga,
@@ -314,5 +347,7 @@ export const usePedidos = () => {
     setMesFiltro: handleSetMesFiltro,
     ordenFiltro,
     setOrdenFiltro,
+    ordenProductos,
+    setOrdenProductos,
   };
 };

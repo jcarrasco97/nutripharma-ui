@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { dashboardService } from "../services/dashboardService";
+import { farmaciaService } from "../../administracion/services/farmaciaService";
+import { nutricionistasService } from "../../administracion/services/nutricionistasService";
 
 export const useResumenAdmin = () => {
   const fechaActual = new Date();
@@ -11,11 +13,17 @@ export const useResumenAdmin = () => {
   const [cargando, setCargando] = useState(true);
   const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
 
+  // States para los filtros paralelos
+  const [listadoFarmacias, setListadoFarmacias] = useState([]);
+  const [listadoNutricionistas, setListadoNutricionistas] = useState([]);
+  const [filtroFarmacia, setFiltroFarmacia] = useState("");
+  const [filtroNutri, setFiltroNutri] = useState("");
+
   const cargarDatos = useCallback(async () => {
     setCargando(true);
     try {
       const [datosGrafica, datosCalendario] = await Promise.all([
-        dashboardService.obtenerFacturacionAdmin(anio).catch(() => []),
+        dashboardService.obtenerFacturacionAdmin(anio, filtroFarmacia, filtroNutri).catch(() => []),
         dashboardService.obtenerCalendarioAdmin(anio, mes).catch(() => []),
       ]);
       setFacturacion(datosGrafica);
@@ -25,7 +33,24 @@ export const useResumenAdmin = () => {
     } finally {
       setCargando(false);
     }
-  }, [anio, mes]);
+  }, [anio, mes, filtroFarmacia, filtroNutri]);
+
+  // Cargar Catalogos de Filtros (solo una vez)
+  useEffect(() => {
+    const cargarListas = async () => {
+      try {
+        const [farmacias, nutris] = await Promise.all([
+          farmaciaService.listarTodas().catch(() => []),
+          nutricionistasService.listarTodas().catch(() => [])
+        ]);
+        setListadoFarmacias(farmacias);
+        setListadoNutricionistas(nutris);
+      } catch(e) {
+        console.error("Error cargando filtros:", e);
+      }
+    };
+    cargarListas();
+  }, []);
 
   useEffect(() => {
     cargarDatos();
@@ -69,5 +94,11 @@ export const useResumenAdmin = () => {
     diasMes,
     offset,
     getEventosDelDia,
+    listadoFarmacias,
+    listadoNutricionistas,
+    filtroFarmacia,
+    setFiltroFarmacia,
+    filtroNutri,
+    setFiltroNutri
   };
 };

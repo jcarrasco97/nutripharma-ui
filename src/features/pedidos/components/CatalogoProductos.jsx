@@ -3,6 +3,8 @@ import { ShoppingBag, Plus, Wallet, Check, Banknote } from "lucide-react";
 
 const CatalogoProductos = ({
   productos,
+  ordenProductos,
+  setOrdenProductos,
   farmaciaActual,
   esAdmin,
   esFarmacia,
@@ -39,19 +41,30 @@ const CatalogoProductos = ({
           </div>
         </div>
 
-        {!esFarmacia && (
+        <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+          {!esFarmacia && (
+            <select
+              value={farmaciaSeleccionada}
+              onChange={(e) => setFarmaciaSeleccionada(e.target.value)}
+              className="w-full sm:w-auto p-4 bg-[#f4f7f4] border-2 border-transparent rounded-2xl text-sm font-bold text-[#062e3a] outline-none focus:border-[#b1cb0c] cursor-pointer appearance-none pr-10"
+            >
+              {farmacias.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.nombre}
+                </option>
+              ))}
+            </select>
+          )}
+
           <select
-            value={farmaciaSeleccionada}
-            onChange={(e) => setFarmaciaSeleccionada(e.target.value)}
-            className="w-full md:w-auto p-4 bg-[#f4f7f4] border-2 border-transparent rounded-2xl text-sm font-bold text-[#062e3a] outline-none focus:border-[#b1cb0c] cursor-pointer"
+            value={ordenProductos}
+            onChange={(e) => setOrdenProductos(e.target.value)}
+            className="w-full sm:w-auto p-4 bg-[#062e3a] border-2 border-transparent rounded-2xl text-sm font-bold text-white outline-none focus:border-[#b1cb0c] cursor-pointer appearance-none pr-10"
           >
-            {farmacias.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.nombre}
-              </option>
-            ))}
+            <option value="recomendados">⭐ Recomendados</option>
+            <option value="alfabetico">A-Z Alfabético</option>
           </select>
-        )}
+        </div>
       </div>
 
       {/* Tarjeta Monedero Integrada */}

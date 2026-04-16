@@ -48,6 +48,8 @@ const VistaPedidos = () => {
       <div className="xl:col-span-7">
         <CatalogoProductos
           productos={hook.productos}
+          ordenProductos={hook.ordenProductos}
+          setOrdenProductos={hook.setOrdenProductos}
           farmaciaActual={hook.farmaciaActual}
           esAdmin={hook.esAdmin}
           esFarmacia={hook.esFarmacia}
@@ -78,6 +80,7 @@ const VistaPedidos = () => {
         />
         <HistorialPedidosUsuario
           esAdmin={hook.esAdmin}
+          esNutricionista={hook.esNutricionista}
           pedidosFiltrados={hook.pedidosFiltrados}
           mesFiltro={hook.mesFiltro}
           setMesFiltro={hook.setMesFiltro}

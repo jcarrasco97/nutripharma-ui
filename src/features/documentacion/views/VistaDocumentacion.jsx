@@ -1,12 +1,15 @@
-import React from "react";
+import React, { useState } from "react";
 import { FileText, Loader2 } from "lucide-react";
 import { useDocumentacion } from "../hooks/useDocumentacion";
 import PanelSubidaDocumentos from "../components/PanelSubidaDocumentos";
 import FiltrosDocumentos from "../components/FiltrosDocumentos";
 import GridDocumentos from "../components/GridDocumentos";
+import SubidaFacturas from "../components/SubidaFacturas";
+import ListadoFacturas from "../components/ListadoFacturas";
 
 const VistaDocumentacion = () => {
   const hook = useDocumentacion();
+  const [updateCounter, setUpdateCounter] = useState(0);
 
   if (hook.cargando) {
     return (
@@ -37,6 +40,21 @@ const VistaDocumentacion = () => {
         <FiltrosDocumentos {...hook} />
         <GridDocumentos {...hook} />
       </div>
+
+      {/* 3. Panel de Facturas de Gastos (Nutricionistas) */}
+      {!hook.isAdmin && !hook.esFarmacia && (
+        <div className="space-y-8 mt-12">
+          <SubidaFacturas onSubidaExitosa={() => setUpdateCounter(c => c + 1)} />
+          <ListadoFacturas esAdmin={false} forceUpdate={updateCounter} />
+        </div>
+      )}
+
+      {/* 4. Panel de Facturas de Gastos (Admins) */}
+      {hook.isAdmin && (
+        <div className="mt-12">
+          <ListadoFacturas esAdmin={true} forceUpdate={updateCounter} />
+        </div>
+      )}
     </div>
   );
 };

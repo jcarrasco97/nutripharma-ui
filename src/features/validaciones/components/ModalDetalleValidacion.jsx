@@ -28,6 +28,7 @@ const ModalDetalleValidacion = ({
   onIniciarEnvio,
   onEstadoSuministro,
   onCancelarPedido, // <-- Nueva función inyectada
+  modoLectura = false,
 }) => {
   const lineasPedidoAgrupadas = useMemo(() => {
     if (pestañaActual !== "pedidos" || !detalle || !detalle.lineas) {
@@ -194,7 +195,7 @@ const ModalDetalleValidacion = ({
                           [campo]: Number(e.target.value),
                         })
                       }
-                      disabled={detalle.estado === "CANCELADA"}
+                      disabled={detalle.estado === "CANCELADA" || modoLectura}
                       className="w-full bg-[#f4f7f4] border border-gray-300 rounded-lg px-3 py-2 text-xl font-black text-[#367933] focus:ring-2 focus:ring-[#b1cb0c] outline-none disabled:bg-transparent disabled:border-transparent"
                     />
                   </div>
