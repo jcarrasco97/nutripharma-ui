@@ -66,6 +66,12 @@ const VistaValidaciones = () => {
         }
         onEstadoSuministro={hook.handleEstadoSuministro}
         onCancelarPedido={hook.handleCancelarPedido}
+        indexActual={hook.indexActual}
+        totalPendientes={hook.totalPendientes}
+        hayAnterior={hook.hayAnterior}
+        haySiguiente={hook.haySiguiente}
+        onAnterior={hook.irAnterior}
+        onSiguiente={hook.irSiguiente}
       />
 
       {/* 2. CABECERA PRINCIPAL */}

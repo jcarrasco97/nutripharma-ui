@@ -101,11 +101,8 @@ export const useValidaciones = () => {
       return;
     setEnviando(true);
     try {
-      await consultasService.editarYValidarTurnoAdmin(
-        detalleSeleccionado.id,
-        formEdicion,
-      );
-      setDetalleSeleccionado(null);
+      await consultasService.editarYValidarTurnoAdmin(detalleSeleccionado.id, formEdicion);
+      avanzarDespuesDeAccion();
       cargarDatos();
       alert(
         "Consulta actualizada y validada con éxito. Matemáticas recalculadas.",
@@ -114,7 +111,7 @@ export const useValidaciones = () => {
       console.error(error);
       alert(
         error.response?.data?.message ||
-          "Error al editar y validar la consulta.",
+        "Error al editar y validar la consulta.",
       );
     } finally {
       setEnviando(false);
@@ -131,7 +128,7 @@ export const useValidaciones = () => {
     setEnviando(true);
     try {
       await consultasService.cancelarTurnoAdmin(detalleSeleccionado.id);
-      setDetalleSeleccionado(null);
+      avanzarDespuesDeAccion();
       cargarDatos();
       alert("Consulta anulada correctamente. Saldos revertidos si procedía.");
     } catch (error) {
@@ -157,7 +154,7 @@ export const useValidaciones = () => {
     setEnviando(true);
     try {
       await pedidosService.cancelarPedidoAdmin(id);
-      setDetalleSeleccionado(null);
+      avanzarDespuesDeAccion();
       cargarDatos();
       alert("Pedido anulado correctamente.");
     } catch (error) {
@@ -232,7 +229,7 @@ export const useValidaciones = () => {
       await pedidosService.marcarComoEnviadoAdmin(pedidoId, listaRepartosFinal);
       setMostrarModalReparto(false);
       setPedidoEnProceso(null);
-      setDetalleSeleccionado(null);
+      avanzarDespuesDeAccion();
       cargarDatos();
     } catch (error) {
       console.error(error);
@@ -250,7 +247,7 @@ export const useValidaciones = () => {
     setEnviando(true);
     try {
       await suministrosService.cambiarEstadoPeticion(id, estado);
-      setDetalleSeleccionado(null);
+      avanzarDespuesDeAccion();
       cargarDatos();
     } catch (error) {
       console.error(error);
@@ -334,6 +331,44 @@ export const useValidaciones = () => {
       setEnviando(false);
     }
   };
+  // =========================================================================
+  // 🧭 NAVEGACIÓN MODO ENFOQUE (EL MAZO DE CARTAS)
+  // =========================================================================
+  const indexActual = pendientes.findIndex(p => p.id === detalleSeleccionado?.id);
+  const hayAnterior = indexActual > 0;
+  const haySiguiente = indexActual >= 0 && indexActual < pendientes.length - 1;
+  const totalPendientes = pendientes.length;
+
+  const abrirDetalleIndex = (consulta) => {
+    setDetalleSeleccionado(consulta);
+    if (pestañaActual === "consultas" && consulta) {
+      setFormEdicion({
+        nuevas: consulta.nuevas || 0,
+        revisiones: consulta.revisiones || 0,
+        promociones: consulta.promociones || 0,
+        personalFarmacia: consulta.personalFarmacia || 0,
+      });
+    }
+  };
+
+  const irAnterior = () => {
+    if (hayAnterior) abrirDetalleIndex(pendientes[indexActual - 1]);
+  };
+
+  const irSiguiente = () => {
+    if (haySiguiente) abrirDetalleIndex(pendientes[indexActual + 1]);
+  };
+
+  const avanzarDespuesDeAccion = () => {
+    if (haySiguiente) {
+      abrirDetalleIndex(pendientes[indexActual + 1]);
+    } else if (hayAnterior) {
+      abrirDetalleIndex(pendientes[indexActual - 1]);
+    } else {
+      setDetalleSeleccionado(null);
+    }
+  };
+
 
   // Exponemos TODO lo que la UI necesita para pintarse
   return {
@@ -372,5 +407,12 @@ export const useValidaciones = () => {
     // Utilidades
     calcularTotalesPedido,
     agruparLineasPorProducto,
+
+    indexActual,
+    totalPendientes,
+    hayAnterior,
+    haySiguiente,
+    irAnterior,
+    irSiguiente
   };
 };

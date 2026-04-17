@@ -1,17 +1,7 @@
 import React, { useMemo } from "react";
 import {
-  Eye,
-  XCircle,
-  AlertTriangle,
-  Loader2,
-  ShieldCheck,
-  Wallet,
-  Banknote,
-  Camera,
-  Clock,
-  Package,
-  Gift,
-  Database,
+  Eye, XCircle, AlertTriangle, Loader2, ShieldCheck, Wallet, Banknote,
+  Camera, Clock, Package, Gift, Database, ChevronLeft, ChevronRight // <-- Añadir estos dos
 } from "lucide-react";
 
 const ModalDetalleValidacion = ({
@@ -27,7 +17,13 @@ const ModalDetalleValidacion = ({
   onBorrarEvidencia,
   onIniciarEnvio,
   onEstadoSuministro,
-  onCancelarPedido, // <-- Nueva función inyectada
+  onCancelarPedido,
+  indexActual,
+  totalPendientes,
+  hayAnterior,
+  haySiguiente,
+  onAnterior,
+  onSiguiente,
   modoLectura = false,
 }) => {
   const lineasPedidoAgrupadas = useMemo(() => {
@@ -100,14 +96,40 @@ const ModalDetalleValidacion = ({
       ["PENDIENTE_VALIDACION", "CON_INCIDENCIA"].includes(detalle.estado)) ||
     (pestañaActual === "pedidos" && detalle.estado === "PENDIENTE_ENVIO") ||
     (pestañaActual === "suministros" && detalle.estado === "SOLICITADO");
+  // Solo mostramos navegación en elementos pendientes, no en el historial de solo lectura
+  const mostrarNavegacion = !modoLectura && totalPendientes > 0 &&
+    ["PENDIENTE_VALIDACION", "CON_INCIDENCIA", "PENDIENTE_ENVIO", "SOLICITADO"].includes(detalle.estado);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#062e3a]/80 backdrop-blur-sm">
       <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden animate-scale-in border border-[#342c1e]/20 flex flex-col max-h-[90vh]">
-        <div className="p-6 bg-gradient-to-r from-[#062e3a] to-[#342c1e] text-white flex justify-between items-center shrink-0">
-          <h3 className="text-xl font-black flex items-center gap-2">
-            <Eye size={20} className="text-[#bed000]" /> Informe Detallado
+        <div className="p-4 sm:p-6 bg-gradient-to-r from-[#062e3a] to-[#342c1e] text-white flex justify-between items-center shrink-0">
+          <h3 className="text-lg sm:text-xl font-black flex items-center gap-2 hidden sm:flex">
+            <Eye size={20} className="text-[#bed000]" /> Informe
           </h3>
+
+          {/* 👇 ESTO ES LO QUE TIENES QUE PEGAR 👇 */}
+          {mostrarNavegacion && (
+            <div className="flex items-center gap-4 bg-black/20 px-4 py-1.5 rounded-full mx-auto">
+              <button
+                type="button"
+                onClick={onAnterior}
+                disabled={!hayAnterior || enviando}
+                className="hover:text-[#bed000] disabled:opacity-30 transition-colors"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <span className="text-xs font-bold tracking-widest">{indexActual + 1} / {totalPendientes}</span>
+              <button
+                type="button"
+                onClick={onSiguiente}
+                disabled={!haySiguiente || enviando}
+                className="hover:text-[#bed000] disabled:opacity-30 transition-colors"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          )}
           <button
             onClick={onCerrar}
             className="text-white/50 hover:text-white transition-colors"
@@ -135,13 +157,12 @@ const ModalDetalleValidacion = ({
                   </p>
                 </div>
                 <span
-                  className={`text-[10px] font-black px-3 py-1 rounded-md uppercase tracking-widest ${
-                    detalle.estado === "VALIDADA"
-                      ? "bg-[#b1cb0c]/20 text-[#367933]"
-                      : detalle.estado === "CANCELADA"
-                        ? "bg-red-100 text-red-700"
-                        : "bg-amber-100 text-amber-700"
-                  }`}
+                  className={`text-[10px] font-black px-3 py-1 rounded-md uppercase tracking-widest ${detalle.estado === "VALIDADA"
+                    ? "bg-[#b1cb0c]/20 text-[#367933]"
+                    : detalle.estado === "CANCELADA"
+                      ? "bg-red-100 text-red-700"
+                      : "bg-amber-100 text-amber-700"
+                    }`}
                 >
                   {detalle.estado.replace("_", " ")}
                 </span>
@@ -421,14 +442,13 @@ const ModalDetalleValidacion = ({
                 {/* 👇 AQUÍ ESTÁ EL CAMBIO DE COLOR (Naranja/Ámbar para Solicitado) 👇 */}
                 <span
                   className={`font-black px-3 py-1 rounded-lg text-[10px] uppercase tracking-widest text-white 
-                  ${
-                    detalle.estado === "APROBADO"
+                  ${detalle.estado === "APROBADO"
                       ? "bg-emerald-600"
                       : detalle.estado === "CANCELADO" ||
-                          detalle.estado === "RECHAZADO"
+                        detalle.estado === "RECHAZADO"
                         ? "bg-red-500"
                         : "bg-amber-500"
-                  }`}
+                    }`}
                 >
                   {detalle.estado}
                 </span>
