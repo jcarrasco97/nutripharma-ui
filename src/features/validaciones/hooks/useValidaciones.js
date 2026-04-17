@@ -15,7 +15,12 @@ export const useValidaciones = () => {
   const [historial, setHistorial] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [listaNutrisGlobal, setListaNutrisGlobal] = useState([]);
-
+  // --- ESTADOS PARA LIQUIDACIÓN (CIERRE DE CAJA) ---
+  const [subPestañaConsultas, setSubPestañaConsultas] = useState("validar");
+  const [pendientesLiquidar, setPendientesLiquidar] = useState([]);
+  const [seleccionadasLiquidacion, setSeleccionadasLiquidacion] = useState([]);
+  const [filtroNutriLiquidacion, setFiltroNutriLiquidacion] = useState("");
+  const [filtroMesLiquidacion, setFiltroMesLiquidacion] = useState("ALL");
   // 2. ESTADOS DE MODALES Y EDICIÓN
   const [detalleSeleccionado, setDetalleSeleccionado] = useState(null);
   const [mostrarModalReparto, setMostrarModalReparto] = useState(false);
@@ -39,22 +44,21 @@ export const useValidaciones = () => {
     setCargando(true);
     try {
       if (pestañaActual === "consultas") {
-        const todas = await consultasService.obtenerTodas();
-        setPendientes(
-          todas.filter(
-            (c) =>
-              c.estado === "PENDIENTE_VALIDACION" ||
-              c.estado === "CON_INCIDENCIA",
-          ),
-        );
-        setHistorial(
-          todas.filter(
-            (c) =>
-              c.estado !== "PENDIENTE_VALIDACION" &&
-              c.estado !== "CON_INCIDENCIA" &&
-              c.estado !== "BORRADOR",
-          ),
-        );
+        const [todas, nutris] = await Promise.all([
+          consultasService.obtenerTodas(),
+          nutricionistasService.listarTodas().catch(() => [])
+        ]);
+
+        setListaNutrisGlobal(nutris);
+
+        // El Mazo de Cartas (Solo Pendientes o con Incidencia)
+        setPendientes(todas.filter(c => c.estado === "PENDIENTE_VALIDACION" || c.estado === "CON_INCIDENCIA"));
+
+        // La Bandeja de Liquidación (Solo Validadas listas para cobrar)
+        setPendientesLiquidar(todas.filter(c => c.estado === "VALIDADA"));
+
+        // El Historial (Todo lo demás: Liquidadas, Canceladas...)
+        setHistorial(todas.filter(c => c.estado !== "PENDIENTE_VALIDACION" && c.estado !== "CON_INCIDENCIA" && c.estado !== "VALIDADA" && c.estado !== "BORRADOR"));
       } else if (pestañaActual === "pedidos") {
         const [todos, nutris] = await Promise.all([
           pedidosService.obtenerTodos(),
@@ -369,6 +373,43 @@ export const useValidaciones = () => {
     }
   };
 
+  // =========================================================================
+  // 💰 LÓGICA DE LIQUIDACIÓN (CIERRE DE CAJA)
+  // =========================================================================
+  const toggleSeleccionLiquidacion = (id) => {
+    setSeleccionadasLiquidacion(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const seleccionarTodasLiquidacion = (idsVisibles) => {
+    // Si ya están todas seleccionadas, las deselecciona. Si no, selecciona todas las visibles.
+    const todasSeleccionadas = idsVisibles.every(id => seleccionadasLiquidacion.includes(id));
+    if (todasSeleccionadas) {
+      setSeleccionadasLiquidacion(prev => prev.filter(id => !idsVisibles.includes(id)));
+    } else {
+      setSeleccionadasLiquidacion(prev => [...new Set([...prev, ...idsVisibles])]);
+    }
+  };
+
+  const handleLiquidarLote = async () => {
+    if (seleccionadasLiquidacion.length === 0) return;
+    if (!window.confirm(`¿Confirmas que has revisado y pagado estas ${seleccionadasLiquidacion.length} consultas? Pasarán al estado LIQUIDADA y desaparecerán de esta bandeja.`)) return;
+
+    setEnviando(true);
+    try {
+      await consultasService.liquidarLote(seleccionadasLiquidacion);
+      setSeleccionadasLiquidacion([]); // Limpiamos la cesta
+      cargarDatos();
+      alert("¡Liquidación completada con éxito!");
+    } catch (error) {
+      console.error(error);
+      alert("Error al liquidar las consultas.");
+    } finally {
+      setEnviando(false);
+    }
+  };
+
 
   // Exponemos TODO lo que la UI necesita para pintarse
   return {
@@ -413,6 +454,18 @@ export const useValidaciones = () => {
     hayAnterior,
     haySiguiente,
     irAnterior,
-    irSiguiente
+    irSiguiente,
+    // Liquidación
+    subPestañaConsultas,
+    setSubPestañaConsultas,
+    pendientesLiquidar,
+    seleccionadasLiquidacion,
+    filtroNutriLiquidacion,
+    setFiltroNutriLiquidacion,
+    filtroMesLiquidacion,
+    setFiltroMesLiquidacion,
+    toggleSeleccionLiquidacion,
+    seleccionarTodasLiquidacion,
+    handleLiquidarLote
   };
 };

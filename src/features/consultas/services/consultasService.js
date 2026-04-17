@@ -112,4 +112,11 @@ export const consultasService = {
     );
     return response.data;
   },
+  liquidarLote: async (ids) => {
+    const token = localStorage.getItem("token");
+    const response = await axios.put(`${API_URL}/liquidar-lote`, ids, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+  },
 };
