@@ -1,5 +1,8 @@
-import React from "react";
-import { Edit, X, Save, Car, MapPin } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import {
+  Edit, X, Save, Mail, Lock, User, Clock, MapPin,
+  Car, Store, Phone, Package, Type, Hash, Tag, Euro, Percent, FileText
+} from "lucide-react";
 
 const ModalEdicionAdministracion = ({
   itemEditando,
@@ -10,14 +13,36 @@ const ModalEdicionAdministracion = ({
   handleToggleFarmacia,
   handleCambiarKilometros,
 }) => {
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  // Limpiamos la confirmación si cambiamos de registro
+  useEffect(() => {
+    setConfirmPassword("");
+  }, [itemEditando?.id]);
+
   if (!itemEditando) return null;
+
+  const passwordMismatch = itemEditando.password && itemEditando.password !== confirmPassword;
+
+  const formValido = () => {
+    if (pestana !== "productos" && itemEditando.password && itemEditando.password !== confirmPassword) {
+      return false;
+    }
+    return true;
+  };
+
+  const onSubmitWrapper = (e) => {
+    e.preventDefault();
+    if (!formValido()) return;
+    handleActualizar(e, confirmPassword);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#062e3a]/70 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-scale-in">
-        <div className="p-6 bg-[#062e3a] text-white flex justify-between items-center">
-          <h3 className="text-xl font-bold flex items-center gap-2">
-            <Edit size={20} className="text-[#bed000]" /> Modificar Datos
+      <div className="bg-[#062e3a] rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-scale-in border border-[#342c1e]/30">
+        <div className="p-6 text-white flex justify-between items-center border-b border-[#342c1e]/30">
+          <h3 className="text-xl font-black flex items-center gap-2">
+            <Edit size={20} className="text-[#bed000]" /> Edición Completa
           </h3>
           <button
             onClick={() => setItemEditando(null)}
@@ -27,261 +52,304 @@ const ModalEdicionAdministracion = ({
           </button>
         </div>
 
-        <form
-          onSubmit={handleActualizar}
-          className="p-6 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar"
-        >
-          {pestana === "nutricionistas" && (
-            <>
-              <input
-                type="text"
-                value={itemEditando.nombre}
-                onChange={(e) =>
-                  setItemEditando({ ...itemEditando, nombre: e.target.value })
-                }
-                className="w-full p-3 bg-[#f4f7f4] border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#b1cb0c] outline-none text-[#062e3a] font-bold"
-                placeholder="Nombre"
-                required
-              />
-              <input
-                type="text"
-                value={itemEditando.apellidos}
-                onChange={(e) =>
-                  setItemEditando({
-                    ...itemEditando,
-                    apellidos: e.target.value,
-                  })
-                }
-                className="w-full p-3 bg-[#f4f7f4] border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#b1cb0c] outline-none text-[#062e3a] font-bold"
-                placeholder="Apellidos"
-                required
-              />
-              <input
-                type="text"
-                value={itemEditando.telefono || ""}
-                onChange={(e) =>
-                  setItemEditando({ ...itemEditando, telefono: e.target.value })
-                }
-                className="w-full p-3 bg-[#f4f7f4] border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#b1cb0c] outline-none text-[#062e3a] font-bold"
-                placeholder="Teléfono de empresa"
-                required
-              />
-              <input
-                type="number"
-                value={itemEditando.horasContratoMensual}
-                onChange={(e) =>
-                  setItemEditando({
-                    ...itemEditando,
-                    horasContratoMensual: e.target.value,
-                  })
-                }
-                className="w-full p-3 bg-[#f4f7f4] border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#b1cb0c] outline-none text-[#062e3a] font-bold"
-                placeholder="Horas mensuales"
-                required
-              />
+        <form onSubmit={onSubmitWrapper} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto custom-scrollbar">
 
-              <div className="pt-2 border-t border-gray-100">
-                <label className="block text-sm font-bold text-[#062e3a] mb-2">
-                  Asignación y Kilometraje
-                </label>
-                <div className="max-h-56 overflow-y-auto space-y-2 p-3 border border-gray-200 rounded-xl bg-gray-50 custom-scrollbar">
-                  {[...farmacias]
-                    .sort((a, b) => {
-                      const hasA = itemEditando.asignaciones?.some(
-                        (asig) => asig.farmaciaId === a.id,
-                      );
-                      const hasB = itemEditando.asignaciones?.some(
-                        (asig) => asig.farmaciaId === b.id,
-                      );
-                      if (hasA && !hasB) return -1;
-                      if (!hasA && hasB) return 1;
-                      return a.nombre.localeCompare(b.nombre);
-                    })
-                    .map((farmacia) => {
-                      const asignacionInfo = itemEditando.asignaciones?.find(
-                        (a) => a.farmaciaId === farmacia.id,
-                      );
-                      const isChecked = !!asignacionInfo;
-                      return (
-                        <div
-                          key={farmacia.id}
-                          className={`flex flex-col p-3 rounded-lg border transition-all ${isChecked ? "bg-white border-[#b1cb0c]/50 shadow-sm" : "bg-transparent border-transparent hover:bg-gray-100"}`}
-                        >
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={(e) =>
-                                handleToggleFarmacia(
-                                  farmacia.id,
-                                  e.target.checked,
-                                  true,
-                                )
-                              }
-                              className="w-4 h-4 text-[#367933] rounded border-gray-300 focus:ring-[#367933]"
-                            />
-                            <span className="text-sm font-bold text-[#062e3a]">
-                              {farmacia.nombre}
-                            </span>
-                          </label>
-                          {isChecked && (
-                            <div className="mt-2 pl-7 flex items-center gap-2 animate-fade-in">
-                              <Car size={14} className="text-gray-400" />
-                              <input
-                                type="number"
-                                min="0"
-                                value={asignacionInfo.kilometros}
-                                onChange={(e) =>
-                                  handleCambiarKilometros(
-                                    farmacia.id,
-                                    e.target.value,
-                                    true,
-                                  )
-                                }
-                                className="w-20 p-1 text-sm border border-gray-200 rounded-md focus:ring-2 focus:ring-[#b1cb0c] outline-none font-bold text-[#062e3a]"
-                                placeholder="Km"
-                                required
-                              />
-                              <span className="text-xs font-bold text-[#342c1e]/60">
-                                Km totales
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  {farmacias.length === 0 && (
-                    <p className="text-xs text-gray-500 text-center">
-                      No hay farmacias.
-                    </p>
-                  )}
+          {/* CREDENCIALES (Solo Nutris y Farmacias) */}
+          {pestana !== "productos" && (
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-[#bed000] uppercase border-b border-[#342c1e]/50 pb-2 tracking-widest">
+                1. Credenciales de Acceso
+              </h4>
+              <div className="relative">
+                <Mail size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                <input
+                  type="email"
+                  value={itemEditando.email || ""}
+                  onChange={(e) => setItemEditando({ ...itemEditando, email: e.target.value })}
+                  required
+                  placeholder="Correo electrónico"
+                  className="w-full bg-[#062e3a]/50 border border-[#342c1e]/30 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#b1cb0c] outline-none transition-all"
+                />
+              </div>
+              <div className="relative">
+                <Lock size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                <input
+                  type="password"
+                  value={itemEditando.password || ""}
+                  onChange={(e) => setItemEditando({ ...itemEditando, password: e.target.value })}
+                  placeholder="Nueva contraseña (dejar en blanco para no cambiar)"
+                  className="w-full bg-[#062e3a]/50 border border-[#342c1e]/30 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#b1cb0c] outline-none transition-all"
+                />
+              </div>
+              {itemEditando.password && (
+                <div className="relative animate-fade-in">
+                  <Lock size={16} className={`absolute left-3 top-3.5 ${passwordMismatch ? 'text-red-400' : 'text-gray-400'}`} />
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    placeholder="Confirmar nueva contraseña"
+                    className={`w-full bg-[#062e3a]/50 border ${passwordMismatch ? 'border-red-500 focus:ring-red-500' : 'border-[#342c1e]/30 focus:ring-[#b1cb0c]'} rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 outline-none transition-all`}
+                  />
+                  {passwordMismatch && <p className="text-xs text-red-500 pl-2 mt-1">Las contraseñas no coinciden</p>}
                 </div>
-              </div>
-            </>
+              )}
+            </div>
           )}
 
-          {pestana === "farmacias" && (
-            <>
-              <input
-                type="text"
-                value={itemEditando.nombre}
-                onChange={(e) =>
-                  setItemEditando({ ...itemEditando, nombre: e.target.value })
-                }
-                className="w-full p-3 bg-[#f4f7f4] border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#b1cb0c] outline-none text-[#062e3a] font-bold"
-                placeholder="Nombre Farmacia"
-                required
-              />
-              <input
-                type="text"
-                value={itemEditando.cif}
-                onChange={(e) =>
-                  setItemEditando({ ...itemEditando, cif: e.target.value })
-                }
-                className="w-full p-3 bg-[#f4f7f4] border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#b1cb0c] outline-none text-[#062e3a] font-bold"
-                placeholder="CIF"
-                required
-              />
-              <input
-                type="text"
-                value={itemEditando.direccion}
-                onChange={(e) =>
-                  setItemEditando({
-                    ...itemEditando,
-                    direccion: e.target.value,
-                  })
-                }
-                className="w-full p-3 bg-[#f4f7f4] border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#b1cb0c] outline-none text-[#062e3a] font-bold"
-                placeholder="Dirección"
-                required
-              />
-              <label className="flex items-center gap-3 p-4 bg-[#b1cb0c]/10 border border-[#b1cb0c]/30 rounded-xl cursor-pointer mt-2">
-                <input
-                  type="checkbox"
-                  checked={itemEditando.esProvinciaLocal !== false}
-                  onChange={(e) =>
-                    setItemEditando({
-                      ...itemEditando,
-                      esProvinciaLocal: e.target.checked,
-                    })
-                  }
-                  className="w-5 h-5 text-[#367933] rounded focus:ring-[#367933]"
-                />
-                <span className="text-sm font-bold text-[#062e3a]">
-                  Provincia de Almería (Aplica PVF)
-                </span>
-              </label>
-              <div className="relative mt-2">
-                <label className="block text-xs font-bold text-[#342c1e]/70 uppercase mb-1">
-                  Comisión para la Farmacia
-                </label>
-                <input
-                  type="number"
-                  value={itemEditando.porcentajeComision || 30}
-                  onChange={(e) =>
-                    setItemEditando({
-                      ...itemEditando,
-                      porcentajeComision: e.target.value,
-                    })
-                  }
-                  required
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  className="w-full p-3 bg-[#f4f7f4] border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#b1cb0c] outline-none text-[#062e3a] font-bold"
-                />
-                <span className="absolute right-4 top-10 text-gray-400 font-bold">
-                  %
-                </span>
-              </div>
-            </>
-          )}
+          {/* DATOS ESPECÍFICOS */}
+          <div className="space-y-3 pt-2">
+            <h4 className="text-xs font-bold text-[#bed000] uppercase border-b border-[#342c1e]/50 pb-2 tracking-widest">
+              {pestana === "productos" ? "Datos del Producto" : "2. Perfil Laboral"}
+            </h4>
 
-          {pestana === "productos" && (
-            <>
-              <input
-                type="text"
-                value={itemEditando.nombreProducto}
-                onChange={(e) =>
-                  setItemEditando({
-                    ...itemEditando,
-                    nombreProducto: e.target.value,
-                  })
-                }
-                className="w-full p-3 bg-[#f4f7f4] border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#b1cb0c] outline-none text-[#062e3a] font-bold"
-                placeholder="Nombre Producto"
-                required
-              />
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  step="0.01"
-                  value={itemEditando.pvf}
-                  onChange={(e) =>
-                    setItemEditando({ ...itemEditando, pvf: e.target.value })
-                  }
-                  className="w-full p-3 bg-[#f4f7f4] border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#b1cb0c] outline-none text-[#062e3a] font-bold"
-                  placeholder="PVF"
-                  required
-                />
-                <input
-                  type="number"
-                  step="0.01"
-                  value={itemEditando.pvp}
-                  onChange={(e) =>
-                    setItemEditando({ ...itemEditando, pvp: e.target.value })
-                  }
-                  className="w-full p-3 bg-[#f4f7f4] border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#b1cb0c] outline-none text-[#062e3a] font-bold"
-                  placeholder="PVP"
-                  required
-                />
-              </div>
-            </>
-          )}
+            {pestana === "nutricionistas" && (
+              <>
+                <div className="relative">
+                  <User size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={itemEditando.nombre}
+                    onChange={(e) => setItemEditando({ ...itemEditando, nombre: e.target.value })}
+                    required
+                    placeholder="Nombre"
+                    className="w-full bg-[#062e3a]/50 border border-[#342c1e]/30 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#b1cb0c] outline-none transition-all"
+                  />
+                </div>
+                <div className="relative">
+                  <User size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={itemEditando.apellidos}
+                    onChange={(e) => setItemEditando({ ...itemEditando, apellidos: e.target.value })}
+                    required
+                    placeholder="Apellidos"
+                    className="w-full bg-[#062e3a]/50 border border-[#342c1e]/30 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#b1cb0c] outline-none transition-all"
+                  />
+                </div>
+                <div className="relative">
+                  <Phone size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={itemEditando.telefono || ""}
+                    onChange={(e) => setItemEditando({ ...itemEditando, telefono: e.target.value })}
+                    placeholder="Teléfono corporativo"
+                    className="w-full bg-[#062e3a]/50 border border-[#342c1e]/30 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#b1cb0c] outline-none transition-all"
+                  />
+                </div>
+                <div className="relative">
+                  <Clock size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                  <input
+                    type="number"
+                    value={itemEditando.horasContratoMensual}
+                    onChange={(e) => setItemEditando({ ...itemEditando, horasContratoMensual: e.target.value })}
+                    required
+                    placeholder="Horas mensuales"
+                    className="w-full bg-[#062e3a]/50 border border-[#342c1e]/30 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#b1cb0c] outline-none transition-all"
+                  />
+                </div>
+
+                <div className="space-y-3 mt-4 pt-4 border-t border-[#342c1e]/50">
+                  <h4 className="text-xs font-bold text-[#bed000] uppercase pb-2 tracking-widest">
+                    3. Asignación y Distancia
+                  </h4>
+                  <div className="max-h-56 overflow-y-auto space-y-2 p-2 bg-white/5 rounded-xl custom-scrollbar border border-white/10">
+                    {[...farmacias]
+                      .sort((a, b) => {
+                        const hasA = itemEditando.asignaciones?.some((asig) => asig.farmaciaId === a.id);
+                        const hasB = itemEditando.asignaciones?.some((asig) => asig.farmaciaId === b.id);
+                        if (hasA && !hasB) return -1;
+                        if (!hasA && hasB) return 1;
+                        return a.nombre.localeCompare(b.nombre);
+                      })
+                      .map((farmacia) => {
+                        const asignacionInfo = itemEditando.asignaciones?.find((a) => a.farmaciaId === farmacia.id);
+                        const isChecked = !!asignacionInfo;
+                        return (
+                          <div key={farmacia.id} className={`flex flex-col p-2 rounded-lg transition-colors ${isChecked ? "bg-[#b1cb0c]/20 border border-[#b1cb0c]/50" : "bg-transparent border border-transparent"}`}>
+                            <label className="flex items-center gap-3 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) => handleToggleFarmacia(farmacia.id, e.target.checked, true)}
+                                className="w-4 h-4 rounded text-[#b1cb0c] bg-[#062e3a] border-gray-600 focus:ring-[#b1cb0c]"
+                              />
+                              <span className="text-sm font-bold text-gray-200">{farmacia.nombre}</span>
+                            </label>
+                            {isChecked && (
+                              <div className="mt-2 pl-7 flex items-center gap-2 animate-fade-in">
+                                <Car size={14} className="text-gray-400" />
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={asignacionInfo.kilometros}
+                                  onChange={(e) => handleCambiarKilometros(farmacia.id, e.target.value, true)}
+                                  className="w-16 p-1 text-sm bg-[#062e3a] text-white border border-[#342c1e] rounded-md focus:ring-2 focus:ring-[#b1cb0c] outline-none text-center"
+                                  placeholder="Km"
+                                  required
+                                />
+                                <span className="text-xs font-bold text-[#b1cb0c]/80">Km totales</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {pestana === "farmacias" && (
+              <>
+                <div className="relative">
+                  <Store size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={itemEditando.nombre}
+                    onChange={(e) => setItemEditando({ ...itemEditando, nombre: e.target.value })}
+                    required
+                    placeholder="Nombre Farmacia"
+                    className="w-full bg-[#062e3a]/50 border border-[#342c1e]/30 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#b1cb0c] outline-none transition-all"
+                  />
+                </div>
+                <div className="relative">
+                  <FileText size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={itemEditando.cif}
+                    onChange={(e) => setItemEditando({ ...itemEditando, cif: e.target.value })}
+                    required
+                    placeholder="CIF"
+                    className="w-full bg-[#062e3a]/50 border border-[#342c1e]/30 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#b1cb0c] outline-none transition-all"
+                  />
+                </div>
+                <div className="relative">
+                  <MapPin size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={itemEditando.direccion}
+                    onChange={(e) => setItemEditando({ ...itemEditando, direccion: e.target.value })}
+                    required
+                    placeholder="Dirección completa"
+                    className="w-full bg-[#062e3a]/50 border border-[#342c1e]/30 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#b1cb0c] outline-none transition-all"
+                  />
+                </div>
+                <div className="pt-2">
+                  <label className="flex items-center gap-3 p-4 bg-[#b1cb0c]/10 border border-[#b1cb0c]/30 rounded-xl cursor-pointer transition-all">
+                    <input
+                      type="checkbox"
+                      checked={itemEditando.esProvinciaLocal !== false}
+                      onChange={(e) => setItemEditando({ ...itemEditando, esProvinciaLocal: e.target.checked })}
+                      className="w-5 h-5 rounded text-[#367933] focus:ring-[#367933]"
+                    />
+                    <span className="text-sm font-bold text-white flex items-center gap-2">
+                      <MapPin size={14} className="text-[#bed000]" /> Almería (PVF)
+                    </span>
+                  </label>
+                </div>
+                <div className="relative mt-2">
+                  <label className="block text-[10px] font-black text-gray-400 uppercase mb-1 tracking-widest">
+                    Comisión para la Farmacia
+                  </label>
+                  <div className="relative">
+                    <Percent size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                    <input
+                      type="number"
+                      value={itemEditando.porcentajeComision || 30}
+                      onChange={(e) => setItemEditando({ ...itemEditando, porcentajeComision: e.target.value })}
+                      required
+                      min="0" max="100" step="0.1"
+                      className="w-full bg-[#062e3a]/50 border border-[#342c1e]/30 rounded-xl pl-10 pr-4 py-3 text-sm text-white font-bold focus:ring-2 focus:ring-[#b1cb0c] outline-none transition-all"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {pestana === "productos" && (
+              <>
+                <div className="relative">
+                  <Package size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={itemEditando.nombreProducto}
+                    onChange={(e) => setItemEditando({ ...itemEditando, nombreProducto: e.target.value })}
+                    required
+                    placeholder="Nombre Producto"
+                    className="w-full bg-[#062e3a]/50 border border-[#342c1e]/30 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#b1cb0c] outline-none transition-all"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <div className="relative w-full">
+                    <Type size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                    <input
+                      type="text"
+                      value={itemEditando.acronimo || ""}
+                      onChange={(e) => setItemEditando({ ...itemEditando, acronimo: e.target.value })}
+                      required
+                      placeholder="Acrónimo"
+                      className="w-full bg-[#062e3a]/50 border border-[#342c1e]/30 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#b1cb0c] outline-none transition-all"
+                    />
+                  </div>
+                  <div className="relative w-full">
+                    <Tag size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                    <select
+                      value={itemEditando.categoria || "PEQUENO"}
+                      onChange={(e) => setItemEditando({ ...itemEditando, categoria: e.target.value })}
+                      className="w-full bg-[#062e3a]/50 border border-[#342c1e]/30 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#b1cb0c] outline-none transition-all appearance-none"
+                    >
+                      <option value="PEQUENO">PEQUEÑO</option>
+                      <option value="GRANDE">GRANDE</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="relative">
+                  <Hash size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={itemEditando.referencia || ""}
+                    onChange={(e) => setItemEditando({ ...itemEditando, referencia: e.target.value })}
+                    required
+                    placeholder="Referencia / SKU"
+                    className="w-full bg-[#062e3a]/50 border border-[#342c1e]/30 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#b1cb0c] outline-none transition-all"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <div className="relative w-full">
+                    <Euro size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={itemEditando.pvf}
+                      onChange={(e) => setItemEditando({ ...itemEditando, pvf: e.target.value })}
+                      required
+                      placeholder="PVF"
+                      className="w-full bg-[#062e3a]/50 border border-[#342c1e]/30 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#b1cb0c] outline-none transition-all"
+                    />
+                  </div>
+                  <div className="relative w-full">
+                    <Euro size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={itemEditando.pvp}
+                      onChange={(e) => setItemEditando({ ...itemEditando, pvp: e.target.value })}
+                      required
+                      placeholder="PVP"
+                      className="w-full bg-[#062e3a]/50 border border-[#342c1e]/30 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-[#b1cb0c] outline-none transition-all"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
 
           <button
             type="submit"
-            className="w-full bg-[#367933] hover:bg-[#006633] text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 mt-4 shadow-lg shadow-[#367933]/20 transition-colors"
+            disabled={!formValido()}
+            className={`w-full font-bold py-3 rounded-xl mt-6 flex items-center justify-center gap-2 shadow-lg transition-all active:scale-[0.98]
+              ${!formValido() ? "bg-gray-600 text-gray-300 cursor-not-allowed" : "bg-[#367933] hover:bg-[#006633] text-white shadow-[#367933]/20"}`}
           >
             <Save size={18} /> Guardar Cambios
           </button>

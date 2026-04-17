@@ -21,6 +21,7 @@ export const useDocumentacion = () => {
 
   const token = localStorage.getItem("token");
   const isAdmin = token ? jwtDecode(token).roles.includes("ROLE_ADMIN") : false;
+  const esFarmacia = token ? jwtDecode(token).roles.includes("ROLE_FARMACIA") : false;
 
   const cargarDatos = useCallback(async () => {
     setCargando(true);
@@ -132,6 +133,7 @@ export const useDocumentacion = () => {
     formulario,
     setFormulario,
     isAdmin,
+    esFarmacia,
     mesesDisponibles,
     handleSubir,
     handleDescargar,

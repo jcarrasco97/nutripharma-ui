@@ -47,4 +47,16 @@ export const productosService = {
     );
     return response.data;
   },
+  obtenerRecomendadosFarmacia: async (farmaciaId) => {
+    const res = await axios.get(
+      `${API_URL}/recomendados/${farmaciaId}`,
+      getConfig(),
+    );
+    return res.data;
+  },
+  obtenerTopVentasGlobal: async () => {
+    const res = await axios.get(`${API_URL}/mas-vendidos`, getConfig());
+    return res.data;
+  },
 };
+

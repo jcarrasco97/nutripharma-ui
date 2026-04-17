@@ -3,7 +3,7 @@ import { Filter, User, Calendar, Clock, TrendingUp } from "lucide-react";
 
 const ListadoConsultasFarmacia = ({ consultasFiltradas }) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 max-h-[65vh] overflow-y-auto custom-scrollbar pr-2 pb-4">
       {consultasFiltradas.length === 0 ? (
         <div className="col-span-full bg-white p-20 rounded-[3rem] text-center border-2 border-dashed border-gray-100">
           <Filter size={48} className="mx-auto text-gray-300 mb-4" />

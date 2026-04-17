@@ -20,7 +20,9 @@ export const usePedidos = () => {
 
   const [mesFiltro, setMesFiltro] = useState("INITIAL");
   const [ordenFiltro, setOrdenFiltro] = useState("recientes");
-  const [ordenProductos, setOrdenProductos] = useState("recomendados");
+  const [ordenProductos, setOrdenProductos] = useState("por_defecto");
+  const [idsRecomendados, setIdsRecomendados] = useState([]);
+  const [idsMasVendidos, setIdsMasVendidos] = useState([]);
   const [carrito, setCarrito] = useState([]);
   const [farmaciaSeleccionada, setFarmaciaSeleccionada] = useState("");
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
@@ -45,14 +47,16 @@ export const usePedidos = () => {
       setEsAdmin(soyAdmin);
       setEsNutricionista(soyNutricionista);
 
-      const [datosProds, datosPeds] = await Promise.all([
+      const [datosProds, datosPeds, datosTopVentas] = await Promise.all([
         productosService.listarTodos().catch(() => []),
         soyAdmin
           ? Promise.resolve([])
           : pedidosService.obtenerMisPedidos().catch(() => []),
+        productosService.obtenerTopVentasGlobal().catch(() => []),
       ]);
       setProductos(datosProds);
       setPedidos(datosPeds);
+      setIdsMasVendidos(datosTopVentas);
 
       if (soyFarmacia) {
         const miPerfilFarm = await farmaciaService
@@ -96,6 +100,14 @@ export const usePedidos = () => {
   useEffect(() => {
     if (!esFarmacia) setCarrito([]);
   }, [farmaciaSeleccionada, esFarmacia]);
+
+  useEffect(() => {
+    if (!farmaciaSeleccionada) return;
+    productosService
+      .obtenerRecomendadosFarmacia(farmaciaSeleccionada)
+      .then(setIdsRecomendados)
+      .catch(() => setIdsRecomendados([]));
+  }, [farmaciaSeleccionada]);
 
   const farmaciaActual = esFarmacia
     ? perfil
@@ -175,8 +187,8 @@ export const usePedidos = () => {
   };
 
   const modificarCantidad = (id, delta, pagadoConSaldo) => {
-    setCarrito((prev) =>
-      prev
+    setCarrito((prev) => {
+      const carritoActualizado = prev
         .map((item) => {
           if (
             item.productoId === id &&
@@ -208,8 +220,18 @@ export const usePedidos = () => {
           }
           return item;
         })
-        .filter((i) => i.cantidad > 0),
-    );
+        .filter((i) => i.cantidad > 0);
+
+      const nuevoTotalReal = carritoActualizado
+        .filter((i) => !i.pagadoConSaldo)
+        .reduce((s, i) => s + i.cantidad * getPrecioAplicado(i.productoInfo), 0);
+
+      if (nuevoTotalReal < 80) {
+        return carritoActualizado.filter((i) => !i.pagadoConSaldo);
+      }
+
+      return carritoActualizado;
+    });
   };
 
   const handleRealizarPedido = async () => {
@@ -242,7 +264,8 @@ export const usePedidos = () => {
   // --- MOTOR DE HISTORIAL ---
 
   const productosFiltrados = [...productos].sort((a, b) => {
-    if (ordenProductos === "recomendados") {
+    // Modo 1: Merchandising del Admin (localStorage / OrdenPorDefectoProducto)
+    if (ordenProductos === "por_defecto") {
       const saved = JSON.parse(localStorage.getItem("orden_recomendados_nutripharma") || "[]");
       const idxA = saved.indexOf(a.id);
       const idxB = saved.indexOf(b.id);
@@ -251,6 +274,37 @@ export const usePedidos = () => {
       if (idxB === -1) return -1;
       return idxA - idxB;
     }
+    // Modo 2: Recomendados por histórico de compras de la farmacia
+    if (ordenProductos === "recomendados") {
+      const idxA = idsRecomendados.indexOf(a.id);
+      const idxB = idsRecomendados.indexOf(b.id);
+      if (idxA === -1 && idxB === -1) return (a.nombreProducto || "").localeCompare(b.nombreProducto || "");
+      if (idxA === -1) return 1;
+      if (idxB === -1) return -1;
+      return idxA - idxB;
+    }
+    // Modo 3: Más Vendidos Global
+    if (ordenProductos === "mas_vendidos") {
+      const idxA = idsMasVendidos.indexOf(a.id);
+      const idxB = idsMasVendidos.indexOf(b.id);
+      if (idxA === -1 && idxB === -1) return (a.nombreProducto || "").localeCompare(b.nombreProducto || "");
+      if (idxA === -1) return 1;
+      if (idxB === -1) return -1;
+      return idxA - idxB;
+    }
+    // Modo 4: Precio ascendente
+    if (ordenProductos === "precio_asc") {
+      return getPrecioAplicado(a) - getPrecioAplicado(b);
+    }
+    // Modo 5: Precio descendente
+    if (ordenProductos === "precio_desc") {
+      return getPrecioAplicado(b) - getPrecioAplicado(a);
+    }
+    // Modo 6: Z-A
+    if (ordenProductos === "za") {
+      return (b.nombreProducto || "").localeCompare(a.nombreProducto || "");
+    }
+    // Modo 7: Alfabético A-Z (por defecto del sort)
     return (a.nombreProducto || "").localeCompare(b.nombreProducto || "");
   });
 

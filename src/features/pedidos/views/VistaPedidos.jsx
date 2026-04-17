@@ -61,6 +61,7 @@ const VistaPedidos = () => {
           saldoRestante={hook.saldoRestante}
           getPrecioAplicado={hook.getPrecioAplicado}
           totalReal={hook.totalReal}
+          carrito={hook.carrito}
         />
       </div>
 

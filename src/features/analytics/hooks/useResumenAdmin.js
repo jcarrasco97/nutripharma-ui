@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { dashboardService } from "../services/dashboardService";
 import { farmaciaService } from "../../administracion/services/farmaciaService";
 import { nutricionistasService } from "../../administracion/services/nutricionistasService";
@@ -45,7 +45,7 @@ export const useResumenAdmin = () => {
         ]);
         setListadoFarmacias(farmacias);
         setListadoNutricionistas(nutris);
-      } catch(e) {
+      } catch (e) {
         console.error("Error cargando filtros:", e);
       }
     };
@@ -55,6 +55,30 @@ export const useResumenAdmin = () => {
   useEffect(() => {
     cargarDatos();
   }, [cargarDatos]);
+
+  // 👇 LÓGICA DE FILTROS EN CASCADA 👇
+
+  // 1. Si hay Nutri seleccionada, mostramos solo sus Farmacias. Si no, todas.
+  const farmaciasDisponibles = useMemo(() => {
+    if (!filtroNutri) return listadoFarmacias;
+
+    const nutriSeleccionada = listadoNutricionistas.find(n => n.id.toString() === filtroNutri.toString());
+    if (!nutriSeleccionada || !nutriSeleccionada.asignaciones) return listadoFarmacias;
+
+    const idsFarmaciasAsignadas = nutriSeleccionada.asignaciones.map(a => a.farmaciaId.toString());
+    return listadoFarmacias.filter(f => idsFarmaciasAsignadas.includes(f.id.toString()));
+  }, [filtroNutri, listadoFarmacias, listadoNutricionistas]);
+
+  // 2. Si hay Farmacia seleccionada, mostramos solo las Nutris que la tienen asignada. Si no, todas.
+  const nutrisDisponibles = useMemo(() => {
+    if (!filtroFarmacia) return listadoNutricionistas;
+
+    return listadoNutricionistas.filter(n =>
+      n.asignaciones && n.asignaciones.some(a => a.farmaciaId.toString() === filtroFarmacia.toString())
+    );
+  }, [filtroFarmacia, listadoNutricionistas]);
+
+  // 👆 FIN DE LÓGICA EN CASCADA 👆
 
   const diasMes = new Date(anio, mes, 0).getDate();
   const primerDiaSemana = new Date(anio, mes - 1, 1).getDay();
@@ -94,8 +118,9 @@ export const useResumenAdmin = () => {
     diasMes,
     offset,
     getEventosDelDia,
-    listadoFarmacias,
-    listadoNutricionistas,
+    // Exportamos las listas filtradas en lugar de las globales crudas
+    listadoFarmacias: farmaciasDisponibles,
+    listadoNutricionistas: nutrisDisponibles,
     filtroFarmacia,
     setFiltroFarmacia,
     filtroNutri,

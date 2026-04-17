@@ -237,15 +237,19 @@ export const useAdministracion = () => {
     try {
       if (pestana === "nutricionistas") {
         await nutricionistasService.actualizar(itemEditando.id, {
+          email: itemEditando.email,       // <-- NUEVO
+          password: itemEditando.password, // <-- NUEVO
           nombre: itemEditando.nombre,
           apellidos: itemEditando.apellidos,
-          telefono: itemEditando.telefono, // <-- AÑADIDO POR SI ACASO
+          telefono: itemEditando.telefono,
           horasContratoMensual: Number(itemEditando.horasContratoMensual),
           asignaciones: itemEditando.asignaciones || [],
         });
       }
       if (pestana === "farmacias") {
         await farmaciaService.actualizar(itemEditando.id, {
+          email: itemEditando.email,       // <-- NUEVO
+          password: itemEditando.password, // <-- NUEVO
           nombre: itemEditando.nombre,
           cif: itemEditando.cif,
           direccion: itemEditando.direccion,
@@ -254,7 +258,14 @@ export const useAdministracion = () => {
         });
       }
       if (pestana === "productos") {
-        await productosService.actualizar(itemEditando.id, itemEditando);
+        await productosService.actualizar(itemEditando.id, {
+          nombreProducto: itemEditando.nombreProducto,
+          acronimo: itemEditando.acronimo, // <-- NUEVO
+          categoria: itemEditando.categoria, // <-- NUEVO
+          referencia: itemEditando.referencia, // <-- NUEVO
+          pvf: Number(itemEditando.pvf),
+          pvp: Number(itemEditando.pvp),
+        });
       }
 
       alert("Datos actualizados correctamente.");
