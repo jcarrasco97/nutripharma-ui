@@ -20,11 +20,20 @@ export const dashboardService = {
   },
 
   // 👇 NUEVO PARA EL ADMIN 👇
-  obtenerFacturacionAdmin: async (anio, farmaciaId, nutriId) => {
-    let url = `${API_URL}/dashboard/admin/facturacion?anio=${anio}`;
+  obtenerFacturacionAdmin: async (anioInicio, anioFin, farmaciaId, nutriId) => {
+    let url = `${API_URL}/dashboard/admin/facturacion?anioInicio=${anioInicio}&anioFin=${anioFin}`;
     if (farmaciaId) url += `&farmaciaId=${farmaciaId}`;
     if (nutriId) url += `&nutricionistaId=${nutriId}`;
 
+    const response = await axios.get(url, getConfig());
+    return response.data;
+  },
+
+  obtenerRendimientoProductos: async (anioInicio, anioFin, mes, farmaciaId, nutriId) => {
+    let url = `${API_URL}/dashboard/admin/rendimiento-productos?anioInicio=${anioInicio}&anioFin=${anioFin}`;
+    if (mes) url += `&mes=${mes}`;
+    if (farmaciaId) url += `&farmaciaId=${farmaciaId}`;
+    if (nutriId) url += `&nutricionistaId=${nutriId}`;
     const response = await axios.get(url, getConfig());
     return response.data;
   },
@@ -48,7 +57,6 @@ export const dashboardService = {
   },
 
   obtenerAuditoriaNutricionista: async (id, anio, mes) => {
-    // IMPORTANTE: Ajustar desfase de índice - JS usa 0-11, Backend usa 1-12
     const mesAjustado = mes + 1;
     const response = await axios.get(
       `${API_URL}/dashboard/admin/auditoria/${id}?anio=${anio}&mes=${mesAjustado}`,
@@ -63,5 +71,34 @@ export const dashboardService = {
       getConfig(),
     );
     return res.data;
+  },
+
+  descargarInformeProductosPdf: async (payload) => {
+    const config = getConfig();
+    config.responseType = 'blob';
+    const response = await axios.post(`${API_URL}/dashboard/admin/rendimiento-productos/pdf`, payload, config);
+    return response.data;
+  },
+
+  descargarInformeFacturacionPdf: async (payload) => {
+    const config = getConfig();
+    config.responseType = 'blob';
+    const response = await axios.post(`${API_URL}/dashboard/admin/facturacion/pdf`, payload, config);
+    return response.data;
+  },
+
+  obtenerRendimientoClinico: async (anioInicio, anioFin, mes, nutriId) => {
+    let url = `${API_URL}/dashboard/admin/rendimiento-clinico?anioInicio=${anioInicio}&anioFin=${anioFin}`;
+    if (mes) url += `&mes=${mes}`;
+    if (nutriId) url += `&nutricionistaId=${nutriId}`;
+    const response = await axios.get(url, getConfig());
+    return response.data;
+  },
+
+  descargarInformeClinicoPdf: async (payload) => {
+    const config = getConfig();
+    config.responseType = 'blob';
+    const response = await axios.post(`${API_URL}/dashboard/admin/clinico/pdf`, payload, config);
+    return response.data;
   },
 };

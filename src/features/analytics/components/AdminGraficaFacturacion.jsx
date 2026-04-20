@@ -136,6 +136,7 @@ const AdminGraficaFacturacion = ({
             tickLine={false}
             tick={{ fill: "#342c1e", fontWeight: "bold" }}
             tickFormatter={(value) => `${value}€`}
+            width={60}
           />
           <Tooltip
             cursor={{ fill: "#f4f7f4" }}
@@ -145,13 +146,6 @@ const AdminGraficaFacturacion = ({
               boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
             }}
             formatter={(value) => [`${value} €`]}
-          />
-          <Legend
-            wrapperStyle={{
-              paddingTop: "20px",
-              fontWeight: "bold",
-              color: "#062e3a",
-            }}
           />
           <Legend
             wrapperStyle={{

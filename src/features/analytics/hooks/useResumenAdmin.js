@@ -23,10 +23,10 @@ export const useResumenAdmin = () => {
     setCargando(true);
     try {
       const [datosGrafica, datosCalendario] = await Promise.all([
-        dashboardService.obtenerFacturacionAdmin(anio, filtroFarmacia, filtroNutri).catch(() => []),
+        dashboardService.obtenerFacturacionAdmin(anio, anio, filtroFarmacia, filtroNutri).catch(() => []),
         dashboardService.obtenerCalendarioAdmin(anio, mes).catch(() => []),
       ]);
-      setFacturacion(datosGrafica);
+      setFacturacion(datosGrafica.totalesRango || []);
       setEventos(datosCalendario);
     } catch (error) {
       console.error("Error al cargar dashboard admin:", error);

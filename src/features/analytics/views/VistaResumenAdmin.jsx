@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, FileText } from "lucide-react";
 import { useResumenAdmin } from "../hooks/useResumenAdmin";
 import AdminModalEvento from "../components/AdminModalEvento";
 import AdminAuditoriaPanel from "../components/AdminAuditoriaPanel";
@@ -9,6 +9,7 @@ import ModalResumenDiario from "../components/ModalResumenDiario";
 import ModalDetalleValidacion from "../../validaciones/components/ModalDetalleValidacion";
 import ModalDetallePedido from "../../pedidos/components/ModalDetallePedido";
 import { dashboardService } from "../services/dashboardService";
+import ModalGeneradorInformes from "../components/ModalGeneradorInformes";
 
 const VistaResumenAdmin = () => {
   const hook = useResumenAdmin();
@@ -19,6 +20,7 @@ const VistaResumenAdmin = () => {
   const [consultaDetalle, setConsultaDetalle] = useState(null);
   const [pedidoDetalle, setPedidoDetalle] = useState(null);
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
+  const [isGeneradorOpen, setIsGeneradorOpen] = useState(false);
 
   if (hook.cargando && hook.facturacion.length === 0) {
     return (
@@ -134,6 +136,13 @@ const VistaResumenAdmin = () => {
           }}
         />
       )}
+
+      <div className="flex justify-center mt-8">
+        <button onClick={() => setIsGeneradorOpen(true)} className="bg-white border-2 border-gray-200 text-[#062e3a] font-black py-4 px-8 rounded-2xl hover:border-[#367933] hover:text-[#367933] flex items-center gap-3 transition-all shadow-sm active:scale-95">
+          <FileText size={24} className="text-[#bed000]" /> Abrir Generador de Informes Avanzados
+        </button>
+      </div>
+      <ModalGeneradorInformes isOpen={isGeneradorOpen} onClose={() => setIsGeneradorOpen(false)} farmacias={hook.listadoFarmacias} nutricionistas={hook.listadoNutricionistas} />
     </div>
   );
 };
