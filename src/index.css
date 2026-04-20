@@ -1,9 +1,14 @@
+/* 1. Importamos la fuente (Inter) con sus pesos más usados */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+
 @import "tailwindcss";
 
-/* AQUÍ ESTÁ LA MAGIA DE TAILWIND v4 
-  Mapeamos tu branding directamente en CSS
-*/
+/* AQUÍ ESTÁ LA MAGIA DE TAILWIND v4 */
 @theme {
+  /* --- TU TIPOGRAFÍA GLOBAL --- */
+  /* Sobrescribimos la fuente sans por defecto de Tailwind */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
   /* 1. Colores Corporativos Base */
   --color-primary: #367933;
   --color-primary-hover: #2d652a;
@@ -22,16 +27,8 @@
   --color-surface: #ffffff;
 
   /* 2. Gradientes Corporativos */
-  --background-image-gradient-nutri-light: linear-gradient(
-    to right,
-    #bed000,
-    #85ac1c
-  );
-  --background-image-gradient-nutri-dark: linear-gradient(
-    to right,
-    #006633,
-    #68b54e
-  );
+  --background-image-gradient-nutri-light: linear-gradient(to right, #bed000, #85ac1c);
+  --background-image-gradient-nutri-dark: linear-gradient(to right, #006633, #68b54e);
 
   /* 3. Animaciones de la App */
   --animate-fade-in: fadeIn 0.3s ease-out;
@@ -41,9 +38,18 @@
       opacity: 0;
       transform: translateY(10px);
     }
+
     100% {
       opacity: 1;
       transform: translateY(0);
     }
+  }
+}
+
+/* --- ESTILOS BASE GLOBALES --- */
+@layer base {
+  body {
+    /* Esto es CLAVE para el look "shadcn". Hace que la fuente se renderice más fina y definida */
+    @apply antialiased bg-background text-neutral;
   }
 }

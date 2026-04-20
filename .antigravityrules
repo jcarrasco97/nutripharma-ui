@@ -1,0 +1,27 @@
+Actúa como Frontend Senior. Vamos a crear la base de nuestro sistema de diseño inspirado en shadcn/ui.
+
+PASO 1: Crea la utilidad 'cn'.
+Crea el archivo 'src/shared/utils/utils.js' (o .ts si usas TypeScript).
+Importa 'clsx' y 'twMerge' (de 'tailwind-merge').
+Exporta una función llamada 'cn' que reciba (...inputs) y retorne twMerge(clsx(inputs)).
+
+PASO 2: Crea el componente Button.
+Crea el archivo 'src/shared/components/ui/Button.jsx'.
+Requisitos del botón:
+1. Usa 'React.forwardRef'.
+2. Usa la función 'cn' que acabamos de crear para fusionar className.
+3. Debe aceptar las props: 'variant' (default, secondary, outline, ghost, link) y 'size' (default, sm, lg, icon).
+4. Estilos base: inline-flex, items-center, justify-center, rounded-xl, text-sm, font-medium, transition-colors, focus-visible:outline-none, disabled:pointer-events-none disabled:opacity-50.
+5. Mapeo de variantes a nuestros colores corporativos (basado en Tailwind v4):
+   - default: bg-[#367933] text-white hover:bg-[#2d652a] shadow-sm
+   - secondary: bg-[#062e3a] text-white hover:bg-[#062e3a]/90 shadow-sm
+   - accent: bg-[#b1cb0c] text-[#062e3a] hover:bg-[#bed000] shadow-sm
+   - outline: border border-gray-200 bg-white hover:bg-gray-100 hover:text-[#062e3a]
+   - ghost: hover:bg-gray-100 hover:text-[#062e3a]
+6. Mapeo de tamaños:
+   - default: h-10 px-4 py-2
+   - sm: h-9 rounded-lg px-3
+   - lg: h-11 rounded-xl px-8
+   - icon: h-10 w-10
+
+No des explicaciones, simplemente crea los archivos.
