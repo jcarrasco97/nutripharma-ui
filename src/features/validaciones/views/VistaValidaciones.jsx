@@ -15,6 +15,7 @@ import ModalRepartoComisiones from "../components/ModalRepartoComisiones";
 import ModalDetalleValidacion from "../components/ModalDetalleValidacion";
 import ModalVerEvidencia from "../../consultas/components/ModalVerEvidencia";
 import HistorialValidaciones from "../components/HistorialValidaciones"; // <-- AÑADIDO IMPORT
+import PanelLiquidacion from "../components/PanelLiquidacion";
 
 const VistaValidaciones = () => {
   const hook = useValidaciones();
@@ -111,25 +112,41 @@ const VistaValidaciones = () => {
         </button>
       </div>
 
-      {/* 4. BANDEJA DE PENDIENTES */}
+      {/* 3.1. SUB-PESTAÑAS CONSULTAS (NUEVO) */}
+      {hook.pestañaActual === "consultas" && (
+        <div className="flex gap-2 bg-[#f4f7f4] p-1.5 rounded-2xl w-fit ml-4 -mt-4 mb-4 border border-gray-200">
+          <button
+            onClick={() => hook.setSubPestañaConsultas("validar")}
+            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${hook.subPestañaConsultas === "validar" ? "bg-white text-[#062e3a] shadow-sm" : "text-gray-400 hover:text-[#062e3a]"}`}
+          >
+            Pendientes de Validar
+          </button>
+          <button
+            onClick={() => hook.setSubPestañaConsultas("liquidar")}
+            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${hook.subPestañaConsultas === "liquidar" ? "bg-[#b1cb0c]/20 text-[#367933] shadow-sm" : "text-gray-400 hover:text-[#367933]"}`}
+          >
+            Cierre de Caja (Liquidar)
+          </button>
+        </div>
+      )}
+
+      {/* 4. BANDEJA DE PENDIENTES / LIQUIDACIÓN */}
       <div>
         <h3 className="text-sm font-black text-[#342c1e]/50 mb-4 px-2 uppercase tracking-widest">
-          Requiere tu Atención
+          {hook.pestañaActual === "consultas" && hook.subPestañaConsultas === "liquidar" ? "Panel de Contabilidad" : "Requiere tu Atención"}
         </h3>
 
         {hook.cargando ? (
           <div className="flex justify-center py-10">
             <Loader2 className="animate-spin text-[#367933]" size={40} />
           </div>
+        ) : hook.pestañaActual === "consultas" && hook.subPestañaConsultas === "liquidar" ? (
+          <PanelLiquidacion hook={hook} />
         ) : hook.pendientes.length === 0 ? (
           <div className="bg-[#f4f7f4] p-12 rounded-[2.5rem] border-2 border-dashed border-gray-200 text-center">
             <CheckCircle size={48} className="mx-auto text-[#b1cb0c] mb-4" />
-            <h3 className="text-xl font-black text-[#062e3a] mb-2">
-              Bandeja Vacía
-            </h3>
-            <p className="text-[#342c1e]/70 font-bold">
-              No hay elementos pendientes de validación. ¡Buen trabajo!
-            </p>
+            <h3 className="text-xl font-black text-[#062e3a] mb-2">Bandeja Vacía</h3>
+            <p className="text-[#342c1e]/70 font-bold">No hay elementos pendientes de validación. ¡Buen trabajo!</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">

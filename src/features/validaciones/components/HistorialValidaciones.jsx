@@ -121,7 +121,7 @@ const HistorialValidaciones = ({
         }
         case "EXITOSOS_PRIMERO": {
           const esExitoso = (est) =>
-            ["VALIDADA", "ENVIADO", "LIQUIDADO", "APROBADO"].includes(est)
+            ["VALIDADA", "ENVIADO", "LIQUIDADO", "LIQUIDADA", "APROBADO"].includes(est)
               ? 0
               : 1;
           const pesoA = esExitoso(getEstado(a));
@@ -129,6 +129,24 @@ const HistorialValidaciones = ({
 
           if (pesoA !== pesoB) return pesoA - pesoB;
           return timeB - timeA;
+        }
+        case "LIQUIDADOS_PRIMERO": {
+          const esLiquidado = (est) =>
+            ["LIQUIDADA", "LIQUIDADO"].includes(est) ? 0 : 1;
+          return (
+            esLiquidado(a.estado) - esLiquidado(b.estado) ||
+            new Date(b.fecha || b.fechaPedido || b.fechaPeticion) -
+            new Date(a.fecha || a.fechaPedido || a.fechaPeticion)
+          );
+        }
+        case "PENDIENTES_PRIMERO": {
+          const esPendiente = (est) =>
+            ["PENDIENTE_VALIDACION", "CON_INCIDENCIA", "PENDIENTE_ENVIO", "SOLICITADO"].includes(est) ? 0 : 1;
+          return (
+            esPendiente(a.estado) - esPendiente(b.estado) ||
+            new Date(b.fecha || b.fechaPedido || b.fechaPeticion) -
+            new Date(a.fecha || a.fechaPedido || a.fechaPeticion)
+          );
         }
         default:
           return 0;
@@ -207,7 +225,9 @@ const HistorialValidaciones = ({
               <option value="RESPONSABLE_ASC">Responsable (A-Z)</option>
               <option value="RESPONSABLE_DESC">Responsable (Z-A)</option>
               <option value="CANCELADOS_PRIMERO">Cancelados primero</option>
-              <option value="EXITOSOS_PRIMERO">Exitosos primero</option>
+              <option value="EXITOSOS_PRIMERO">Validados primero</option>
+              <option value="LIQUIDADOS_PRIMERO">Liquidados primero</option>
+              <option value="PENDIENTES_PRIMERO">Pendientes primero</option>
             </select>
           </div>
 
@@ -292,20 +312,14 @@ const HistorialValidaciones = ({
 
                   <td className="py-4 text-center">
                     <span
-                      className={`text-[9px] font-black px-3 py-1 rounded-md uppercase tracking-widest whitespace-nowrap ${
-                        [
-                          "VALIDADA",
-                          "ENVIADO",
-                          "LIQUIDADO",
-                          "APROBADO",
-                        ].includes(item.estado)
+                      className={`text-[9px] font-black px-3 py-1 rounded-md uppercase tracking-widest whitespace-nowrap ${["LIQUIDADA", "LIQUIDADO"].includes(item.estado)
+                        ? "bg-[#367933] text-[#FFFFFF] shadow-sm" // <-- NUEVO ESTADO: Verde corporativo + texto lima
+                        : ["VALIDADA", "ENVIADO", "APROBADO"].includes(item.estado)
                           ? "bg-[#b1cb0c]/20 text-[#367933]"
-                          : ["CANCELADA", "CANCELADO", "RECHAZADA"].includes(
-                                item.estado,
-                              )
+                          : ["CANCELADA", "CANCELADO", "RECHAZADA"].includes(item.estado)
                             ? "bg-red-100 text-red-700"
                             : "bg-amber-100 text-amber-700"
-                      }`}
+                        }`}
                     >
                       {item.estado.replace("_", " ")}
                     </span>

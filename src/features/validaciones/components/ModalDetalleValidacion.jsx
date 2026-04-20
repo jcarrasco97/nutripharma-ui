@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import {
   Eye, XCircle, AlertTriangle, Loader2, ShieldCheck, Wallet, Banknote,
-  Camera, Clock, Package, Gift, Database, ChevronLeft, ChevronRight // <-- Añadir estos dos
+  Camera, Clock, Package, Gift, Database, ChevronLeft, ChevronRight, Edit3
 } from "lucide-react";
 
 const ModalDetalleValidacion = ({
@@ -26,6 +26,14 @@ const ModalDetalleValidacion = ({
   onSiguiente,
   modoLectura = false,
 }) => {
+  // Control de seguridad para editar consultas ya consolidadas
+  const [modoEdicionForzada, setModoEdicionForzada] = React.useState(false);
+
+  // Si cambiamos de tarjeta, volvemos a bloquear la edición por seguridad
+  React.useEffect(() => {
+    setModoEdicionForzada(false);
+  }, [detalle]);
+
   const lineasPedidoAgrupadas = useMemo(() => {
     if (pestañaActual !== "pedidos" || !detalle || !detalle.lineas) {
       return { agrupadas: [], totales: { euros: 0, virtual: 0 } };
@@ -93,7 +101,7 @@ const ModalDetalleValidacion = ({
   // Lógica para saber si debemos mostrar el Footer (Solo si hay acciones que hacer)
   const mostrarFooter =
     (pestañaActual === "consultas" &&
-      ["PENDIENTE_VALIDACION", "CON_INCIDENCIA"].includes(detalle.estado)) ||
+      ["PENDIENTE_VALIDACION", "CON_INCIDENCIA", "VALIDADA"].includes(detalle.estado)) ||
     (pestañaActual === "pedidos" && detalle.estado === "PENDIENTE_ENVIO") ||
     (pestañaActual === "suministros" && detalle.estado === "SOLICITADO");
   // Solo mostramos navegación en elementos pendientes, no en el historial de solo lectura
@@ -216,8 +224,11 @@ const ModalDetalleValidacion = ({
                           [campo]: Number(e.target.value),
                         })
                       }
-                      disabled={detalle.estado === "CANCELADA" || modoLectura}
-                      className="w-full bg-[#f4f7f4] border border-gray-300 rounded-lg px-3 py-2 text-xl font-black text-[#367933] focus:ring-2 focus:ring-[#b1cb0c] outline-none disabled:bg-transparent disabled:border-transparent"
+                      disabled={
+                        detalle.estado === "CANCELADA" ||
+                        modoLectura ||
+                        (["VALIDADA", "LIQUIDADA"].includes(detalle.estado) && !modoEdicionForzada)
+                      } className="w-full bg-[#f4f7f4] border border-gray-300 rounded-lg px-3 py-2 text-xl font-black text-[#367933] focus:ring-2 focus:ring-[#b1cb0c] outline-none disabled:bg-transparent disabled:border-transparent"
                     />
                   </div>
                 ))}
@@ -479,17 +490,27 @@ const ModalDetalleValidacion = ({
         {/* 👇 FOOTER CONTEXTUAL INTELIGENTE (SOLO SI HAY ACCIONES) 👇 */}
         {mostrarFooter && (
           <div className="p-4 border-t border-gray-100 bg-white shrink-0 flex gap-3 justify-end items-center">
-            {pestañaActual === "consultas" &&
-              ["PENDIENTE_VALIDACION", "CON_INCIDENCIA"].includes(
-                detalle.estado,
-              ) && (
+            {/* MODO CORRECCIÓN (Consulta ya Validada pero no Liquidada) */}
+            {pestañaActual === "consultas" && detalle.estado === "VALIDADA" && (
+              !modoEdicionForzada ? (
+                <button
+                  onClick={() => {
+                    if (window.confirm("🚨 MODO EDICIÓN AVANZADA:\n\n¿Seguro que deseas alterar una jornada ya validada? Si modificas las cifras, el sistema recalculará automáticamente y alterará el saldo de la farmacia en tiempo real.")) {
+                      setModoEdicionForzada(true);
+                    }
+                  }}
+                  className="py-3 px-6 bg-amber-50 text-amber-600 font-black rounded-xl hover:bg-amber-100 flex items-center gap-2 transition-colors border border-amber-200"
+                >
+                  <Edit3 size={18} /> Corregir Datos Consolidados
+                </button>
+              ) : (
                 <>
                   <button
-                    onClick={onCancelarConsulta}
+                    onClick={() => setModoEdicionForzada(false)}
                     disabled={enviando}
-                    className="py-3 px-6 bg-red-50 text-red-600 font-black rounded-xl hover:bg-red-100 flex items-center gap-2 transition-colors"
+                    className="py-3 px-6 bg-gray-100 text-gray-600 font-black rounded-xl hover:bg-gray-200 flex items-center gap-2 transition-colors"
                   >
-                    <XCircle size={18} /> Anular
+                    <XCircle size={18} /> Cancelar Corrección
                   </button>
                   <button
                     onClick={onEditarYValidar}
@@ -501,10 +522,11 @@ const ModalDetalleValidacion = ({
                     ) : (
                       <ShieldCheck size={18} />
                     )}{" "}
-                    Guardar y Validar
+                    Aplicar Nueva Liquidación
                   </button>
                 </>
-              )}
+              )
+            )}
 
             {pestañaActual === "pedidos" &&
               detalle.estado === "PENDIENTE_ENVIO" && (

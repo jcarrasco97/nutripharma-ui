@@ -21,6 +21,7 @@ export const useValidaciones = () => {
   const [seleccionadasLiquidacion, setSeleccionadasLiquidacion] = useState([]);
   const [filtroNutriLiquidacion, setFiltroNutriLiquidacion] = useState("");
   const [filtroMesLiquidacion, setFiltroMesLiquidacion] = useState("ALL");
+  const [ordenLiquidacion, setOrdenLiquidacion] = useState("FECHA_DESC");
   // 2. ESTADOS DE MODALES Y EDICIÓN
   const [detalleSeleccionado, setDetalleSeleccionado] = useState(null);
   const [mostrarModalReparto, setMostrarModalReparto] = useState(false);
@@ -57,8 +58,10 @@ export const useValidaciones = () => {
         // La Bandeja de Liquidación (Solo Validadas listas para cobrar)
         setPendientesLiquidar(todas.filter(c => c.estado === "VALIDADA"));
 
-        // El Historial (Todo lo demás: Liquidadas, Canceladas...)
-        setHistorial(todas.filter(c => c.estado !== "PENDIENTE_VALIDACION" && c.estado !== "CON_INCIDENCIA" && c.estado !== "VALIDADA" && c.estado !== "BORRADOR"));
+        // EL HISTORIAL ENTERPRISE (BIEN)
+        // Mostramos absolutamente todas las consultas para tener el control total.
+        // (Opcional: puedes mantener el filtro de BORRADOR si no quieres que el admin vea lo que la nutri aún no ha terminado de escribir).
+        setHistorial(todas.filter(c => c.estado !== "BORRADOR"));
       } else if (pestañaActual === "pedidos") {
         const [todos, nutris] = await Promise.all([
           pedidosService.obtenerTodos(),
@@ -464,6 +467,9 @@ export const useValidaciones = () => {
     setFiltroNutriLiquidacion,
     filtroMesLiquidacion,
     setFiltroMesLiquidacion,
+    ordenLiquidacion,
+    setOrdenLiquidacion,
+    listaNutrisGlobal,
     toggleSeleccionLiquidacion,
     seleccionarTodasLiquidacion,
     handleLiquidarLote
