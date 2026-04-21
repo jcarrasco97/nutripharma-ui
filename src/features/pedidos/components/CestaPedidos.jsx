@@ -1,5 +1,6 @@
 import React from "react";
-import Button from "../../../core/components/ui/Button"; import {
+import { Button } from "../../../shared/components/ui/Button";
+import {
   ShoppingCart,
   ShoppingBag,
   Wallet,

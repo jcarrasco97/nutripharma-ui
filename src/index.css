@@ -22,6 +22,10 @@
   --color-neutral: #342c1e;
   --color-neutral-dark: #342c1e;
 
+  --color-destructive: #ef4444;
+  --color-destructive-hover: #ef4444;
+  --color-destructive-dark: #ef4444;
+
   /* Fondos Clean SaaS */
   --color-background: #f8fafc;
   --color-surface: #ffffff;
@@ -32,6 +36,9 @@
 
   /* 3. Animaciones de la App */
   --animate-fade-in: fadeIn 0.3s ease-out;
+  /* Animaciones para el Accordion */
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
 
   @keyframes fadeIn {
     0% {
@@ -43,6 +50,26 @@
       opacity: 1;
       transform: translateY(0);
     }
+  }
+}
+
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+
+  to {
+    height: 0;
   }
 }
 

@@ -1,5 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+// 👇 Importa el Toaster que creamos
+import { Toaster } from "./shared/components/ui/Toaster";
 
 // 👇 Nuevas rutas FSD
 import Login from "./features/auth/views/Login";
@@ -11,6 +13,9 @@ import Playground from './features/playground/Playground'; // La crearemos ahora
 function App() {
   return (
     <BrowserRouter>
+      {/* 👇 Añade el componente aquí. Se mantendrá "invisible" hasta que dispares un toast */}
+      <Toaster position="top-right" expand={false} richColors />
+
       <Routes>
         <Route path="/sandbox" element={<Playground />} />
         <Route path="/" element={<Login />} />

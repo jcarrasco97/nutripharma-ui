@@ -1,6 +1,6 @@
 import React from "react";
 import { History, ShieldCheck, User } from "lucide-react";
-import Badge from "../../../core/components/ui/Badge";
+import { Badge } from "../../../shared/components/ui/Badge";
 
 const HistorialPedidosUsuario = ({
   esAdmin,
@@ -58,11 +58,10 @@ const HistorialPedidosUsuario = ({
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
           <div
-            className={`p-2 rounded-xl ${
-              esNutricionista
-                ? "bg-primary/10 text-primary"
-                : "bg-accent/20 text-primary"
-            }`}
+            className={`p-2 rounded-xl ${esNutricionista
+              ? "bg-primary/10 text-primary"
+              : "bg-accent/20 text-primary"
+              }`}
           >
             {esNutricionista ? <User size={20} /> : <History size={20} />}
           </div>

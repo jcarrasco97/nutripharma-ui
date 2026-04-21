@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Plus, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
-import Button from "../../../core/components/ui/Button";
-import Input from "../../../core/components/ui/Input";
+import { Button } from "../../../shared/components/ui/Button";
+import { Input } from "../../../shared/components/ui/Input";
 
 const FormularioAdmin = ({ formData, handleChange, handleCrear, enviando }) => {
   // Estados locales para controlar la visibilidad de las contraseñas
