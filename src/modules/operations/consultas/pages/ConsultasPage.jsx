@@ -7,7 +7,7 @@ import HistorialTurnos from "../components/HistorialTurnos";
 import ModalResumenTurno from "../components/ModalResumenTurno";
 import ModalVerEvidencia from "../components/ModalVerEvidencia";
 
-const VistaConsultas = () => {
+const ConsultasPage = () => {
   const hook = useConsultas();
 
   if (hook.cargando) {
@@ -63,4 +63,4 @@ const VistaConsultas = () => {
   );
 };
 
-export default VistaConsultas;
+export default ConsultasPage;

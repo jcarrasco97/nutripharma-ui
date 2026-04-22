@@ -1,11 +1,11 @@
 import React from "react";
 import { Loader2, AlertCircle, RefreshCcw } from "lucide-react";
-import { useResumenFarmacia } from "../hooks/useResumenFarmacia";
+import { useDashboardFarmacia } from "../hooks/useDashboardFarmacia";
 import FarmaciaCabeceraSaldo from "../components/farmacia/FarmaciaCabeceraSaldo";
 import FarmaciaHistorialPedidos from "../components/farmacia/FarmaciaHistorialPedidos";
 
-const VistaResumenFarmacia = ({ cambiarVista }) => {
-  const hook = useResumenFarmacia();
+const DashboardFarmaciaPage = ({ cambiarVista }) => {
+  const hook = useDashboardFarmacia();
 
   if (hook.cargando) {
     return (
@@ -52,4 +52,4 @@ const VistaResumenFarmacia = ({ cambiarVista }) => {
   );
 };
 
-export default VistaResumenFarmacia;
+export default DashboardFarmaciaPage;

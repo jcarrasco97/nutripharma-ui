@@ -1,6 +1,6 @@
 import React from "react";
 import { History, ShieldCheck, User } from "lucide-react";
-import { Badge } from "../../../../shared/components/ui/Badge";
+import { Badge } from "@/shared/components/ui/Badge";
 
 const HistorialPedidosUsuario = ({
   esAdmin,

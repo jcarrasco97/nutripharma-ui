@@ -1,6 +1,7 @@
 import React from "react";
 import { Lock, Loader2, Eye, EyeOff, XCircle } from "lucide-react";
-import { useAuth } from "@/modules/security/hooks/useAuth";
+import { useAuth } from "../hooks/useAuth";
+
 const ResetPassword = () => {
   const hook = useAuth();
 

@@ -1,23 +1,20 @@
 import React from "react";
 import { Menu, Activity } from "lucide-react";
 
-// --- HOOKS Y COMPONENTES ---
+// --- HOOKS Y COMPONENTES GLOBALES ---
 import { useDashboard } from "./hooks/useDashboard";
 import Sidebar from "./Sidebar";
 
-// --- IMPORTACIONES DE VISTAS (Features) ---
-import VistaResumen from "../modules/operations/dashboard/pages/VistaResumen";
-import VistaResumenFarmacia from "../modules/operations/dashboard/pages/VistaResumenFarmacia";
-import VistaResumenAdmin from "../modules/operations/dashboard/pages/VistaResumenAdmin";
-import VistaConsultas from "../modules/operations/consultas/pages/VistaConsultas";
-import VistaHistorialFarmacia from "../modules/operations/consultas/pages/VistaHistorialFarmacia";
-import VistaPedidos from "../modules/sales/pedidos/pages/VistaPedidos";
-import VistaSuministros from "../modules/sales/suministros/pages/VistaSuministros";
-import VistaAdminSuministros from "../modules/sales/suministros/pages/VistaAdminSuministros";
-import VistaDocumentacion from "../modules/documents/pages/VistaDocumentacion";
-import VistaValidaciones from "../modules/operations/validaciones/pages/VistaValidaciones";
-import VistaAdministracion from "../modules/organization/pages/VistaAdministracion";
-import VistaPersonalInterno from "../modules/organization/pages/VistaPersonalInterno";
+// --- IMPORTACIONES MAESTRAS DE LOS MÓDULOS (Feature-First) ---
+import {
+  ConsultasPage, HistorialFarmaciaPage,
+  DashboardAdminPage, DashboardFarmaciaPage, DashboardNutriPage,
+  ValidacionesPage
+} from "@/modules/operations";
+
+import { AdministracionPage, PersonalInternoPage } from "@/modules/organization";
+import { DocumentacionPage } from "@/modules/documents";
+import { PedidosPage, SuministrosPage, SuministrosAdminPage } from "@/modules/sales";
 
 const Dashboard = () => {
   const hook = useDashboard();
@@ -25,55 +22,64 @@ const Dashboard = () => {
   if (!hook.usuario) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex font-sans">
-      {/* BOTÓN MOBILE HAMBURGUESA */}
-      <button
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-[#367933] text-white rounded-lg shadow-md"
-        onClick={() => hook.setMenuAbierto(!hook.menuAbierto)}
-      >
-        <Menu size={24} />
-      </button>
-
-      {/* MENÚ LATERAL EXTERNALIZADO */}
-      <Sidebar {...hook} />
+    <div className="min-h-screen bg-[#f4f7f4] flex flex-col md:flex-row font-sans overflow-hidden">
+      {/* SIDEBAR COMPONENTE AisLADO */}
+      <Sidebar
+        usuario={hook.usuario}
+        menuAbierto={hook.menuAbierto}
+        setMenuAbierto={hook.setMenuAbierto}
+        vistaActual={hook.vistaActual}
+        setVistaActual={hook.setVistaActual}
+        menuItems={hook.menuItems}
+        handleLogout={hook.handleLogout}
+        isAdmin={hook.isAdmin}
+        isNutricionista={hook.isNutricionista}
+        isFarmacia={hook.isFarmacia}
+      />
 
       {/* CONTENIDO PRINCIPAL */}
-      <main className="flex-1 flex flex-col min-h-screen overflow-hidden">
-        {/* TOPBAR DESKTOP */}
-        <header className="h-20 bg-white border-b border-gray-200 flex items-center px-8 hidden md:flex">
-          <h2 className="text-2xl font-bold text-[#062e3a] capitalize">
-            {hook.vistaActual.replace("-", " ")}
-          </h2>
+      <main className="flex-1 flex flex-col h-screen overflow-hidden relative transition-all duration-300 z-10">
+        {/* HEADER MÓVIL */}
+        <header className="md:hidden bg-[#062e3a] text-white p-4 flex justify-between items-center z-20 shadow-md">
+          <div className="flex items-center">
+            <Activity size={24} className="mr-2 text-[#b1cb0c]" />
+            <h1 className="text-xl font-bold">NutriPharma</h1>
+          </div>
+          <button
+            onClick={() => hook.setMenuAbierto(!hook.menuAbierto)}
+            className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+          >
+            <Menu size={24} />
+          </button>
         </header>
 
-        {/* ÁREA DE RENDERIZADO DE VISTAS */}
-        <div className="flex-1 overflow-auto p-4 md:p-8 bg-[#f4f7f4]/30">
-          {hook.vistaActual === "resumen-admin" ? (
-            <VistaResumenAdmin />
-          ) : hook.vistaActual === "resumen" ? (
-            hook.isFarmacia ? (
-              <VistaResumenFarmacia cambiarVista={hook.setVistaActual} />
-            ) : (
-              <VistaResumen />
-            )
+        {/* ÁREA DE RENDERIZADO DE LAS VISTAS (SCROLLABLE) */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar relative z-0">
+          {/* 👇 CIRUGÍA: Protegemos las vistas por ROL para evitar el 403 del backend 👇 */}
+          {hook.vistaActual === "resumen" && hook.isNutricionista ? (
+            <DashboardNutriPage />
+          ) : hook.vistaActual === "resumen-farmacia" && hook.isFarmacia ? (
+            <DashboardFarmaciaPage />
+          ) : hook.vistaActual === "resumen-admin" && hook.isAdmin ? (
+            <DashboardAdminPage setVistaActual={hook.setVistaActual} />
           ) : hook.vistaActual === "consultas" ? (
-            <VistaConsultas />
+            <ConsultasPage />
           ) : hook.vistaActual === "pedidos" ? (
-            <VistaPedidos />
-          ) : hook.vistaActual === "suministros" ? (
-            <VistaSuministros />
+            <PedidosPage />
           ) : hook.vistaActual === "documentacion" ? (
-            <VistaDocumentacion />
+            <DocumentacionPage />
+          ) : hook.vistaActual === "suministros" ? (
+            <SuministrosPage />
           ) : hook.vistaActual === "validaciones" ? (
-            <VistaValidaciones />
+            <ValidacionesPage />
           ) : hook.vistaActual === "admin-suministros" ? (
-            <VistaAdminSuministros />
+            <SuministrosAdminPage />
           ) : hook.vistaActual === "historial-farmacia" ? (
-            <VistaHistorialFarmacia />
+            <HistorialFarmaciaPage />
           ) : hook.vistaActual === "usuarios" ? (
-            <VistaAdministracion />
+            <AdministracionPage />
           ) : hook.vistaActual === "personal-interno" ? (
-            <VistaPersonalInterno />
+            <PersonalInternoPage />
           ) : (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 min-h-[500px] flex items-center justify-center">
               <div className="text-center">
@@ -96,7 +102,7 @@ const Dashboard = () => {
       {/* OVERLAY MOBILE PARA CERRAR EL MENÚ AL HACER CLIC FUERA */}
       {hook.menuAbierto && (
         <div
-          className="fixed inset-0 bg-[#062e3a]/50 z-30 md:hidden backdrop-blur-sm"
+          className="fixed inset-0 bg-[#062e3a]/40 backdrop-blur-sm z-30 md:hidden animate-fade-in"
           onClick={() => hook.setMenuAbierto(false)}
         />
       )}

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Plus, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
-import { Button } from "../../../../shared/components/ui/Button";
-import { Input } from "../../../../shared/components/ui/Input";
+import { Button } from "@/shared/components/ui/Button";
+import { Input } from "@/shared/components/ui/Input";
 
 const FormularioAdmin = ({ formData, handleChange, handleCrear, enviando }) => {
   // Estados locales para controlar la visibilidad de las contraseñas
@@ -40,7 +40,7 @@ const FormularioAdmin = ({ formData, handleChange, handleCrear, enviando }) => {
             required
             placeholder="Contraseña"
             // Añadimos pr-11 para que el texto no se pise con el icono del ojo
-            inputClassName="pr-11"
+            className="pr-11"
           />
           <button
             type="button"
@@ -63,7 +63,7 @@ const FormularioAdmin = ({ formData, handleChange, handleCrear, enviando }) => {
             onPaste={(e) => e.preventDefault()} // 👈 Bloquea copiar y pegar
             required
             placeholder="Confirmar Contraseña"
-            inputClassName="pr-11"
+            className="pr-11"
           />
           <button
             type="button"

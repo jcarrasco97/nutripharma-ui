@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Download, FileSpreadsheet, Loader2, Search, Trash2 } from "lucide-react";
 import { facturasService } from "../services/facturasService";
-import { obtenerUltimos6Meses } from "../../../../shared/utils/mesesHelper";
+import { obtenerUltimos6Meses } from "@/shared/utils/mesesHelper";
 
 const ListadoFacturas = ({ esAdmin, forceUpdate }) => {
   const [facturas, setFacturas] = useState([]);

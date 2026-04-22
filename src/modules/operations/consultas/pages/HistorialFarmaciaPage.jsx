@@ -5,7 +5,7 @@ import { useHistorialFarmacia } from "../hooks/useHistorialFarmacia";
 import FiltrosHistorialFarmacia from "../components/FiltrosHistorialFarmacia";
 import ListadoConsultasFarmacia from "../components/ListadoConsultasFarmacia";
 
-const VistaHistorialFarmacia = () => {
+const HistorialFarmaciaPage = () => {
   const hook = useHistorialFarmacia();
 
   if (hook.cargando) {
@@ -52,4 +52,4 @@ const VistaHistorialFarmacia = () => {
   );
 };
 
-export default VistaHistorialFarmacia;
+export default HistorialFarmaciaPage;

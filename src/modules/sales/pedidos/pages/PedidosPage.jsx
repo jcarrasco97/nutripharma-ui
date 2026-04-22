@@ -2,12 +2,12 @@ import React from "react";
 import { Loader2, AlertCircle } from "lucide-react";
 
 import { usePedidos } from "../hooks/usePedidos";
-import CatalogoProductos from "../../catalogo/components/CatalogoProductos";
+import { CatalogoProductos } from "@/modules/sales/catalogo";
 import CestaPedidos from "../components/CestaPedidos";
 import ModalDetallePedido from "../components/ModalDetallePedido";
 import HistorialPedidosUsuario from "../components/HistorialPedidosUsuario";
 
-const VistaPedidos = () => {
+const PedidosPage = () => {
   const hook = usePedidos();
 
   if (hook.cargando) {
@@ -95,4 +95,4 @@ const VistaPedidos = () => {
   );
 };
 
-export default VistaPedidos;
+export default PedidosPage;

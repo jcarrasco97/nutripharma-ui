@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { UploadCloud, ReceiptText, Check } from "lucide-react";
 import { facturasService } from "../services/facturasService";
-import { obtenerUltimos6Meses } from "../../../../shared/utils/mesesHelper";
+import { obtenerUltimos6Meses } from "@/shared/utils/mesesHelper";
 
 const SubidaFacturas = ({ onSubidaExitosa }) => {
   const [archivo, setArchivo] = useState(null);

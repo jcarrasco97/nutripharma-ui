@@ -1,19 +1,18 @@
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-// 👇 Importa el Toaster que creamos
-import { Toaster } from "../shared/components/ui/Toaster";
 
-// 👇 Nuevas rutas FSD
-import Login from "../modules/security/components/Login";
-import ResetPassword from "../modules/security/components/ResetPassword";
-import Dashboard from "../layout/Dashboard"; // <-- Aquí estaba el fallo principal
+// 👇 Todo con el alias @ apuntando directo a la raíz de src/
+import { Toaster } from "@/shared/components/ui/Toaster"; // (Si moviste Toaster a shared/ui/)
+import { Login, ResetPassword } from "@/modules/security";
+import Dashboard from "@/layout/Dashboard";
+import Playground from '@/shared/playground/Playground'; // (O donde lo hayas puesto)
+
+// Este se queda con ./ porque está en la misma carpeta app/router/
 import ProtectedRoute from "./router/ProtectedRoute";
-import Playground from '../shared/playground/Playground'; // La crearemos ahora
 
 function App() {
   return (
     <BrowserRouter>
-      {/* 👇 Añade el componente aquí. Se mantendrá "invisible" hasta que dispares un toast */}
       <Toaster position="top-right" expand={false} richColors />
 
       <Routes>

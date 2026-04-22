@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { consultasService } from "../services/consultasService";
-import { farmaciaService } from "../../../organization/farmacias/services/farmaciaService";
-import { nutricionistasService } from "../../../organization/nutricionistas/services/nutricionistasService";
+// Consumimos los módulos vecinos limpiamente
+import { farmaciaService } from "@/modules/organization/farmacias";
+import { nutricionistasService } from "@/modules/organization/nutricionistas";
 
 export const useConsultas = () => {
   const [consultas, setConsultas] = useState([]);

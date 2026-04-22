@@ -1,20 +1,23 @@
 import React, { useState } from "react";
 import { Loader2, FileText } from "lucide-react";
-import { useResumenAdmin } from "../hooks/useResumenAdmin";
+import { useDashboardAdmin } from "../hooks/useDashboardAdmin";
 import AdminModalEvento from "../components/admin/AdminModalEvento";
 import AdminAuditoriaPanel from "../components/admin/AdminAuditoriaPanel";
 import AdminGraficaFacturacion from "../components/admin/AdminGraficaFacturacion";
 import AdminCalendarioOperativo from "../components/admin/AdminCalendarioOperativo";
 import ModalResumenDiario from "../components/admin/ModalResumenDiario";
-import ModalDetalleValidacion from "../../validaciones/components/ModalDetalleValidacion";
-import ModalDetallePedido from "../../../sales/pedidos/components/ModalDetallePedido";
+// Asegúrate de que estos dos componentes estén exportados en los index.js de sus respectivos módulos
+import ModalConsultaLectura from "../components/admin/ModalConsultaLectura";
+import { ModalDetallePedido } from "@/modules/sales/pedidos";
 import { dashboardService } from "../services/dashboardService";
 import ModalGeneradorInformes from "../components/admin/ModalGeneradorInformes";
+import { ModalVerEvidencia } from "@/modules/operations/consultas";
 
-const VistaResumenAdmin = () => {
-  const hook = useResumenAdmin();
+const DashboardAdminPage = ({ setVistaActual }) => {
+  const hook = useDashboardAdmin();
 
   const [isResumenDiarioOpen, setIsResumenDiarioOpen] = useState(false);
+  const [fotoAVisualizar, setFotoAVisualizar] = useState(null); // 👈 AÑADIDO: Estado para la foto
   const [eventosSeleccionados, setEventosSeleccionados] = useState({ consultas: [], pedidos: [] });
   const [fechaSeleccionada, setFechaSeleccionada] = useState(null);
   const [consultaDetalle, setConsultaDetalle] = useState(null);
@@ -107,23 +110,15 @@ const VistaResumenAdmin = () => {
         </div>
       )}
 
+      {/* MODAL LIGERO DE CONSULTA (LECTURA) */}
       {consultaDetalle && (
-        <ModalDetalleValidacion
-          detalle={consultaDetalle}
-          pestañaActual="consultas"
-          formEdicion={{
-            nuevas: consultaDetalle.nuevas || 0,
-            revisiones: consultaDetalle.revisiones || 0,
-            promociones: consultaDetalle.promociones || 0,
-            personalFarmacia: consultaDetalle.personalFarmacia || 0
-          }}
-          modoLectura={true}
-          setFormEdicion={() => { }}
-          enviando={false}
+        <ModalConsultaLectura
+          consulta={consultaDetalle}
           onCerrar={() => {
             setConsultaDetalle(null);
             setIsResumenDiarioOpen(true);
           }}
+          onIrAGestionar={(c) => hook.handleDeepLinkValidacion(c, setVistaActual)}
         />
       )}
 
@@ -147,4 +142,4 @@ const VistaResumenAdmin = () => {
   );
 };
 
-export default VistaResumenAdmin;
+export default DashboardAdminPage;

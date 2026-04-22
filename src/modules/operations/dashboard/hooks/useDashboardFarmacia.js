@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { farmaciaService } from "../../../organization/farmacias/services/farmaciaService";
-import { pedidosService } from "../../../sales/pedidos/services/pedidosService";
+import { farmaciaService } from "@/modules/organization/farmacias";
+import { pedidosService } from "@/modules/sales/pedidos";
 
-export const useResumenFarmacia = () => {
+export const useDashboardFarmacia = () => {
   const [perfil, setPerfil] = useState(null);
   const [pedidos, setPedidos] = useState([]);
   const [cargando, setCargando] = useState(true);

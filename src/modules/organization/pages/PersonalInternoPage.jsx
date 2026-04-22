@@ -1,12 +1,14 @@
 import React from "react";
 import { Shield } from "lucide-react";
+// Importamos todo desde la "puerta" del submódulo personal:
+import {
+  usePersonalInterno,
+  FormularioAdmin,
+  ListadoAdmins,
+  ArchivoBajasAdmins,
+} from "@/modules/organization/personal";
 
-import { usePersonalInterno } from "../hooks/usePersonalInterno";
-import FormularioAdmin from "../personal/components/FormularioAdmin";
-import ListadoAdmins from "../personal/components/ListadoAdmins";
-import ArchivoBajasAdmins from "../personal/components/ArchivoBajasAdmins";
-
-const VistaPersonalInterno = () => {
+const PersonalInternoPage = () => {
   const hook = usePersonalInterno();
 
   return (
@@ -53,4 +55,4 @@ const VistaPersonalInterno = () => {
   );
 };
 
-export default VistaPersonalInterno;
+export default PersonalInternoPage;

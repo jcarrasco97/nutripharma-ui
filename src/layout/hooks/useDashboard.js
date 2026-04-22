@@ -27,11 +27,46 @@ export const useDashboard = () => {
     }
   });
 
+  // 👇 CIRUGÍA 1: Movemos la lectura de ROLES arriba para que el estado sepa quién eres al instante
+  const userRoles = Array.isArray(usuario?.roles)
+    ? usuario.roles.map((r) => (typeof r === "string" ? r : r.authority))
+    : [];
+
+  const isAdmin = userRoles.includes("ROLE_ADMIN");
+  const isNutricionista = userRoles.includes("ROLE_NUTRICIONISTA");
+  const isFarmacia = userRoles.includes("ROLE_FARMACIA");
+  const isSuperAdmin = userRoles.includes("ROLE_SUPERADMIN");
+
+  // 1. Inicialización de vistaActual (ahora sí sabe qué roles tienes)
   const [vistaActual, setVistaActual] = useState(() => {
-    if (usuario && usuario.roles.includes("ROLE_ADMIN")) return "resumen-admin";
-    if (usuario && usuario.roles.includes("ROLE_FARMACIA")) return "resumen";
-    return "resumen";
+    const hash = window.location.hash.replace("#", "");
+    if (hash) return hash;
+
+    // Asignamos la vista por defecto correcta para cada rol
+    if (isNutricionista) return "resumen";
+    if (isFarmacia) return "resumen-farmacia";
+    return "resumen-admin";
   });
+
+  // 2. Sincronizar la URL cuando haces clic en el menú
+  useEffect(() => {
+    if (vistaActual) {
+      window.history.pushState(null, "", `#${vistaActual}`);
+    }
+  }, [vistaActual]);
+
+  // 3. Escuchar cuando el usuario le da al botón "Atrás" del navegador
+  useEffect(() => {
+    const manejarBotonAtras = () => {
+      const hash = window.location.hash.replace("#", "");
+      if (hash) {
+        setVistaActual(hash); // Cambiamos la vista internamente
+      }
+    };
+
+    window.addEventListener("popstate", manejarBotonAtras);
+    return () => window.removeEventListener("popstate", manejarBotonAtras);
+  }, []);
 
   const [menuAbierto, setMenuAbierto] = useState(false);
 
@@ -46,15 +81,6 @@ export const useDashboard = () => {
     localStorage.removeItem("token");
     navigate("/");
   };
-
-  const userRoles = Array.isArray(usuario?.roles)
-    ? usuario.roles.map((r) => (typeof r === "string" ? r : r.authority))
-    : [];
-
-  const isAdmin = userRoles.includes("ROLE_ADMIN");
-  const isNutricionista = userRoles.includes("ROLE_NUTRICIONISTA");
-  const isFarmacia = userRoles.includes("ROLE_FARMACIA");
-  const isSuperAdmin = userRoles.includes("ROLE_SUPERADMIN");
 
   const menuItems = useMemo(() => {
     const items = [];
@@ -83,8 +109,10 @@ export const useDashboard = () => {
     }
 
     if (isFarmacia) {
-      if (!items.some((i) => i.id === "resumen"))
-        items.push({ id: "resumen", label: "Mi Resumen", icon: BarChart3 });
+      // 👇 CIRUGÍA 2: Cambiado el ID a "resumen-farmacia"
+      if (!items.some((i) => i.id === "resumen-farmacia"))
+        items.push({ id: "resumen-farmacia", label: "Mi Resumen", icon: BarChart3 });
+
       if (!items.some((i) => i.id === "pedidos"))
         items.push({
           id: "pedidos",

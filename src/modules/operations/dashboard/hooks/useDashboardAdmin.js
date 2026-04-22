@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { dashboardService } from "../services/dashboardService";
-import { farmaciaService } from "../../../organization/farmacias/services/farmaciaService";
-import { nutricionistasService } from "../../../organization/nutricionistas/services/nutricionistasService";
+import { farmaciaService } from "@/modules/organization/farmacias";
+import { nutricionistasService } from "@/modules/organization/nutricionistas";
 
-export const useResumenAdmin = () => {
+export const useDashboardAdmin = () => {
   const fechaActual = new Date();
   const [anio, setAnio] = useState(fechaActual.getFullYear());
   const [mes, setMes] = useState(fechaActual.getMonth() + 1);
@@ -34,6 +34,14 @@ export const useResumenAdmin = () => {
       setCargando(false);
     }
   }, [anio, mes, filtroFarmacia, filtroNutri]);
+
+  // Añade esta función dentro de useDashboardAdmin.js (y expórtala en el return)
+  const handleDeepLinkValidacion = (consulta, setVistaActual) => {
+    // Guardamos el ID en una clave que useValidaciones sepa leer
+    localStorage.setItem("np_target_consulta_id", consulta.id);
+    // Cambiamos la vista global
+    setVistaActual("validaciones");
+  };
 
   // Cargar Catalogos de Filtros (solo una vez)
   useEffect(() => {
@@ -124,6 +132,7 @@ export const useResumenAdmin = () => {
     filtroFarmacia,
     setFiltroFarmacia,
     filtroNutri,
-    setFiltroNutri
+    setFiltroNutri,
+    handleDeepLinkValidacion
   };
 };

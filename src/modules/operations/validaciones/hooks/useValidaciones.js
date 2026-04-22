@@ -1,12 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 
-// Subimos dos niveles (../../) para salir de admin/hooks/ y llegar a features/
-import { consultasService } from "../../consultas/services/consultasService";
-import { pedidosService } from "../../../sales/pedidos/services/pedidosService";
-import { suministrosService } from "../../../sales/suministros/services/suministrosService";
-
-// Para el nutricionistasService solo subimos un nivel porque ya está dentro de admin/
-import { nutricionistasService } from "../../../organization/nutricionistas/services/nutricionistasService";
+import { consultasService } from "@/modules/operations/consultas";
+import { pedidosService } from "@/modules/sales/pedidos";
+import { suministrosService } from "@/modules/sales/suministros";
+import { nutricionistasService } from "@/modules/organization/nutricionistas";
 
 export const useValidaciones = () => {
   // 1. ESTADOS DE NAVEGACIÓN Y DATOS
@@ -145,6 +142,26 @@ export const useValidaciones = () => {
       setEnviando(false);
     }
   };
+
+  // Lógica de Teletransporte (Deep Link) desde el Dashboard
+  useEffect(() => {
+    const targetId = localStorage.getItem("np_target_consulta_id");
+
+    if (targetId && (pendientes.length > 0 || historial.length > 0)) {
+      let encontrada = pendientes.find(p => p.id.toString() === targetId) ||
+        historial.find(h => h.id.toString() === targetId);
+
+      if (encontrada) {
+        // 👇 CIRUGÍA: Añadimos un pequeño retraso (300ms) para que la página "respire" 
+        // y termine su animación antes de lanzar el modal.
+        setTimeout(() => {
+          abrirDetalleConsulta(encontrada);
+        }, 250);
+
+        localStorage.removeItem("np_target_consulta_id");
+      }
+    }
+  }, [pendientes, historial, abrirDetalleConsulta]);
 
   // =========================================================================
   // LÓGICA DE PEDIDOS (Comisiones Multicapa)

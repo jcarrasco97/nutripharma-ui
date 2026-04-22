@@ -149,7 +149,6 @@ const ModalDetalleValidacion = ({
         <div className="p-6 overflow-y-auto custom-scrollbar bg-[#f4f7f4] flex-1">
           {/* VISTA CONSULTAS */}
           {pestañaActual === "consultas" && (
-            // ... [TU CÓDIGO DE CONSULTAS SE MANTIENE EXACTAMENTE IGUAL AQUÍ] ...
             <div className="space-y-4">
               <div className="bg-[#b1cb0c]/10 p-4 rounded-2xl border border-[#b1cb0c]/30 flex justify-between items-center bg-white">
                 <div>
@@ -157,7 +156,7 @@ const ModalDetalleValidacion = ({
                     Jornada
                   </p>
                   <p className="font-black text-[#062e3a] text-lg">
-                    {formatFecha(detalle.fecha)}
+                    {detalle.fecha}
                   </p>
                   <p className="text-sm font-bold text-[#342c1e]/70 mt-1">
                     {detalle.horaInicio?.substring(0, 5)} -{" "}
@@ -197,7 +196,7 @@ const ModalDetalleValidacion = ({
                   <p className="text-[11px] font-bold text-[#342c1e]/60">
                     Registrado en el sistema:{" "}
                     <span className="font-black text-[#062e3a]">
-                      {formatFechaHora(detalle.fechaCreacion)}
+                      {detalle.fechaCreacion}
                     </span>
                   </p>
                 </div>
@@ -268,7 +267,7 @@ const ModalDetalleValidacion = ({
                         <Clock size={12} /> Momento de Subida:
                       </span>
                       <span className="text-[#062e3a] bg-[#f4f7f4] px-2 py-1 rounded border border-gray-200 shadow-sm">
-                        {formatFechaHora(detalle.evidenciaFecha)}
+                        {detalle.evidenciaFecha}
                       </span>
                     </div>
                     <div className="flex items-center gap-3 pt-2">
@@ -296,9 +295,29 @@ const ModalDetalleValidacion = ({
                   </div>
                 )}
               </div>
+
+              {/* 👇 BOTONES DE VALIDACIÓN RESTAURADOS 👇 */}
+              {["BORRADOR", "PENDIENTE_VALIDACION", "CON_INCIDENCIA"].includes(detalle.estado) && (
+                <div className="flex gap-3 pt-4 mt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => onCancelarConsulta(detalle.id)}
+                    disabled={enviando}
+                    className="flex-1 py-4 px-4 bg-white text-red-600 font-black rounded-xl hover:bg-red-50 flex justify-center items-center gap-2 transition-colors border-2 border-red-100 disabled:opacity-50"
+                  >
+                    <XCircle size={18} /> Denegar
+                  </button>
+                  <button
+                    onClick={() => onEditarYValidar(detalle.id, formEdicion)}
+                    disabled={enviando}
+                    className="flex-1 py-4 px-4 bg-[#367933] text-white font-black rounded-xl hover:bg-[#006633] flex justify-center items-center gap-2 transition-colors shadow-lg shadow-[#367933]/20 disabled:opacity-50"
+                  >
+                    <ShieldCheck size={18} /> Validar y Cerrar
+                  </button>
+                </div>
+              )}
+
             </div>
           )}
-
           {/* VISTA PEDIDOS */}
           {pestañaActual === "pedidos" && (
             // ... [TU CÓDIGO DE PEDIDOS SE MANTIENE EXACTAMENTE IGUAL AQUÍ] ...

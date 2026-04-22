@@ -9,7 +9,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import { useAuth } from "../../../features/auth/hooks/useAuth";
+import { useAuth } from "../hooks/useAuth";
 
 const Login = () => {
   const hook = useAuth();

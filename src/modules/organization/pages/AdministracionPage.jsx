@@ -121,7 +121,7 @@ const ModalOrganizarRecomendados = ({ abierto, onClose, productos }) => {
   );
 };
 
-const VistaAdministracion = () => {
+const AdministracionPage = () => {
   const hook = useAdministracion();
   const [terminoBusqueda, setTerminoBusqueda] = useState("");
   const [ordenAlfabetico, setOrdenAlfabetico] = useState("asc");
@@ -254,4 +254,4 @@ const VistaAdministracion = () => {
   );
 };
 
-export default VistaAdministracion;
+export default AdministracionPage;

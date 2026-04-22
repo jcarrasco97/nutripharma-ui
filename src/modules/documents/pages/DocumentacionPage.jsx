@@ -1,13 +1,11 @@
 import React, { useState } from "react";
 import { FileText, Loader2 } from "lucide-react";
-import { useDocumentacion } from "../documentacion/hooks/useDocumentacion";
-import PanelSubidaDocumentos from "../documentacion/components/PanelSubidaDocumentos";
-import FiltrosDocumentos from "../documentacion/components/FiltrosDocumentos";
-import GridDocumentos from "../documentacion/components/GridDocumentos";
-import SubidaFacturas from "../facturas/components/SubidaFacturas";
-import ListadoFacturas from "../facturas/components/ListadoFacturas";
 
-const VistaDocumentacion = () => {
+// Imports limpios desde los submódulos (rutas relativas porque estamos en el mismo módulo)
+import { useDocumentacion, PanelSubidaDocumentos, FiltrosDocumentos, GridDocumentos } from "../documentacion";
+import { SubidaFacturas, ListadoFacturas } from "../facturas";
+
+const DocumentacionPage = () => {
   const hook = useDocumentacion();
   const [updateCounter, setUpdateCounter] = useState(0);
 
@@ -59,4 +57,4 @@ const VistaDocumentacion = () => {
   );
 };
 
-export default VistaDocumentacion;
+export default DocumentacionPage;

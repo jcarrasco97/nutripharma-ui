@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Loader2, Search, MapPin, ClipboardList, ShoppingBag, FileText, ArrowRight } from "lucide-react";
-import { nutricionistasService } from "../../../../organization/nutricionistas/services/nutricionistasService";
-import { dashboardService } from "../../services/dashboardService";
+import { nutricionistasService } from "@/modules/organization/nutricionistas";
+import { dashboardService } from "@/modules/operations/dashboard/services/dashboardService";
+import { consultasService } from "@/modules/operations/consultas"; // 👈 AÑADIDO
 import { useNavigate } from "react-router-dom";
 
 const AdminAuditoriaPanel = () => {
@@ -17,7 +18,6 @@ const AdminAuditoriaPanel = () => {
     const fetchNutris = async () => {
       try {
         const lis = await nutricionistasService.listarTodas();
-        // El backend ya filtra por activo=true vía @SQLRestriction
         setNutricionistas(lis);
       } catch (error) {
         console.error("Error al cargar nutricionistas:", error);
@@ -26,7 +26,6 @@ const AdminAuditoriaPanel = () => {
     fetchNutris();
   }, []);
 
-  // Efecto 1: Carga de meses disponibles
   useEffect(() => {
     if (!selectedNutri) {
       setAuditoriaData(null);
@@ -37,152 +36,150 @@ const AdminAuditoriaPanel = () => {
 
     const fetchMeses = async () => {
       try {
-        const resultado = await dashboardService.obtenerMesesDisponiblesAuditoria(selectedNutri);
-        setMesesDisponibles(resultado);
-        if (resultado.length > 0) {
-          setMesAuditoria(resultado[0]);
-        } else {
-          setMesAuditoria("");
-          setAuditoriaData(null);
-        }
+        const meses = await dashboardService.obtenerMesesDisponiblesAuditoria(selectedNutri);
+        setMesesDisponibles(meses);
+        if (meses.length > 0) setMesAuditoria(meses[0]);
       } catch (error) {
-        console.error("Error al cargar meses disponibles:", error);
+        console.error("Error cargando meses:", error);
       }
     };
-
     fetchMeses();
   }, [selectedNutri]);
 
-  // Efecto 2: Carga de datos de auditoría
   useEffect(() => {
-    if (!selectedNutri || !mesAuditoria) {
-      setAuditoriaData(null);
-      return;
-    }
+    if (!mesAuditoria || !selectedNutri) return;
 
-    const fetchAuditoria = async () => {
+    const fetchData = async () => {
       setLoading(true);
       try {
         const [anioStr, mesStr] = mesAuditoria.split('-');
         const anioInt = parseInt(anioStr, 10);
-        // backend expects mes 1-12, but dashboardService adds +1.
-        // so we pass JS offset (0-11)
         const mesJS = parseInt(mesStr, 10) - 1;
 
+        // 1. Obtenemos los datos del backend (que trae los km a 0)
         const data = await dashboardService.obtenerAuditoriaNutricionista(selectedNutri, anioInt, mesJS);
+
+        // 2. 👇 EL TRUCO: Calculamos los KM en el Frontend (Como hace el panel Nutri) 👇
+        const todasLasConsultas = await consultasService.obtenerTodas();
+
+        // Obtenemos el perfil de la nutri seleccionada para ver sus asignaciones (kilómetros)
+        const nutriInfo = nutricionistas.find(n => n.id.toString() === selectedNutri.toString());
+        const asignaciones = nutriInfo?.asignaciones || [];
+
+        // Filtramos las jornadas validadas de ESE mes para ESA nutri
+        const consultasValidadasMes = todasLasConsultas.filter(c => {
+          const date = new Date(c.fecha);
+          return c.estado === "VALIDADA" &&
+            c.nutricionistaNombre === nutriInfo?.nombre + " " + nutriInfo?.apellidos &&
+            date.getFullYear() === anioInt &&
+            date.getMonth() === mesJS;
+        });
+
+        // Sumamos los kilómetros cruzando con la farmacia
+        let kmCalculados = 0;
+        consultasValidadasMes.forEach(c => {
+          const asignacion = asignaciones.find(a => a.farmaciaNombre === c.farmaciaNombre);
+          if (asignacion) {
+            kmCalculados += (asignacion.kilometros || 0);
+          }
+        });
+
+        // 3. Machacamos el '0' del backend con la realidad
+        data.totalKilometros = kmCalculados;
+
         setAuditoriaData(data);
       } catch (error) {
-        console.error("Error al cargar auditoria:", error);
+        console.error("Error cargando auditoría:", error);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchAuditoria();
-  }, [selectedNutri, mesAuditoria]);
+    fetchData();
+  }, [mesAuditoria, selectedNutri, nutricionistas]);
 
   return (
-    <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col xl:flex-row gap-8">
-      {/* Selector Area */}
-      <div className="flex-1">
-        <div className="flex items-center gap-4 mb-6">
+    <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col h-full">
+
+      {/* CABECERA PANEL */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div className="flex items-center gap-4">
           <div className="bg-[#b1cb0c]/20 p-3 rounded-2xl text-[#367933]">
             <Search size={28} />
           </div>
           <div>
-            <h2 className="text-xl md:text-2xl font-black text-[#062e3a]">
-              Modo Auditoría
-            </h2>
-            <p className="text-sm md:text-base text-[#342c1e] font-medium">
-              Analiza el rendimiento individual cruzado con kilometraje
-            </p>
+            <h2 className="text-2xl font-black text-[#062e3a]">Panel de Auditoría</h2>
+            <p className="text-[#342c1e] font-medium">Revisión de rendimiento por Nutricionista</p>
           </div>
         </div>
 
-        <div className="relative">
+        <div className="w-full md:w-auto">
           <select
             value={selectedNutri}
             onChange={(e) => setSelectedNutri(e.target.value)}
-            className="w-full bg-[#f4f7f4] border border-gray-200 text-[#062e3a] text-sm md:text-base rounded-xl focus:ring-[#367933] focus:border-[#367933] block p-3.5 outline-none font-bold appearance-none cursor-pointer pr-10 hover:border-gray-300 transition-colors"
+            className="w-full md:w-64 bg-[#f4f7f4] border border-gray-200 text-[#062e3a] text-sm rounded-xl px-4 py-3 outline-none focus:border-[#b1cb0c] focus:ring-2 focus:ring-[#b1cb0c]/20 font-bold transition-all"
           >
-            <option value="">Selecciona una cuenta profesional...</option>
+            <option value="">Selecciona Nutricionista...</option>
             {nutricionistas.map((n) => (
               <option key={n.id} value={n.id}>
-                {/* 👇 AQUÍ ESTÁ LA MAGIA 👇 */}
-                {n.nombre} {n.apellidos} {n.usuarioEmail ? `(${n.usuarioEmail})` : ""}
+                {n.nombre} {n.apellidos}
               </option>
             ))}
           </select>
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#367933]">
-            <svg className="fill-current h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-              <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
-            </svg>
-          </div>
         </div>
-
-        {selectedNutri && (
-          <div className="relative mt-4">
-            <select
-              value={mesAuditoria}
-              onChange={(e) => setMesAuditoria(e.target.value)}
-              disabled={mesesDisponibles.length === 0}
-              className="w-full bg-[#f4f7f4] border border-gray-200 text-[#062e3a] text-sm md:text-base rounded-xl focus:ring-[#367933] focus:border-[#367933] block p-3.5 outline-none font-bold appearance-none cursor-pointer pr-10 hover:border-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {mesesDisponibles.length === 0 ? (
-                <option value="">No hay datos registrados</option>
-              ) : (
-                mesesDisponibles.map((m) => {
-                  const [y, mm] = m.split("-");
-                  const nombreMes = new Date(y, mm - 1).toLocaleString("es-ES", { month: "long" });
-                  const nombreFinal = nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1);
-                  return (
-                    <option key={m} value={m}>
-                      {nombreFinal} {y}
-                    </option>
-                  );
-                })
-              )}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#367933]">
-              <svg className="fill-current h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
-              </svg>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Resultados de Auditoría */}
-      <div className="flex-1 xl:max-w-xl">
-        {!selectedNutri && (
-          <div className="h-full min-h-[200px] border-2 border-dashed border-gray-200 rounded-3xl flex flex-col items-center justify-center p-6 text-gray-400">
-            <Search size={32} className="mb-2 opacity-50" />
-            <p className="font-bold text-sm text-center">Busca y selecciona una cuenta en el desplegable<br />para auditar su mes en curso.</p>
+      {/* CONTENIDO PRINCIPAL */}
+      <div className="flex-1 flex flex-col justify-center min-h-[300px]">
+        {!selectedNutri ? (
+          <div className="text-center text-gray-400 p-8 border-2 border-dashed border-gray-100 rounded-3xl">
+            <Search size={48} className="mx-auto mb-4 opacity-50" />
+            <p className="font-bold text-lg text-[#062e3a]">Selecciona un perfil</p>
+            <p className="text-sm">Elige un nutricionista para auditar su rendimiento.</p>
           </div>
-        )}
-
-        {selectedNutri && loading && (
-          <div className="h-full min-h-[200px] border border-gray-100 bg-[#f4f7f4] rounded-3xl flex flex-col items-center justify-center p-6">
-            <Loader2 className="animate-spin text-[#367933]" size={40} />
+        ) : loading ? (
+          <div className="flex justify-center items-center h-full">
+            <Loader2 className="animate-spin text-[#367933]" size={48} />
           </div>
-        )}
+        ) : !auditoriaData ? (
+          <div className="text-center text-gray-400 p-8 border-2 border-dashed border-gray-100 rounded-3xl">
+            <ClipboardList size={48} className="mx-auto mb-4 opacity-50" />
+            <p className="font-bold text-lg text-[#062e3a]">Sin actividad registrada</p>
+            <p className="text-sm">El nutricionista seleccionado no tiene datos.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in">
+            {/* TARJETA 1: RESUMEN LOGÍSTICO Y OPERATIVO */}
+            <div className="bg-[#062e3a] p-6 rounded-3xl text-white shadow-lg relative overflow-hidden">
+              <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-[#b1cb0c] opacity-10 rounded-full blur-3xl pointer-events-none"></div>
 
-        {selectedNutri && !loading && auditoriaData && (
-          <div className="bg-gradient-to-br from-[#062e3a] to-[#041d25] rounded-3xl p-6 text-white relative overflow-hidden shadow-xl shadow-[#062e3a]/30 border border-[#062e3a]">
-            {/* Decoración de fondo */}
-            <div className="absolute -right-6 -top-6 text-white/5 rotate-12 pointer-events-none">
-              <MapPin size={180} strokeWidth={1} />
-            </div>
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h3 className="text-lg font-black flex items-center gap-2">
+                    <MapPin className="text-[#b1cb0c]" size={20} />
+                    Desplazamiento Mensual
+                  </h3>
+                </div>
+                {mesesDisponibles.length > 0 && (
+                  <select
+                    value={mesAuditoria}
+                    onChange={(e) => setMesAuditoria(e.target.value)}
+                    className="bg-white/10 border border-white/20 text-white text-xs rounded-lg px-3 py-1.5 outline-none focus:border-[#b1cb0c] backdrop-blur-sm font-bold"
+                  >
+                    {mesesDisponibles.map(m => (
+                      <option key={m} value={m} className="text-[#062e3a]">{m}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
 
-            <div className="relative z-10 flex flex-col h-full justify-between">
-              <div>
-                <p className="text-[#bed000] text-xs font-black uppercase tracking-widest mb-1 flex items-center gap-2">
-                  <ClipboardList size={14} /> Análisis de {
+              <div className="relative z-10">
+                <p className="text-[#b1cb0c] font-black text-xs uppercase tracking-widest">
+                  Acumulado de
+                  {mesAuditoria &&
                     (() => {
-                      if (!mesAuditoria) return "";
                       const [y, mm] = mesAuditoria.split('-');
                       const mName = new Date(y, mm - 1).toLocaleString("es-ES", { month: "long" });
-                      return mName.charAt(0).toUpperCase() + mName.slice(1) + " " + y;
+                      return " " + mName.charAt(0).toUpperCase() + mName.slice(1) + " " + y;
                     })()
                   }
                 </p>
@@ -202,6 +199,46 @@ const AdminAuditoriaPanel = () => {
                     {auditoriaData.cantidadPedidos} Pedidos Asociados
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* TARJETA 2: RENDIMIENTO ECONÓMICO */}
+            <div className="bg-gray-50 border border-gray-100 p-6 rounded-3xl flex flex-col justify-between">
+              <div>
+                <h3 className="text-[#342c1e] font-black uppercase tracking-wider text-xs mb-4">
+                  Desglose de Ingresos (Base Imponible)
+                </h3>
+
+                <div className="space-y-4">
+                  <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-[#b1cb0c]/20 p-2 rounded-lg text-[#367933]">
+                        <ClipboardList size={18} />
+                      </div>
+                      <span className="font-bold text-[#062e3a] text-sm">Por Consultas</span>
+                    </div>
+                    <span className="font-black text-xl text-[#367933]">{(auditoriaData.facturacionConsultas || 0).toFixed(2)}€</span>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-blue-100 p-2 rounded-lg text-blue-600">
+                        <ShoppingBag size={18} />
+                      </div>
+                      <span className="font-bold text-[#062e3a] text-sm">Por Productos</span>
+                    </div>
+                    <span className="font-black text-xl text-[#062e3a]">{(auditoriaData.facturacionProductos || 0).toFixed(2)}€</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <p className="text-right text-[10px] uppercase font-black tracking-widest text-[#342c1e]/60 mb-1">
+                  Facturación Total Bruta
+                </p>
+                <p className="text-right text-4xl font-black text-[#062e3a] tracking-tighter">
+                  {((auditoriaData.facturacionConsultas || 0) + (auditoriaData.facturacionProductos || 0)).toFixed(2)}€
+                </p>
               </div>
             </div>
           </div>

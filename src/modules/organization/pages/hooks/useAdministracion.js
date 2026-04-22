@@ -25,7 +25,7 @@ export const useAdministracion = () => {
 
   const [formData, setFormData] = useState({
     nombre: "", apellidos: "", email: "", telefono: "", password: "",
-    nombreFarmacia: "", direccion: "", esProvinciaLocal: true, porcentajeComision: "",
+    nombreFarmacia: "", cif: "", direccion: "", esProvinciaLocal: true, porcentajeComision: "", // 👈 AÑADIDO cif: ""
     nombreProducto: "", acronimo: "", categoria: "", referencia: "", pvp: "", pvf: "",
     asignaciones: [],
   });
@@ -84,14 +84,24 @@ export const useAdministracion = () => {
     try {
       if (pestana === "nutricionistas") {
         await nutricionistasService.crear({
-          nombre: formData.nombre, apellidos: formData.apellidos, email: formData.email,
-          telefono: formData.telefono, password: formData.password, asignaciones: formData.asignaciones,
+          nombre: formData.nombre,
+          apellidos: formData.apellidos,
+          email: formData.email,
+          telefono: formData.telefono,
+          password: formData.password,
+          asignaciones: formData.asignaciones,
+          horasContratoMensual: Number(formData.horasContratoMensual) || 40
         });
       }
       if (pestana === "farmacias") {
         await farmaciaService.crear({
-          nombreFarmacia: formData.nombreFarmacia, direccion: formData.direccion,
-          esProvinciaLocal: formData.esProvinciaLocal, porcentajeComision: Number(formData.porcentajeComision),
+          nombreFarmacia: formData.nombreFarmacia,
+          cif: formData.cif, // 👈 AÑADIDO
+          direccion: formData.direccion,
+          esProvinciaLocal: formData.esProvinciaLocal,
+          porcentajeComision: Number(formData.porcentajeComision),
+          email: formData.email,
+          password: formData.password
         });
       }
       if (pestana === "productos") {
@@ -120,8 +130,12 @@ export const useAdministracion = () => {
     try {
       if (pestana === "nutricionistas") {
         const payload = {
-          nombre: itemEditando.nombre, apellidos: itemEditando.apellidos, email: itemEditando.email,
-          telefono: itemEditando.telefono, asignaciones: itemEditando.asignaciones || [],
+          nombre: itemEditando.nombre,
+          apellidos: itemEditando.apellidos,
+          email: itemEditando.email,
+          telefono: itemEditando.telefono,
+          asignaciones: itemEditando.asignaciones || [],
+          horasContratoMensual: Number(itemEditando.horasContratoMensual) || 40 // 👈 AÑADE ESTA LÍNEA
         };
         if (itemEditando.password && itemEditando.password === confirmPassword) {
           payload.password = itemEditando.password;
@@ -130,8 +144,11 @@ export const useAdministracion = () => {
       }
       if (pestana === "farmacias") {
         await farmaciaService.actualizar(itemEditando.id, {
-          nombreFarmacia: itemEditando.nombreFarmacia, direccion: itemEditando.direccion,
-          esProvinciaLocal: itemEditando.esProvinciaLocal, porcentajeComision: Number(itemEditando.porcentajeComision),
+          nombreFarmacia: itemEditando.nombreFarmacia,
+          cif: itemEditando.cif, // 👈 AÑADIDO
+          direccion: itemEditando.direccion,
+          esProvinciaLocal: itemEditando.esProvinciaLocal,
+          porcentajeComision: Number(itemEditando.porcentajeComision),
         });
       }
       if (pestana === "productos") {

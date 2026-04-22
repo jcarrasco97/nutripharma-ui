@@ -217,7 +217,7 @@ const ModalEdicionAdministracion = ({
                   <FileText size={16} className="absolute left-3 top-3.5 text-gray-400" />
                   <input
                     type="text"
-                    value={itemEditando.cif}
+                    value={itemEditando.cif || ""}
                     onChange={(e) => setItemEditando({ ...itemEditando, cif: e.target.value })}
                     required
                     placeholder="CIF"

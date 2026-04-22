@@ -13,11 +13,11 @@ import {
 import { useValidaciones } from "../hooks/useValidaciones";
 import ModalRepartoComisiones from "../components/ModalRepartoComisiones";
 import ModalDetalleValidacion from "../components/ModalDetalleValidacion";
-import ModalVerEvidencia from "../../consultas/components/ModalVerEvidencia";
+import { ModalVerEvidencia } from "@/modules/operations/consultas";
 import HistorialValidaciones from "../components/HistorialValidaciones"; // <-- AÑADIDO IMPORT
 import PanelLiquidacion from "../components/PanelLiquidacion";
 
-const VistaValidaciones = () => {
+const ValidacionesPage = () => {
   const hook = useValidaciones();
 
   return (
@@ -259,4 +259,4 @@ const VistaValidaciones = () => {
   );
 };
 
-export default VistaValidaciones;
+export default ValidacionesPage;

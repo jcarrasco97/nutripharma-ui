@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { jwtDecode } from "jwt-decode";
-import { productosService } from "../../catalogo/services/productosService";
 import { pedidosService } from "../services/pedidosService";
-import { farmaciaService } from "../../../organization/farmacias/services/farmaciaService";
-import { nutricionistasService } from "../../../organization/nutricionistas/services/nutricionistasService";
+// Consumimos el resto a través de las APIs públicas de cada módulo
+import { productosService } from "@/modules/sales/catalogo";
+import { farmaciaService } from "@/modules/organization/farmacias";
+import { nutricionistasService } from "@/modules/organization/nutricionistas";
 
 export const usePedidos = () => {
   const [productos, setProductos] = useState([]);

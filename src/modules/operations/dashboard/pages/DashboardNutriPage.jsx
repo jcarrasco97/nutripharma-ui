@@ -1,12 +1,12 @@
 import React from "react";
 import { Loader2, AlertCircle, TrendingUp, Award } from "lucide-react";
-import { useResumenNutri } from "../hooks/useResumenNutri";
+import { useDashboardNutri } from "../hooks/useDashboardNutri";
 import PanelCabeceraNutri from "../components/nutricionista/PanelCabeceraNutri";
 import PanelEstadoActual from "../components/nutricionista/PanelEstadoActual";
 import PanelTramosIncentivos from "../components/nutricionista/PanelTramosIncentivos";
 
-const VistaResumen = () => {
-  const hook = useResumenNutri();
+const DashboardNutriPage = () => {
+  const hook = useDashboardNutri();
 
   if (hook.cargando)
     return (
@@ -99,4 +99,4 @@ const VistaResumen = () => {
   );
 };
 
-export default VistaResumen;
+export default DashboardNutriPage;

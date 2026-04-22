@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { consultasService } from "../../consultas/services/consultasService";
-import { pedidosService } from "../../../sales/pedidos/services/pedidosService";
-import { nutricionistasService } from "../../../organization/nutricionistas/services/nutricionistasService";
+import { consultasService } from "@/modules/operations/consultas";
+import { pedidosService } from "@/modules/sales/pedidos";
+import { nutricionistasService } from "@/modules/organization/nutricionistas";
 
 const METAS_BASE = {
   OB1: { facturacion: 5000, productos: 800, incentivo: 200, exceso: 0 },
@@ -9,7 +9,7 @@ const METAS_BASE = {
   OB3: { facturacion: 8700, productos: 1200, incentivo: 600, exceso: 0.1 },
 };
 
-export const useResumenNutri = () => {
+export const useDashboardNutri = () => {
   const [perfil, setPerfil] = useState(null);
 
   // Guardamos todos los datos en bruto para poder re-filtrar rápidamente
