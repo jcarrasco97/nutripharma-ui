@@ -1,5 +1,6 @@
 import React from "react";
 import { Menu, Activity } from "lucide-react";
+import logoUrl from "@/assets/logo.svg";
 
 // --- HOOKS Y COMPONENTES GLOBALES ---
 import { useDashboard } from "./hooks/useDashboard";
@@ -22,7 +23,7 @@ const Dashboard = () => {
   if (!hook.usuario) return null;
 
   return (
-    <div className="min-h-screen bg-[#f4f7f4] flex flex-col md:flex-row font-sans overflow-hidden">
+    <div className="min-h-screen bg-background flex flex-col md:flex-row font-sans overflow-hidden">
       {/* SIDEBAR COMPONENTE AisLADO */}
       <Sidebar
         usuario={hook.usuario}
@@ -40,14 +41,13 @@ const Dashboard = () => {
       {/* CONTENIDO PRINCIPAL */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative transition-all duration-300 z-10">
         {/* HEADER MÓVIL */}
-        <header className="md:hidden bg-[#062e3a] text-white p-4 flex justify-between items-center z-20 shadow-md">
+        <header className="md:hidden bg-surface border-b border-neutral/10 text-neutral p-4 flex justify-between items-center z-20 shadow-sm">
           <div className="flex items-center">
-            <Activity size={24} className="mr-2 text-[#b1cb0c]" />
-            <h1 className="text-xl font-bold">NutriPharma</h1>
+            <img src={logoUrl} alt="NutriPharma Logo" className="h-8 w-auto" />
           </div>
           <button
             onClick={() => hook.setMenuAbierto(!hook.menuAbierto)}
-            className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+            className="p-2 bg-neutral/5 rounded-lg hover:bg-neutral/10 transition-colors text-neutral"
           >
             <Menu size={24} />
           </button>
@@ -102,7 +102,7 @@ const Dashboard = () => {
       {/* OVERLAY MOBILE PARA CERRAR EL MENÚ AL HACER CLIC FUERA */}
       {hook.menuAbierto && (
         <div
-          className="fixed inset-0 bg-[#062e3a]/40 backdrop-blur-sm z-30 md:hidden animate-fade-in"
+          className="fixed inset-0 bg-neutral/40 backdrop-blur-sm z-30 md:hidden animate-fade-in"
           onClick={() => hook.setMenuAbierto(false)}
         />
       )}

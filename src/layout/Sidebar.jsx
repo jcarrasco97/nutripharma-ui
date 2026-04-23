@@ -1,5 +1,6 @@
 import React from "react";
 import { Activity, LogOut } from "lucide-react";
+import logoUrl from "@/assets/logo.svg";
 
 const Sidebar = ({
   usuario,
@@ -15,28 +16,33 @@ const Sidebar = ({
 }) => {
   return (
     <aside
-      className={`fixed md:static inset-y-0 left-0 z-40 w-72 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out flex flex-col ${menuAbierto ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
+      className={`fixed md:static inset-y-0 left-0 z-40 w-72 bg-surface border-r border-neutral/10 transform transition-transform duration-300 ease-in-out flex flex-col ${menuAbierto ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
     >
-      {/* HEADER AZUL CORPORATIVO */}
-      <div className="h-20 flex items-center px-8 border-b border-[#062e3a]/10 bg-[#062e3a] text-white">
-        <Activity size={28} className="mr-3 text-[#b1cb0c]" />
-        <h1 className="text-2xl font-bold tracking-tight">NutriPharma</h1>
+      {/* HEADER LOGO */}
+      <div 
+        className="h-20 flex items-center px-6 border-b border-neutral/10 cursor-pointer" 
+        onClick={() => {
+            setVistaActual(isAdmin ? "resumen-admin" : isFarmacia ? "resumen-farmacia" : "resumen");
+            setMenuAbierto(false);
+        }}
+      >
+        <img src={logoUrl} alt="NutriPharma Logo" className="h-10 w-auto" />
       </div>
 
       {/* INFO USUARIO */}
-      <div className="p-6 border-b border-gray-100 bg-[#f4f7f4]">
-        <p className="text-xs text-[#367933] font-bold uppercase tracking-wider mb-1">
+      <div className="p-6 border-b border-neutral/10 bg-background/50">
+        <p className="text-xs text-neutral/50 font-bold uppercase tracking-wider mb-1">
           Conectado como
         </p>
         <p
-          className="text-sm font-medium text-[#062e3a] truncate"
+          className="text-sm font-semibold text-secondary truncate"
           title={usuario.email}
         >
           {usuario.email}
         </p>
         <div className="flex flex-wrap gap-2 mt-2">
           {isNutricionista && (
-            <span className="bg-[#b1cb0c]/20 text-[#367933] text-xs px-2 py-1 rounded-md font-bold">
+            <span className="bg-primary/10 text-primary text-xs px-2 py-1 rounded-md font-bold">
               Nutricionista
             </span>
           )}
@@ -46,7 +52,7 @@ const Sidebar = ({
             </span>
           )}
           {isAdmin && (
-            <span className="bg-[#062e3a]/10 text-[#062e3a] text-xs px-2 py-1 rounded-md font-bold">
+            <span className="bg-secondary/10 text-secondary text-xs px-2 py-1 rounded-md font-bold">
               Administrador
             </span>
           )}
@@ -54,7 +60,7 @@ const Sidebar = ({
       </div>
 
       {/* NAVEGACIÓN */}
-      <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
+      <nav className="flex-1 py-6 space-y-1 overflow-y-auto custom-scrollbar">
         {menuItems.map((item) => {
           const Icono = item.icon;
           const activo = vistaActual === item.id;
@@ -65,15 +71,15 @@ const Sidebar = ({
                 setVistaActual(item.id);
                 setMenuAbierto(false);
               }}
-              className={`w-full flex items-center px-4 py-3 rounded-xl transition-all duration-200 ${
+              className={`w-full flex items-center px-6 py-3 transition-all duration-200 ${
                 activo
-                  ? "bg-[#b1cb0c]/20 text-[#367933] font-bold shadow-sm"
-                  : "text-[#342c1e] hover:bg-gray-50 hover:text-[#062e3a] font-medium"
+                  ? "bg-primary/10 text-primary font-bold border-r-4 border-primary"
+                  : "text-neutral/70 hover:text-secondary hover:bg-neutral/5 font-medium border-r-4 border-transparent"
               }`}
             >
               <Icono
                 size={20}
-                className={`mr-3 transition-colors ${activo ? "text-[#367933]" : "text-gray-400"}`}
+                className={`mr-3 transition-colors ${activo ? "text-primary" : "text-neutral/50"}`}
               />
               {item.label}
             </button>
@@ -82,10 +88,10 @@ const Sidebar = ({
       </nav>
 
       {/* CERRAR SESIÓN */}
-      <div className="p-4 border-t border-gray-100">
+      <div className="p-4 border-t border-neutral/10">
         <button
           onClick={handleLogout}
-          className="w-full flex items-center justify-center px-4 py-3 text-red-600 bg-red-50 hover:bg-red-100 rounded-xl font-bold transition-colors"
+          className="w-full flex items-center justify-center px-4 py-3 text-destructive bg-destructive/10 hover:bg-destructive/20 rounded-xl font-bold transition-colors"
         >
           <LogOut size={20} className="mr-2" /> Cerrar Sesión
         </button>
