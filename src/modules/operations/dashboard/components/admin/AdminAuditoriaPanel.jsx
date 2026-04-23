@@ -1,19 +1,24 @@
-import React, { useState, useEffect } from "react";
-import { Loader2, Search, MapPin, ClipboardList, ShoppingBag, FileText, ArrowRight } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { Loader2, Search, MapPin, ClipboardList, ShoppingBag } from "lucide-react";
 import { nutricionistasService } from "@/modules/organization/nutricionistas";
-import { dashboardService } from "@/modules/operations/dashboard/services/dashboardService";
-import { consultasService } from "@/modules/operations/consultas"; // 👈 AÑADIDO
+import { consultasService } from "@/modules/operations/consultas";
+import { pedidosService } from "@/modules/sales/pedidos";
 import { useNavigate } from "react-router-dom";
 
 const AdminAuditoriaPanel = () => {
   const [nutricionistas, setNutricionistas] = useState([]);
   const [selectedNutri, setSelectedNutri] = useState("");
+
+  // Almacén de datos en bruto (igual que useDashboardNutri)
+  const [consultasBruto, setConsultasBruto] = useState([]);
+  const [pedidosBruto, setPedidosBruto] = useState([]);
   const [mesesDisponibles, setMesesDisponibles] = useState([]);
+
   const [mesAuditoria, setMesAuditoria] = useState("");
-  const [auditoriaData, setAuditoriaData] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // 1. Cargar lista maestra de Nutricionistas
   useEffect(() => {
     const fetchNutris = async () => {
       try {
@@ -26,76 +31,103 @@ const AdminAuditoriaPanel = () => {
     fetchNutris();
   }, []);
 
+  // 2. Al seleccionar Nutricionista, descargar sus datos y extraer meses
   useEffect(() => {
     if (!selectedNutri) {
-      setAuditoriaData(null);
+      setConsultasBruto([]);
+      setPedidosBruto([]);
       setMesesDisponibles([]);
       setMesAuditoria("");
       return;
     }
 
-    const fetchMeses = async () => {
-      try {
-        const meses = await dashboardService.obtenerMesesDisponiblesAuditoria(selectedNutri);
-        setMesesDisponibles(meses);
-        if (meses.length > 0) setMesAuditoria(meses[0]);
-      } catch (error) {
-        console.error("Error cargando meses:", error);
-      }
-    };
-    fetchMeses();
-  }, [selectedNutri]);
-
-  useEffect(() => {
-    if (!mesAuditoria || !selectedNutri) return;
-
-    const fetchData = async () => {
+    const fetchDatosNutri = async () => {
       setLoading(true);
       try {
-        const [anioStr, mesStr] = mesAuditoria.split('-');
-        const anioInt = parseInt(anioStr, 10);
-        const mesJS = parseInt(mesStr, 10) - 1;
-
-        // 1. Obtenemos los datos del backend (que trae los km a 0)
-        const data = await dashboardService.obtenerAuditoriaNutricionista(selectedNutri, anioInt, mesJS);
-
-        // 2. 👇 EL TRUCO: Calculamos los KM en el Frontend (Como hace el panel Nutri) 👇
-        const todasLasConsultas = await consultasService.obtenerTodas();
-
-        // Obtenemos el perfil de la nutri seleccionada para ver sus asignaciones (kilómetros)
         const nutriInfo = nutricionistas.find(n => n.id.toString() === selectedNutri.toString());
-        const asignaciones = nutriInfo?.asignaciones || [];
+        const nombreCompleto = `${nutriInfo.nombre} ${nutriInfo.apellidos}`;
 
-        // Filtramos las jornadas validadas de ESE mes para ESA nutri
-        const consultasValidadasMes = todasLasConsultas.filter(c => {
-          const date = new Date(c.fecha);
-          return c.estado === "VALIDADA" &&
-            c.nutricionistaNombre === nutriInfo?.nombre + " " + nutriInfo?.apellidos &&
-            date.getFullYear() === anioInt &&
-            date.getMonth() === mesJS;
-        });
+        // Simulamos la ingesta de Métrica C
+        const [todasConsultas, todosPedidos] = await Promise.all([
+          consultasService.obtenerTodas(),
+          pedidosService.listarTodos()
+        ]);
 
-        // Sumamos los kilómetros cruzando con la farmacia
-        let kmCalculados = 0;
-        consultasValidadasMes.forEach(c => {
-          const asignacion = asignaciones.find(a => a.farmaciaNombre === c.farmaciaNombre);
-          if (asignacion) {
-            kmCalculados += (asignacion.kilometros || 0);
-          }
-        });
+        // Filtramos Consultas válidas de esta nutri
+        const misConsultas = todasConsultas.filter(c =>
+          c.nutricionistaNombre === nombreCompleto &&
+          (c.estado === "VALIDADA" || c.estado === "LIQUIDADA")
+        );
 
-        // 3. Machacamos el '0' del backend con la realidad
-        data.totalKilometros = kmCalculados;
+        // Filtramos Pedidos válidos donde esta nutri tiene comisión (Reparto)
+        const misPedidos = todosPedidos.filter(p =>
+          (p.estado === "ENVIADO" || p.estado === "LIQUIDADO") &&
+          p.repartos?.some(r => r.nutricionistaId?.toString() === selectedNutri.toString())
+        );
 
-        setAuditoriaData(data);
+        setConsultasBruto(misConsultas);
+        setPedidosBruto(misPedidos);
+
+        // Extraer meses únicos de la actividad real
+        const mesesSet = new Set([
+          ...misConsultas.map(c => c.fecha?.substring(0, 7)),
+          ...misPedidos.map(p => p.fechaPedido?.substring(0, 7))
+        ].filter(Boolean));
+
+        const mesesArr = [...mesesSet].sort((a, b) => b.localeCompare(a));
+        setMesesDisponibles(mesesArr);
+
+        if (mesesArr.length > 0) {
+          setMesAuditoria(mesesArr[0]);
+        }
       } catch (error) {
         console.error("Error cargando auditoría:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
-  }, [mesAuditoria, selectedNutri, nutricionistas]);
+
+    fetchDatosNutri();
+  }, [selectedNutri, nutricionistas]);
+
+  // 3. El Motor Matemático (Idéntico a la Nutri - Métrica C)
+  const auditoriaData = useMemo(() => {
+    if (!mesAuditoria || !selectedNutri) return null;
+
+    const nutriInfo = nutricionistas.find(n => n.id.toString() === selectedNutri.toString());
+    const asignaciones = nutriInfo?.asignaciones || [];
+
+    // Filtramos los datos brutos por el mes seleccionado
+    const consultasMes = consultasBruto.filter(c => c.fecha?.startsWith(mesAuditoria));
+    const pedidosMes = pedidosBruto.filter(p => p.fechaPedido?.startsWith(mesAuditoria));
+
+    let kms = 0;
+    let factConsultas = 0;
+
+    // Cálculo Consultas + Kilómetros
+    consultasMes.forEach(c => {
+      factConsultas += (c.nuevas * 25) + (c.revisiones * 20);
+      const asig = asignaciones.find(a => a.farmaciaNombre === c.farmaciaNombre);
+      if (asig) kms += (asig.kilometros || 0);
+    });
+
+    // Cálculo Productos (Aplicando el % de Reparto)
+    let factProductos = 0;
+    pedidosMes.forEach(p => {
+      const miReparto = p.repartos?.find(r => r.nutricionistaId?.toString() === selectedNutri.toString());
+      if (miReparto) {
+        factProductos += p.totalPedido * (miReparto.porcentaje / 100);
+      }
+    });
+
+    return {
+      totalKilometros: kms,
+      totalConsultas: consultasMes.length,
+      cantidadPedidos: pedidosMes.length,
+      facturacionConsultas: factConsultas,
+      facturacionProductos: factProductos
+    };
+  }, [mesAuditoria, selectedNutri, consultasBruto, pedidosBruto, nutricionistas]);
 
   return (
     <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col h-full">
@@ -140,11 +172,11 @@ const AdminAuditoriaPanel = () => {
           <div className="flex justify-center items-center h-full">
             <Loader2 className="animate-spin text-[#367933]" size={48} />
           </div>
-        ) : !auditoriaData ? (
+        ) : !auditoriaData || (auditoriaData.totalConsultas === 0 && auditoriaData.cantidadPedidos === 0) ? (
           <div className="text-center text-gray-400 p-8 border-2 border-dashed border-gray-100 rounded-3xl">
             <ClipboardList size={48} className="mx-auto mb-4 opacity-50" />
             <p className="font-bold text-lg text-[#062e3a]">Sin actividad registrada</p>
-            <p className="text-sm">El nutricionista seleccionado no tiene datos.</p>
+            <p className="text-sm">No hay registros validados en el mes seleccionado.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in">
@@ -156,7 +188,7 @@ const AdminAuditoriaPanel = () => {
                 <div>
                   <h3 className="text-lg font-black flex items-center gap-2">
                     <MapPin className="text-[#b1cb0c]" size={20} />
-                    Desplazamiento Mensual
+                    Desplazamiento
                   </h3>
                 </div>
                 {mesesDisponibles.length > 0 && (
@@ -175,13 +207,11 @@ const AdminAuditoriaPanel = () => {
               <div className="relative z-10">
                 <p className="text-[#b1cb0c] font-black text-xs uppercase tracking-widest">
                   Acumulado de
-                  {mesAuditoria &&
-                    (() => {
-                      const [y, mm] = mesAuditoria.split('-');
-                      const mName = new Date(y, mm - 1).toLocaleString("es-ES", { month: "long" });
-                      return " " + mName.charAt(0).toUpperCase() + mName.slice(1) + " " + y;
-                    })()
-                  }
+                  {mesAuditoria && (() => {
+                    const [y, mm] = mesAuditoria.split('-');
+                    const mName = new Date(y, mm - 1).toLocaleString("es-ES", { month: "long" });
+                    return " " + mName.charAt(0).toUpperCase() + mName.slice(1) + " " + y;
+                  })()}
                 </p>
 
                 <div className="flex items-end gap-3 my-4 mt-2">
@@ -192,21 +222,21 @@ const AdminAuditoriaPanel = () => {
                 <div className="flex flex-wrap gap-3 mb-6 text-sm font-bold opacity-90">
                   <div className="bg-white/10 px-3 py-2 rounded-xl flex items-center gap-2 backdrop-blur-sm border border-white/5">
                     <ClipboardList size={16} className="text-[#bed000]" />
-                    {auditoriaData.totalConsultas} Consultas Validadas
+                    {auditoriaData.totalConsultas} Consultas
                   </div>
                   <div className="bg-white/10 px-3 py-2 rounded-xl flex items-center gap-2 backdrop-blur-sm border border-white/5">
                     <ShoppingBag size={16} className="text-white" />
-                    {auditoriaData.cantidadPedidos} Pedidos Asociados
+                    {auditoriaData.cantidadPedidos} Pedidos
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* TARJETA 2: RENDIMIENTO ECONÓMICO */}
+            {/* TARJETA 2: RENDIMIENTO ECONÓMICO (Textos unificados) */}
             <div className="bg-gray-50 border border-gray-100 p-6 rounded-3xl flex flex-col justify-between">
               <div>
                 <h3 className="text-[#342c1e] font-black uppercase tracking-wider text-xs mb-4">
-                  Desglose de Ingresos (Base Imponible)
+                  Ingreso Real Ponderado (Neto)
                 </h3>
 
                 <div className="space-y-4">
@@ -215,7 +245,7 @@ const AdminAuditoriaPanel = () => {
                       <div className="bg-[#b1cb0c]/20 p-2 rounded-lg text-[#367933]">
                         <ClipboardList size={18} />
                       </div>
-                      <span className="font-bold text-[#062e3a] text-sm">Por Consultas</span>
+                      <span className="font-bold text-[#062e3a] text-sm">Servicios Clínicos</span>
                     </div>
                     <span className="font-black text-xl text-[#367933]">{(auditoriaData.facturacionConsultas || 0).toFixed(2)}€</span>
                   </div>
@@ -225,7 +255,7 @@ const AdminAuditoriaPanel = () => {
                       <div className="bg-blue-100 p-2 rounded-lg text-blue-600">
                         <ShoppingBag size={18} />
                       </div>
-                      <span className="font-bold text-[#062e3a] text-sm">Por Productos</span>
+                      <span className="font-bold text-[#062e3a] text-sm">Comisiones de Productos</span>
                     </div>
                     <span className="font-black text-xl text-[#062e3a]">{(auditoriaData.facturacionProductos || 0).toFixed(2)}€</span>
                   </div>
@@ -234,7 +264,7 @@ const AdminAuditoriaPanel = () => {
 
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <p className="text-right text-[10px] uppercase font-black tracking-widest text-[#342c1e]/60 mb-1">
-                  Facturación Total Bruta
+                  Beneficio Operativo Estimado
                 </p>
                 <p className="text-right text-4xl font-black text-[#062e3a] tracking-tighter">
                   {((auditoriaData.facturacionConsultas || 0) + (auditoriaData.facturacionProductos || 0)).toFixed(2)}€

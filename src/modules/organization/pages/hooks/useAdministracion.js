@@ -60,21 +60,42 @@ export const useAdministracion = () => {
     setFormData({ ...formData, [name]: type === "checkbox" ? checked : value });
   };
 
+  // 1. Corregimos la lógica del Checkbox para que use 'id' o 'farmaciaId' de forma segura
   const handleToggleFarmacia = (farmaciaId) => {
-    setFormData((prev) => {
-      const existe = prev.asignaciones.find((a) => a.farmaciaId === farmaciaId);
+    const targetSetter = itemEditando ? setItemEditando : setFormData;
+
+    targetSetter((prev) => {
+      const currentAsignaciones = prev.asignaciones || [];
+      // 🛡️ Buscamos por farmaciaId (nuevo) o id (si ya venía del backend)
+      const existe = currentAsignaciones.find(
+        (a) => (a.farmaciaId || a.id) === farmaciaId
+      );
+
       if (existe) {
-        return { ...prev, asignaciones: prev.asignaciones.filter((a) => a.farmaciaId !== farmaciaId) };
+        return {
+          ...prev,
+          asignaciones: currentAsignaciones.filter(
+            (a) => (a.farmaciaId || a.id) !== farmaciaId
+          ),
+        };
       } else {
-        return { ...prev, asignaciones: [...prev.asignaciones, { farmaciaId, kilometros: 0 }] };
+        return {
+          ...prev,
+          asignaciones: [...currentAsignaciones, { farmaciaId, kilometros: 0 }],
+        };
       }
     });
   };
 
-  const handleCambiarKilometros = (farmaciaId, km) => {
-    setFormData((prev) => ({
+  // 2. Corregimos los kilómetros para que sepa dónde escribir
+  const handleCambiarKilometros = (farmaciaId, kms) => {
+    const targetSetter = itemEditando ? setItemEditando : setFormData;
+
+    targetSetter((prev) => ({
       ...prev,
-      asignaciones: prev.asignaciones.map((a) => (a.farmaciaId === farmaciaId ? { ...a, kilometros: km } : a)),
+      asignaciones: (prev.asignaciones || []).map((a) =>
+        a.farmaciaId === farmaciaId ? { ...a, kilometros: Number(kms) } : a
+      ),
     }));
   };
 
@@ -95,11 +116,12 @@ export const useAdministracion = () => {
       }
       if (pestana === "farmacias") {
         await farmaciaService.crear({
-          nombreFarmacia: formData.nombreFarmacia,
-          cif: formData.cif, // 👈 AÑADIDO
+          // 👇 1. FIX 500: Usamos "nombre" porque así se llama el input y así lo espera el Backend
+          nombre: formData.nombre,
+          cif: formData.cif,
           direccion: formData.direccion,
           esProvinciaLocal: formData.esProvinciaLocal,
-          porcentajeComision: Number(formData.porcentajeComision),
+          porcentajeComision: Number(formData.porcentajeComision) || 30, // Fallback por seguridad
           email: formData.email,
           password: formData.password
         });
@@ -111,11 +133,14 @@ export const useAdministracion = () => {
         });
       }
       alert("Creado correctamente.");
+
+      // 👇 2. FIX REACT WARNING: Reseteamos TODOS los campos estrictamente a ""
       setFormData({
         nombre: "", apellidos: "", email: "", telefono: "", password: "",
-        nombreFarmacia: "", direccion: "", esProvinciaLocal: true, porcentajeComision: "",
-        nombreProducto: "", acronimo: "", categoria: "", referencia: "", pvp: "", pvf: "", asignaciones: [],
+        cif: "", direccion: "", esProvinciaLocal: true, porcentajeComision: "", // <-- ¡Aquí faltaba el CIF!
+        nombreProducto: "", acronimo: "", categoria: "PEQUENO", referencia: "", pvp: "", pvf: "", asignaciones: [],
       });
+
       cargarDatos();
     } catch (error) {
       console.error("Error al crear:", error);
@@ -125,41 +150,40 @@ export const useAdministracion = () => {
     }
   };
 
+  // Corregimos la actualización para que el backend reciba exactamente lo que espera
   const handleActualizar = async (e, confirmPassword) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     try {
       if (pestana === "nutricionistas") {
-        const payload = {
+        const asignacionesLimpias = itemEditando.asignaciones.map(a => ({
+          farmaciaId: a.farmaciaId || a.id,
+          kilometros: Number(a.kilometros) || 0
+        }));
+
+        await nutricionistasService.actualizar(itemEditando.id, {
           nombre: itemEditando.nombre,
           apellidos: itemEditando.apellidos,
           email: itemEditando.email,
           telefono: itemEditando.telefono,
-          asignaciones: itemEditando.asignaciones || [],
-          horasContratoMensual: Number(itemEditando.horasContratoMensual) || 40 // 👈 AÑADE ESTA LÍNEA
-        };
-        if (itemEditando.password && itemEditando.password === confirmPassword) {
-          payload.password = itemEditando.password;
-        }
-        await nutricionistasService.actualizar(itemEditando.id, payload);
-      }
-      if (pestana === "farmacias") {
+          // 👇 LA LÍNEA QUE FALTA PARA EVITAR EL ERROR 500 👇
+          horasContratoMensual: Number(itemEditando.horasContratoMensual) || 40,
+          password: itemEditando.password || undefined,
+          asignaciones: asignacionesLimpias,
+        });
+      } else if (pestana === "farmacias") {
         await farmaciaService.actualizar(itemEditando.id, {
-          nombreFarmacia: itemEditando.nombreFarmacia,
-          cif: itemEditando.cif, // 👈 AÑADIDO
+          nombre: itemEditando.nombreFarmacia || itemEditando.nombre,
+          cif: itemEditando.cif,
+          telefono: itemEditando.telefono,
+          email: itemEditando.email,
           direccion: itemEditando.direccion,
           esProvinciaLocal: itemEditando.esProvinciaLocal,
-          porcentajeComision: Number(itemEditando.porcentajeComision),
+          password: itemEditando.password || undefined,
         });
       }
-      if (pestana === "productos") {
-        await productosService.actualizar(itemEditando.id, {
-          nombreProducto: itemEditando.nombreProducto, acronimo: itemEditando.acronimo, categoria: itemEditando.categoria,
-          referencia: itemEditando.referencia, pvf: Number(itemEditando.pvf), pvp: Number(itemEditando.pvp),
-        });
-      }
+      // ... resto del código (alert, setItemEditando, cargarDatos)
       alert("Datos actualizados correctamente.");
       setItemEditando(null);
-      setMostrarBajas(false);
       cargarDatos();
     } catch (error) {
       console.error("Error al actualizar:", error);

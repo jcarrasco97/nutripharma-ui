@@ -172,7 +172,18 @@ const ModalEdicionAdministracion = ({
                               <input
                                 type="checkbox"
                                 checked={isChecked}
-                                onChange={(e) => handleToggleFarmacia(farmacia.id, e.target.checked, true)}
+                                onChange={(e) => {
+                                  const checked = e.target.checked;
+                                  let nuevasAsignaciones = [...(itemEditando.asignaciones || [])];
+
+                                  if (checked) {
+                                    nuevasAsignaciones.push({ farmaciaId: farmacia.id, kilometros: 0 });
+                                  } else {
+                                    nuevasAsignaciones = nuevasAsignaciones.filter(a => a.farmaciaId !== farmacia.id);
+                                  }
+
+                                  setItemEditando({ ...itemEditando, asignaciones: nuevasAsignaciones });
+                                }}
                                 className="w-4 h-4 rounded text-[#b1cb0c] bg-[#062e3a] border-gray-600 focus:ring-[#b1cb0c]"
                               />
                               <span className="text-sm font-bold text-gray-200">{farmacia.nombre}</span>
@@ -184,7 +195,13 @@ const ModalEdicionAdministracion = ({
                                   type="number"
                                   min="0"
                                   value={asignacionInfo.kilometros}
-                                  onChange={(e) => handleCambiarKilometros(farmacia.id, e.target.value, true)}
+                                  onChange={(e) => {
+                                    const kms = e.target.value;
+                                    const nuevasAsignaciones = (itemEditando.asignaciones || []).map(a =>
+                                      a.farmaciaId === farmacia.id ? { ...a, kilometros: Number(kms) } : a
+                                    );
+                                    setItemEditando({ ...itemEditando, asignaciones: nuevasAsignaciones });
+                                  }}
                                   className="w-16 p-1 text-sm bg-[#062e3a] text-white border border-[#342c1e] rounded-md focus:ring-2 focus:ring-[#b1cb0c] outline-none text-center"
                                   placeholder="Km"
                                   required

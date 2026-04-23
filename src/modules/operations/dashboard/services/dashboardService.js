@@ -56,15 +56,6 @@ export const dashboardService = {
     return response.data;
   },
 
-  obtenerAuditoriaNutricionista: async (id, anio, mes) => {
-    const mesAjustado = mes + 1;
-    const response = await axios.get(
-      `${API_URL}/dashboard/admin/auditoria/${id}?anio=${anio}&mes=${mesAjustado}`,
-      getConfig(),
-    );
-    return response.data;
-  },
-
   obtenerMesesDisponiblesAuditoria: async (id) => {
     const res = await axios.get(
       `${API_URL}/dashboard/admin/auditoria/${id}/meses`,
