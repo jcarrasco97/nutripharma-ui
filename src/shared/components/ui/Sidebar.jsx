@@ -26,9 +26,9 @@ import {
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
-const SIDEBAR_WIDTH = "16rem"
-const SIDEBAR_WIDTH_MOBILE = "18rem"
-const SIDEBAR_WIDTH_ICON = "3rem"
+const SIDEBAR_WIDTH = "15rem"
+const SIDEBAR_WIDTH_MOBILE = "20rem"
+const SIDEBAR_WIDTH_ICON = "5rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 
 const SidebarContext = React.createContext(null)
@@ -114,7 +114,7 @@ function SidebarProvider({
                     ...style,
                 }}
                 className={cn(
-                    "group/sidebar-wrapper relative flex min-h-svh w-full has-data-[variant=inset]:bg-surface",
+                    "group/sidebar-wrapper relative flex min-h-svh w-full has-data-[variant=inset]:bg-background",
                     className
                 )}
                 {...props}
@@ -159,7 +159,8 @@ function Sidebar({
                     data-sidebar="sidebar"
                     data-slot="sidebar"
                     data-mobile="true"
-                    className="w-(--sidebar-width) bg-surface p-0 text-neutral [&>button]:hidden"
+                    // 👇 AQUÍ LA MAGIA: Forzamos el fondo, el ancho y el ancho máximo 👇
+                    className="!bg-background !w-[var(--sidebar-width)] !max-w-[var(--sidebar-width)] !p-0 text-neutral [&>button]:hidden"
                     style={{
                         "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
                     }}
@@ -210,7 +211,7 @@ function Sidebar({
                 <div
                     data-sidebar="sidebar"
                     data-slot="sidebar-inner"
-                    className="flex size-full flex-col bg-surface group-data-[variant=floating]:rounded-2xl group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-neutral/10"
+                    className="flex size-full flex-col bg-background group-data-[variant=floating]:rounded-2xl group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-neutral/10"
                 >
                     {children}
                 </div>
@@ -396,7 +397,7 @@ function SidebarMenu({ className, ...props }) {
         <ul
             data-slot="sidebar-menu"
             data-sidebar="menu"
-            className={cn("flex w-full min-w-0 flex-col gap-0", className)}
+            className={cn("flex w-full min-w-0 flex-col gap-1", className)}
             {...props}
         />
     )
@@ -414,7 +415,17 @@ function SidebarMenuItem({ className, ...props }) {
 }
 
 const sidebarMenuButtonVariants = cva(
-    "peer/menu-button group/menu-button flex w-full items-center gap-2 overflow-hidden rounded-xl p-2 text-left text-sm ring-primary/50 outline-hidden transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-neutral/5 hover:text-secondary focus-visible:ring-2 active:bg-neutral/10 active:text-secondary disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-neutral/5 data-open:hover:text-secondary data-active:bg-neutral/5 data-active:font-medium data-active:text-secondary [&_svg]:size-4 [&_svg]:shrink-0 [&>span:last-child]:truncate",
+    // 1. Clases generales (comportamiento normal abierto)
+    "peer/menu-button group/menu-button flex w-full items-center gap-3 overflow-hidden rounded-xl p-4 text-left text-sm ring-primary/50 outline-hidden transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-10 " +
+
+    // 👇 --- LA MAGIA DEL PANEL MINIMIZADO (EXPERIMENTA AQUÍ) --- 👇
+    "group-data-[collapsible=icon]:size-14! " +         // <-- Cambia el tamaño del cuadrado
+    "group-data-[collapsible=icon]:justify-center " +   // <-- Centra el icono por dentro
+    "group-data-[collapsible=icon]:mx-auto " +          // <-- Centra el botón por fuera
+    // 👆 -------------------------------------------------------- 👆
+
+    // 3. Efectos Hover, Active y configuraciones internas
+    "hover:bg-neutral/5 hover:text-secondary focus-visible:ring-2 active:bg-neutral/10 active:text-secondary disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-neutral/5 data-open:hover:text-secondary data-active:bg-neutral/5 data-active:font-medium data-active:text-secondary [&_svg]:size-4 [&_svg]:shrink-0 [&>span:last-child]:truncate",
     {
         variants: {
             variant: {
@@ -425,7 +436,7 @@ const sidebarMenuButtonVariants = cva(
             size: {
                 default: "h-10 text-sm",
                 sm: "h-8 text-xs",
-                lg: "h-12 text-sm group-data-[collapsible=icon]:p-0!",
+                lg: "h-12 text-sm group-data-[collapsible=icon]:p-0!", // Quita el padding interno al minimizar
             },
         },
         defaultVariants: {

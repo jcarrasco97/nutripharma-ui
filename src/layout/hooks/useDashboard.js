@@ -86,82 +86,40 @@ export const useDashboard = () => {
     const items = [];
 
     if (isNutricionista && !isAdmin) {
-      items.push({
-        id: "resumen",
-        label: "Resumen Operativo",
-        icon: BarChart3,
-      });
-      items.push({
-        id: "pedidos",
-        label: "Pedidos y Liquidación",
-        icon: ShoppingCart,
-      });
-      items.push({
-        id: "consultas",
-        label: "Mis Consultas",
-        icon: Stethoscope,
-      });
-      items.push({
-        id: "suministros",
-        label: "Petición Suministros",
-        icon: Package,
-      });
+      items.push({ id: "resumen", label: "Resumen", icon: BarChart3 });
+      items.push({ id: "pedidos", label: "Liquidación", icon: ShoppingCart });
+      items.push({ id: "consultas", label: "Consultas", icon: Stethoscope });
+      items.push({ id: "suministros", label: "Suministros", icon: Package });
     }
 
     if (isFarmacia) {
-      // 👇 CIRUGÍA 2: Cambiado el ID a "resumen-farmacia"
       if (!items.some((i) => i.id === "resumen-farmacia"))
-        items.push({ id: "resumen-farmacia", label: "Mi Resumen", icon: BarChart3 });
+        items.push({ id: "resumen-farmacia", label: "Resumen", icon: BarChart3 });
 
       if (!items.some((i) => i.id === "pedidos"))
-        items.push({
-          id: "pedidos",
-          label: "Hacer Pedido",
-          icon: ShoppingCart,
-        });
-      items.push({
-        id: "historial-farmacia",
-        label: "Historial Consultas",
-        icon: History,
-      });
+        items.push({ id: "pedidos", label: "Pedidos", icon: ShoppingCart });
+
+      items.push({ id: "historial-farmacia", label: "Historial", icon: History });
     }
 
     if (isAdmin) {
       if (!items.some((i) => i.id === "resumen-admin"))
-        items.push({
-          id: "resumen-admin",
-          label: "Dashboard General",
-          icon: BarChart3,
-        });
+        items.push({ id: "resumen-admin", label: "Dashboard", icon: BarChart3 });
+
       if (!items.some((i) => i.id === "pedidos"))
-        items.push({
-          id: "pedidos",
-          label: "Crear Pedido (Proxy)",
-          icon: ShoppingCart,
-        });
-      items.push({
-        id: "validaciones",
-        label: "Centro Validaciones",
-        icon: ShieldCheck,
-      });
+        items.push({ id: "pedidos", label: "Pedidos", icon: ShoppingCart });
+
+      items.push({ id: "validaciones", label: "Validaciones", icon: ShieldCheck });
       items.push({ id: "usuarios", label: "Administración", icon: Users });
     }
 
     if (!items.some((i) => i.id === "documentacion")) {
-      items.push({
-        id: "documentacion",
-        label: "Gestión Documental",
-        icon: FileText,
-      });
+      items.push({ id: "documentacion", label: "Documentación", icon: FileText });
     }
 
     if (isSuperAdmin) {
       if (!items.some((i) => i.id === "personal-interno")) {
-        items.push({
-          id: "personal-interno",
-          label: "Personal Interno",
-          icon: Shield,
-        });
+        items.push({ id: "personal-interno", label: "Personal", icon: Shield });
       }
     }
 

@@ -1,10 +1,16 @@
 import React from "react";
-import { Menu, Activity } from "lucide-react";
-import logoUrl from "@/assets/logo.svg";
+import { Activity } from "lucide-react";
 
 // --- HOOKS Y COMPONENTES GLOBALES ---
 import { useDashboard } from "./hooks/useDashboard";
-import Sidebar from "./Sidebar";
+import AppSidebar from "./AppSidebar";
+
+import {
+  SidebarProvider,
+  SidebarInset,
+  SidebarTrigger,
+} from "@/shared/components/ui/Sidebar";
+import { TooltipProvider } from "@/shared/components/ui/Tooltip";
 
 // --- IMPORTACIONES MAESTRAS DE LOS MÓDULOS (Feature-First) ---
 import {
@@ -22,67 +28,59 @@ const Dashboard = () => {
 
   if (!hook.usuario) return null;
 
+  const tituloVistaActual = hook.menuItems.find(item => item.id === hook.vistaActual)?.label || "Dashboard";
+
   return (
-    <div className="min-h-screen bg-background flex flex-col md:flex-row font-sans overflow-hidden">
-      {/* SIDEBAR COMPONENTE AisLADO */}
-      <Sidebar
-        usuario={hook.usuario}
-        menuAbierto={hook.menuAbierto}
-        setMenuAbierto={hook.setMenuAbierto}
-        vistaActual={hook.vistaActual}
-        setVistaActual={hook.setVistaActual}
-        menuItems={hook.menuItems}
-        handleLogout={hook.handleLogout}
-        isAdmin={hook.isAdmin}
-        isNutricionista={hook.isNutricionista}
-        isFarmacia={hook.isFarmacia}
-      />
+    <TooltipProvider>
+      <SidebarProvider className="flex h-screen overflow-hidden w-full">
 
-      {/* CONTENIDO PRINCIPAL */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden relative transition-all duration-300 z-10">
-        {/* HEADER MÓVIL */}
-        <header className="md:hidden bg-surface border-b border-neutral/10 text-neutral p-4 flex justify-between items-center z-20 shadow-sm">
-          <div className="flex items-center">
-            <img src={logoUrl} alt="NutriPharma Logo" className="h-8 w-auto" />
-          </div>
-          <button
-            onClick={() => hook.setMenuAbierto(!hook.menuAbierto)}
-            className="p-2 bg-neutral/5 rounded-lg hover:bg-neutral/10 transition-colors text-neutral"
-          >
-            <Menu size={24} />
-          </button>
-        </header>
+        {/* Renderizamos el nuevo Sidebar (inamovible) */}
+        <AppSidebar hook={hook} />
 
-        {/* ÁREA DE RENDERIZADO DE LAS VISTAS (SCROLLABLE) */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar relative z-0">
-          {/* 👇 CIRUGÍA: Protegemos las vistas por ROL para evitar el 403 del backend 👇 */}
-          {hook.vistaActual === "resumen" && hook.isNutricionista ? (
-            <DashboardNutriPage />
-          ) : hook.vistaActual === "resumen-farmacia" && hook.isFarmacia ? (
-            <DashboardFarmaciaPage />
-          ) : hook.vistaActual === "resumen-admin" && hook.isAdmin ? (
-            <DashboardAdminPage setVistaActual={hook.setVistaActual} />
-          ) : hook.vistaActual === "consultas" ? (
-            <ConsultasPage />
-          ) : hook.vistaActual === "pedidos" ? (
-            <PedidosPage />
-          ) : hook.vistaActual === "documentacion" ? (
-            <DocumentacionPage />
-          ) : hook.vistaActual === "suministros" ? (
-            <SuministrosPage />
-          ) : hook.vistaActual === "validaciones" ? (
-            <ValidacionesPage />
-          ) : hook.vistaActual === "admin-suministros" ? (
-            <SuministrosAdminPage />
-          ) : hook.vistaActual === "historial-farmacia" ? (
-            <HistorialFarmaciaPage />
-          ) : hook.vistaActual === "usuarios" ? (
-            <AdministracionPage />
-          ) : hook.vistaActual === "personal-interno" ? (
-            <PersonalInternoPage />
-          ) : (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 min-h-[500px] flex items-center justify-center">
-              <div className="text-center">
+        {/* Renderizamos el área principal (deslizable) */}
+        {/* CAMBIO 3: bg-surface (Blanco puro) */}
+        <SidebarInset className="flex flex-col flex-1 bg-surface overflow-hidden">
+
+          {/* HEADER DEL INSET (Fijo arriba) */}
+          {/* CAMBIO 4: bg-surface (Blanco puro) para que se mimetice con la app */}
+          <header className="flex h-16 shrink-0 items-center gap-2 bg-surface px-4 z-10">
+            <SidebarTrigger className="text-neutral/70 hover:text-primary transition-colors" />
+            <div className="w-px h-4 bg-neutral/20 mx-2" />
+
+            <span className="font-semibold text-[15px] text-secondary">
+              {tituloVistaActual}
+            </span>
+          </header>
+
+          {/* MAIN CONTENT (El único que scrollea) */}
+          <main className="flex-1 overflow-y-auto p-4 md:p-8">
+            {/* 👇 CIRUGÍA: Protegemos las vistas por ROL para evitar el 403 del backend 👇 */}
+            {hook.vistaActual === "resumen" && hook.isNutricionista ? (
+              <DashboardNutriPage />
+            ) : hook.vistaActual === "resumen-farmacia" && hook.isFarmacia ? (
+              <DashboardFarmaciaPage />
+            ) : hook.vistaActual === "resumen-admin" && hook.isAdmin ? (
+              <DashboardAdminPage setVistaActual={hook.setVistaActual} />
+            ) : hook.vistaActual === "consultas" ? (
+              <ConsultasPage />
+            ) : hook.vistaActual === "pedidos" ? (
+              <PedidosPage />
+            ) : hook.vistaActual === "documentacion" ? (
+              <DocumentacionPage />
+            ) : hook.vistaActual === "suministros" ? (
+              <SuministrosPage />
+            ) : hook.vistaActual === "validaciones" ? (
+              <ValidacionesPage />
+            ) : hook.vistaActual === "admin-suministros" ? (
+              <SuministrosAdminPage />
+            ) : hook.vistaActual === "historial-farmacia" ? (
+              <HistorialFarmaciaPage />
+            ) : hook.vistaActual === "usuarios" ? (
+              <AdministracionPage />
+            ) : hook.vistaActual === "personal-interno" ? (
+              <PersonalInternoPage />
+            ) : (
+              <div className="bg-surface rounded-2xl shadow-sm border border-neutral/10 p-8 min-h-[500px] flex items-center justify-center">                <div className="text-center">
                 <Activity size={48} className="mx-auto text-[#b1cb0c] mb-4" />
                 <h3 className="text-xl font-bold text-[#062e3a]">
                   Módulo en construcción
@@ -94,19 +92,12 @@ const Dashboard = () => {
                   </span>
                 </p>
               </div>
-            </div>
-          )}
-        </div>
-      </main>
-
-      {/* OVERLAY MOBILE PARA CERRAR EL MENÚ AL HACER CLIC FUERA */}
-      {hook.menuAbierto && (
-        <div
-          className="fixed inset-0 bg-neutral/40 backdrop-blur-sm z-30 md:hidden animate-fade-in"
-          onClick={() => hook.setMenuAbierto(false)}
-        />
-      )}
-    </div>
+              </div>
+            )}
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+    </TooltipProvider>
   );
 };
 

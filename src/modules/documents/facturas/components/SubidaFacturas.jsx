@@ -2,6 +2,11 @@ import React, { useState } from "react";
 import { UploadCloud, ReceiptText, Check } from "lucide-react";
 import { facturasService } from "../services/facturasService";
 import { obtenerUltimos6Meses } from "@/shared/utils/mesesHelper";
+import { Card, CardHeader, CardContent } from "@/shared/components/ui/Card";
+import { Button } from "@/shared/components/ui/Button";
+import { Input } from "@/shared/components/ui/Input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/Select";
+import { Field, FieldLabel, FieldContent } from "@/shared/components/ui/Field";
 
 const SubidaFacturas = ({ onSubidaExitosa }) => {
   const [archivo, setArchivo] = useState(null);
@@ -35,49 +40,57 @@ const SubidaFacturas = ({ onSubidaExitosa }) => {
   };
 
   return (
-    <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col gap-6">
-      <div className="flex items-center gap-4 border-b border-gray-100 pb-4">
-        <div className="bg-[#f4f7f4] p-3 rounded-2xl text-[#367933]">
+    <Card className="bg-surface p-8 rounded-[2.5rem] shadow-sm border border-neutral/10 flex flex-col gap-6">
+      <CardHeader className="p-0 flex flex-row items-center gap-4 border-b border-neutral/10 pb-4 space-y-0">
+        <div className="bg-neutral/5 p-3 rounded-2xl text-primary">
           <ReceiptText size={24} />
         </div>
         <div>
-          <h2 className="text-xl font-black text-[#062e3a]">Subir Factura de Gastos / Km</h2>
-          <p className="text-sm font-medium text-[#342c1e]/70">El sistema renombrará tu archivo automáticamente para cumplir con el estándar: fecha_Km_Nombre_Apellidos</p>
+          <h2 className="text-xl font-black text-secondary">Subir Factura de Gastos / Km</h2>
+          <p className="text-sm font-medium text-neutral/70">El sistema renombrará tu archivo automáticamente para cumplir con el estándar: fecha_Km_Nombre_Apellidos</p>
         </div>
-      </div>
+      </CardHeader>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-        <div>
-          <label className="block text-sm font-bold text-[#062e3a] mb-2">Mes al que corresponde la factura</label>
-          <select
-            value={mesCorresponde}
-            onChange={(e) => setMesCorresponde(e.target.value)}
-            className="w-full bg-[#f4f7f4] border-2 border-transparent focus:border-[#b1cb0c] rounded-2xl px-4 py-3 text-[#062e3a] font-bold outline-none"
-          >
-            {meses.map(m => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-bold text-[#062e3a] mb-2">Seleccionar Archivo (PDF, JPG, PNG)</label>
-          <input
-            type="file"
-            accept=".pdf,.jpg,.jpeg,.png"
-            onChange={(e) => setArchivo(e.target.files[0])}
-            className="w-full bg-[#f4f7f4] border-2 border-transparent focus:border-[#b1cb0c] rounded-2xl px-4 py-2.5 text-[#062e3a] font-bold outline-none file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-[#062e3a] file:text-white hover:file:bg-[#062e3a]/90 file:cursor-pointer"
-          />
-        </div>
-      </div>
+      <CardContent className="p-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end mb-6">
+          <Field>
+            <FieldLabel className="text-sm font-bold text-secondary mb-2">Mes al que corresponde la factura</FieldLabel>
+            <FieldContent>
+              <Select value={mesCorresponde} onValueChange={setMesCorresponde}>
+                <SelectTrigger className="w-full bg-neutral/5 border-2 border-transparent focus:border-accent rounded-2xl px-4 py-6 text-secondary font-bold outline-none">
+                  <SelectValue placeholder="Seleccionar mes" />
+                </SelectTrigger>
+                <SelectContent>
+                  {meses.map(m => (
+                    <SelectItem key={m} value={m}>{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldContent>
+          </Field>
 
-      <button
-        onClick={handleSubir}
-        disabled={!archivo || subiendo}
-        className="mt-2 w-full md:w-auto px-10 py-4 bg-[#367933] text-white font-black rounded-2xl hover:bg-[#006633] transition-colors flex items-center justify-center gap-2 self-start disabled:opacity-50"
-      >
-        {subiendo ? "Subiendo..." : (exito ? <><Check size={20} /> ¡Subida Exitosa!</> : <><UploadCloud size={20} /> Subir Gasto</>)}
-      </button>
-    </div>
+          <Field>
+            <FieldLabel className="text-sm font-bold text-secondary mb-2">Seleccionar Archivo (PDF, JPG, PNG)</FieldLabel>
+            <FieldContent>
+              <Input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={(e) => setArchivo(e.target.files[0])}
+                className="w-full bg-neutral/5 border-2 border-transparent focus-visible:border-accent focus-visible:ring-0 rounded-2xl px-4 py-3 h-auto text-secondary font-bold outline-none file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-secondary file:text-surface hover:file:bg-secondary/90 file:cursor-pointer"
+              />
+            </FieldContent>
+          </Field>
+        </div>
+
+        <Button
+          onClick={handleSubir}
+          disabled={!archivo || subiendo}
+          className="w-full md:w-auto px-10 py-6 bg-primary text-surface font-black rounded-2xl hover:bg-primary-hover transition-colors flex items-center justify-center gap-2 self-start disabled:opacity-50"
+        >
+          {subiendo ? "Subiendo..." : (exito ? <><Check size={20} /> ¡Subida Exitosa!</> : <><UploadCloud size={20} /> Subir Gasto</>)}
+        </Button>
+      </CardContent>
+    </Card>
   );
 };
 

@@ -6,7 +6,6 @@
 /* AQUÍ ESTÁ LA MAGIA DE TAILWIND v4 */
 @theme {
   /* --- TU TIPOGRAFÍA GLOBAL --- */
-  /* Sobrescribimos la fuente sans por defecto de Tailwind */
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
 
   /* 1. Colores Corporativos Base */
@@ -33,50 +32,153 @@
   /* 2. Gradientes Corporativos */
   --background-image-gradient-nutri-light: linear-gradient(to right, #bed000, #85ac1c);
   --background-image-gradient-nutri-dark: linear-gradient(to right, #006633, #68b54e);
-
-  /* 3. Animaciones de la App */
-  --animate-fade-in: fadeIn 0.3s ease-out;
-  /* Animaciones para el Accordion */
-  --animate-accordion-down: accordion-down 0.2s ease-out;
-  --animate-accordion-up: accordion-up 0.2s ease-out;
-
-  @keyframes fadeIn {
-    0% {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-
-    100% {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-}
-
-@keyframes accordion-down {
-  from {
-    height: 0;
-  }
-
-  to {
-    height: var(--radix-accordion-content-height);
-  }
-}
-
-@keyframes accordion-up {
-  from {
-    height: var(--radix-accordion-content-height);
-  }
-
-  to {
-    height: 0;
-  }
 }
 
 /* --- ESTILOS BASE GLOBALES --- */
 @layer base {
   body {
-    /* Esto es CLAVE para el look "shadcn". Hace que la fuente se renderice más fina y definida */
     @apply antialiased bg-background text-neutral;
   }
+}
+
+/* --- LA "VACUNA" GLOBAL: ANIMACIONES PARA SHADCN EN TAILWIND V4 --- */
+@layer utilities {
+
+  /* 1. Animaciones Maestras (Keyframes) */
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95) translateY(-4px);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  @keyframes pop-out {
+    from {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+
+    to {
+      opacity: 0;
+      transform: scale(0.95) translateY(-4px);
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade-out {
+    from {
+      opacity: 1;
+    }
+
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes slide-in-left {
+    from {
+      transform: translateX(-100%);
+    }
+
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slide-out-left {
+    from {
+      transform: translateX(0);
+    }
+
+    to {
+      transform: translateX(-100%);
+    }
+  }
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+
+    to {
+      height: 0;
+    }
+  }
+
+  /* 2. Inyección de la Vacuna a los Componentes Radix/Shadcn */
+
+  /* Dropdowns, Selects, Popovers, HoverCards, Tooltips, ContextMenus, Dialogs */
+  [data-state="open"][data-side="top"],
+  [data-state="open"][data-side="bottom"],
+  [data-state="open"][data-side="left"],
+  [data-state="open"][data-side="right"],
+  [data-slot="dialog-content"][data-state="open"] {
+    animation: pop-in 0.15s ease-out forwards;
+  }
+
+  [data-state="closed"][data-side="top"],
+  [data-state="closed"][data-side="bottom"],
+  [data-state="closed"][data-side="left"],
+  [data-state="closed"][data-side="right"],
+  [data-slot="dialog-content"][data-state="closed"] {
+    animation: pop-out 0.15s ease-in forwards;
+  }
+
+  /* Fondos oscuros (Overlays) para modales y menús */
+  [data-state="open"][data-slot="dialog-overlay"] {
+    animation: fade-in 0.2s ease-out forwards;
+  }
+
+  [data-state="closed"][data-slot="dialog-overlay"] {
+    animation: fade-out 0.2s ease-in forwards;
+  }
+
+  /* Accordions */
+  [data-state="open"][data-slot="accordion-content"] {
+    animation: accordion-down 0.2s ease-out forwards;
+  }
+
+  [data-state="closed"][data-slot="accordion-content"] {
+    animation: accordion-up 0.2s ease-in forwards;
+  }
+
+  /* Panel Lateral Móvil (El que arreglamos en el paso anterior) */
+  [data-mobile="true"][data-state="open"] {
+    animation: slide-in-left 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  [data-mobile="true"][data-state="closed"] {
+    animation: slide-out-left 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+}
+
+/* Ocultar el icono de contraseña nativo del navegador (evita duplicados) */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear,
+input[type="password"]::-webkit-credentials-auto-fill-button {
+  display: none !important;
 }

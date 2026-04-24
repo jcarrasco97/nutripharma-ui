@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { FileText, Loader2 } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/shared/components/ui/Card";
 
 // Imports limpios desde los submódulos (rutas relativas porque estamos en el mismo módulo)
 import { useDocumentacion, PanelSubidaDocumentos, FiltrosDocumentos, GridDocumentos } from "../documentacion";
@@ -12,7 +13,7 @@ const DocumentacionPage = () => {
   if (hook.cargando) {
     return (
       <div className="flex justify-center p-20">
-        <Loader2 className="animate-spin text-[#367933]" size={48} />
+        <Loader2 className="animate-spin text-primary" size={48} />
       </div>
     );
   }
@@ -23,21 +24,23 @@ const DocumentacionPage = () => {
       {hook.isAdmin && <PanelSubidaDocumentos {...hook} />}
 
       {/* 2. Repositorio Común */}
-      <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-4 border-b border-gray-100">
+      <Card className="bg-surface p-8 rounded-[2.5rem] shadow-sm border border-neutral/10">
+        <CardHeader className="p-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-4 border-b border-neutral/10">
           <div className="flex items-center gap-4">
-            <div className="bg-[#f4f7f4] p-3 rounded-2xl text-[#367933]">
+            <div className="bg-neutral/5 p-3 rounded-2xl text-primary">
               <FileText size={24} />
             </div>
-            <h2 className="text-xl font-black text-[#062e3a]">
+            <CardTitle className="text-xl font-black text-secondary">
               Repositorio Documental
-            </h2>
+            </CardTitle>
           </div>
-        </div>
+        </CardHeader>
 
-        <FiltrosDocumentos {...hook} />
-        <GridDocumentos {...hook} />
-      </div>
+        <CardContent className="p-0">
+          <FiltrosDocumentos {...hook} />
+          <GridDocumentos {...hook} />
+        </CardContent>
+      </Card>
 
       {/* 3. Panel de Facturas de Gastos (Nutricionistas) */}
       {!hook.isAdmin && !hook.esFarmacia && (
