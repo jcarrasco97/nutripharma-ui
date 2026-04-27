@@ -125,6 +125,7 @@ export const usePersonalInterno = () => {
     cargando,
     enviando,
     formData,
+    setFormData,
     handleChange,
     handleCrear,
     handleEliminar,

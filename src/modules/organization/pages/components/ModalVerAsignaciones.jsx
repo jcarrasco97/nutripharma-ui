@@ -1,5 +1,13 @@
 import React from "react";
-import { X, Store, User, Car } from "lucide-react";
+import { Store, User, Car, X } from "lucide-react";
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle,
+} from "@/shared/components/ui/Sheet";
+import { Badge } from "@/shared/components/ui/Badge";
+import { ScrollArea } from "@/shared/components/ui/ScrollArea";
+import {
+  Empty, EmptyHeader, EmptyMedia, EmptyTitle,
+} from "@/shared/components/ui/Empty";
 
 const ModalVerAsignaciones = ({
   modalAsignaciones,
@@ -10,93 +18,95 @@ const ModalVerAsignaciones = ({
 
   const { tipo, item } = modalAsignaciones;
 
-  // Si abrimos una farmacia, calculamos qué nutris la tienen asignada
   const nutrisAsignados =
     tipo === "farmacia"
       ? nutricionistas.filter((n) =>
-          n.asignaciones?.some((a) => a.farmaciaId === item.id),
+          n.asignaciones?.some((a) => a.farmaciaId === item.id)
         )
       : [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#062e3a]/70 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden animate-scale-in">
-        <div className="p-6 bg-[#062e3a] text-white flex justify-between items-center">
-          <h3 className="text-lg font-black flex items-center gap-2">
-            {tipo === "nutricionista" ? (
-              <Store className="text-[#bed000]" size={20} />
-            ) : (
-              <User className="text-[#bed000]" size={20} />
-            )}
-            {tipo === "nutricionista"
-              ? "Farmacias Asignadas"
-              : "Nutricionistas"}
-          </h3>
-          <button
-            onClick={cerrarModalAsignaciones}
-            className="text-white/70 hover:text-white transition-colors"
-          >
-            <X size={24} />
-          </button>
-        </div>
-
-        <div className="p-6 max-h-[60vh] overflow-y-auto custom-scrollbar bg-gray-50">
-          <div className="mb-4 text-center">
-            <p className="text-sm font-bold text-[#062e3a]">
-              {item.nombre} {item.apellidos || ""}
-            </p>
-            <p className="text-xs text-gray-500">
-              {tipo === "nutricionista" ? "Ruta asignada" : "Personal asignado"}
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            {tipo === "nutricionista" &&
-              (item.asignaciones?.length === 0 ? (
-                <p className="text-center text-sm text-gray-400 font-bold py-4">
-                  No tiene farmacias asignadas.
+    <Sheet open={modalAsignaciones.visible} onOpenChange={cerrarModalAsignaciones}>
+      <SheetContent side="right" className="sm:max-w-sm flex flex-col p-0">
+        <SheetHeader className="bg-secondary text-surface px-6 pt-6 pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-surface/20 p-2 rounded-xl">
+                {tipo === "nutricionista" ? (
+                  <Store size={18} className="text-surface" />
+                ) : (
+                  <User size={18} className="text-surface" />
+                )}
+              </div>
+              <div>
+                <SheetTitle className="text-surface text-base font-bold">
+                  {tipo === "nutricionista" ? "Farmacias Asignadas" : "Nutricionistas"}
+                </SheetTitle>
+                <p className="text-surface/70 text-xs font-medium mt-0.5">
+                  {item.nombre} {item.apellidos || ""}
                 </p>
+              </div>
+            </div>
+            <button
+              onClick={cerrarModalAsignaciones}
+              className="text-surface/70 hover:text-surface transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        </SheetHeader>
+
+        <ScrollArea className="flex-1 px-6 py-4">
+          <div className="space-y-2">
+            {tipo === "nutricionista" && (
+              item.asignaciones?.length === 0 ? (
+                <Empty className="py-8">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon"><Store size={22} /></EmptyMedia>
+                    <EmptyTitle className="text-sm">Sin farmacias asignadas</EmptyTitle>
+                  </EmptyHeader>
+                </Empty>
               ) : (
-                item.asignaciones.map((asig, idx) => (
+                item.asignaciones?.map((asig, idx) => (
                   <div
                     key={idx}
-                    className="bg-white p-3 rounded-xl border border-gray-200 flex justify-between items-center shadow-sm"
+                    className="bg-neutral/5 border border-neutral/10 p-3 rounded-xl flex justify-between items-center"
                   >
-                    <span className="font-bold text-[#062e3a] text-sm">
-                      {asig.farmaciaNombre}
-                    </span>
-                    <span className="text-xs font-black text-[#367933] bg-[#b1cb0c]/20 px-2 py-1 rounded-md flex items-center gap-1">
-                      <Car size={12} /> {asig.kilometros} km
-                    </span>
+                    <span className="font-bold text-secondary text-sm">{asig.farmaciaNombre}</span>
+                    <Badge className="bg-accent/20 text-primary border-none font-bold flex items-center gap-1">
+                      <Car size={11} /> {asig.kilometros} km
+                    </Badge>
                   </div>
                 ))
-              ))}
+              )
+            )}
 
-            {tipo === "farmacia" &&
-              (nutrisAsignados.length === 0 ? (
-                <p className="text-center text-sm text-gray-400 font-bold py-4">
-                  Ninguna nutricionista cubre esta farmacia.
-                </p>
+            {tipo === "farmacia" && (
+              nutrisAsignados.length === 0 ? (
+                <Empty className="py-8">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon"><User size={22} /></EmptyMedia>
+                    <EmptyTitle className="text-sm">Sin nutricionistas asignadas</EmptyTitle>
+                  </EmptyHeader>
+                </Empty>
               ) : (
                 nutrisAsignados.map((n) => (
                   <div
                     key={n.id}
-                    className="bg-white p-3 rounded-xl border border-gray-200 flex items-center gap-3 shadow-sm"
+                    className="bg-neutral/5 border border-neutral/10 p-3 rounded-xl flex items-center gap-3"
                   >
-                    <div className="bg-[#062e3a]/10 text-[#062e3a] w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0">
-                      {n.nombre.charAt(0)}
-                      {n.apellidos ? n.apellidos.charAt(0) : ""}
+                    <div className="w-8 h-8 bg-secondary/10 text-secondary rounded-full flex items-center justify-center font-bold text-xs shrink-0">
+                      {n.nombre.charAt(0)}{n.apellidos?.charAt(0) || ""}
                     </div>
-                    <span className="font-bold text-[#062e3a] text-sm">
-                      {n.nombre} {n.apellidos}
-                    </span>
+                    <span className="font-bold text-secondary text-sm">{n.nombre} {n.apellidos}</span>
                   </div>
                 ))
-              ))}
+              )
+            )}
           </div>
-        </div>
-      </div>
-    </div>
+        </ScrollArea>
+      </SheetContent>
+    </Sheet>
   );
 };
 

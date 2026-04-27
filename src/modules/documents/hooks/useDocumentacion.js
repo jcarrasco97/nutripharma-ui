@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { jwtDecode } from "jwt-decode";
 import { documentosService } from "../services/documentosService";
+import { toast } from "sonner";
 
 export const useDocumentacion = () => {
   const [documentos, setDocumentos] = useState([]);
@@ -45,9 +46,9 @@ export const useDocumentacion = () => {
 
   const handleSubir = async (e) => {
     e.preventDefault();
-    if (!formulario.archivo) return alert("Por favor, selecciona un archivo.");
+    if (!formulario.archivo) return toast.error("Por favor, selecciona un archivo.");
     if (formulario.alcance === "INDIVIDUAL" && !formulario.propietarioEmail) {
-      return alert("Por favor, selecciona un destinatario.");
+      return toast.error("Por favor, selecciona un destinatario.");
     }
 
     setSubiendo(true);
@@ -60,17 +61,16 @@ export const useDocumentacion = () => {
       formData.append("archivo", formulario.archivo);
 
       await documentosService.subir(formData);
-      alert("Documento subido con éxito.");
+      toast.success("Documento subido con éxito.");
       setFormulario({
         alcance: "GLOBAL_TODOS",
         propietarioEmail: "",
         archivo: null,
       });
-      document.getElementById("fileInput").value = "";
       cargarDatos();
     } catch (error) {
       console.error("Error al subir:", error);
-      alert("Error al subir el documento.");
+      toast.error("Error al subir el documento.");
     } finally {
       setSubiendo(false);
     }
@@ -81,7 +81,7 @@ export const useDocumentacion = () => {
     try {
       await documentosService.descargar(id, nombreOriginal);
     } catch (error) {
-      alert("Error al descargar el archivo.");
+      toast.error("Error al descargar el archivo.");
       console.error(error);
     } finally {
       setDescargandoId(null);
@@ -98,10 +98,10 @@ export const useDocumentacion = () => {
     setBorrandoId(id);
     try {
       await documentosService.eliminar(id);
-      alert("Documento eliminado correctamente.");
+      toast.success("Documento eliminado correctamente.");
       cargarDatos();
     } catch (error) {
-      alert("Error al eliminar el documento.");
+      toast.error("Error al eliminar el documento.");
       console.error(error);
     } finally {
       setBorrandoId(null);
