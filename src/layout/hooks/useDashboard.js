@@ -117,12 +117,6 @@ export const useDashboard = () => {
       items.push({ id: "documentacion", label: "Documentación", icon: FileText });
     }
 
-    if (isSuperAdmin) {
-      if (!items.some((i) => i.id === "personal-interno")) {
-        items.push({ id: "personal-interno", label: "Personal", icon: Shield });
-      }
-    }
-
     return items;
   }, [isAdmin, isNutricionista, isFarmacia, isSuperAdmin]);
 

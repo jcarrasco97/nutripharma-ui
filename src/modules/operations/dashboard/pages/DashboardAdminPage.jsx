@@ -8,7 +8,6 @@ import AdminCalendarioOperativo from "../components/admin/AdminCalendarioOperati
 import ModalResumenDiario from "../components/admin/ModalResumenDiario";
 // Asegúrate de que estos dos componentes estén exportados en los index.js de sus respectivos módulos
 import ModalConsultaLectura from "../components/admin/ModalConsultaLectura";
-import { ModalDetallePedido } from "@/modules/sales/pedidos";
 import { dashboardService } from "../services/dashboardService";
 import ModalGeneradorInformes from "../components/admin/ModalGeneradorInformes";
 import { ModalVerEvidencia } from "@/modules/operations/consultas";

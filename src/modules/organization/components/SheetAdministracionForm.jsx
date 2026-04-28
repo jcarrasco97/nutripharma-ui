@@ -21,7 +21,7 @@ const SheetAdministracionForm = ({
   setItemEditando,
   formData,
   setFormData,
-  farmacias,
+  farmacias = [],
   enviando,
   handleCrear,
   handleActualizar,
@@ -84,24 +84,21 @@ const SheetAdministracionForm = ({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col p-0">
-
-        {/* Header */}
-        <SheetHeader className="px-6 pt-6 pb-4 border-b border-neutral/10">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary/10 p-2.5 rounded-xl text-primary shrink-0">
-              {pestana === "nutricionistas" && <User size={18} />}
-              {pestana === "farmacias" && <Store size={18} />}
-              {pestana === "productos" && <Package size={18} />}
-              {pestana === "personal" && <Shield size={18} />}
-            </div>
-            <div>
-              <SheetTitle className="text-base">{titulo}</SheetTitle>
-              <SheetDescription>
-                {modoEdicion ? "Modifica los campos y guarda los cambios." : "Completa el formulario para añadir un nuevo registro."}
-              </SheetDescription>
-            </div>
+      <SheetContent side="right" className="w-full sm:max-w-2xl flex flex-col p-0 h-full data-[state=open]:animate-in data-[state=closed]:animate-out slide-in-from-right-1/2 duration-300">        {/* Header */}
+        <SheetHeader className="px-6 pt-6 pb-4 border-b border-neutral/10 shrink-0">          <div className="flex items-center gap-3">
+          <div className="bg-primary/10 p-2.5 rounded-xl text-primary shrink-0">
+            {pestana === "nutricionistas" && <User size={18} />}
+            {pestana === "farmacias" && <Store size={18} />}
+            {pestana === "productos" && <Package size={18} />}
+            {pestana === "personal" && <Shield size={18} />}
           </div>
+          <div>
+            <SheetTitle className="text-base">{titulo}</SheetTitle>
+            <SheetDescription>
+              {modoEdicion ? "Modifica los campos y guarda los cambios." : "Completa el formulario para añadir un nuevo registro."}
+            </SheetDescription>
+          </div>
+        </div>
           {modoEdicion && (
             <Badge className="w-fit bg-accent/20 text-primary border-none text-[10px] font-black uppercase mt-2">
               Modo Edición
@@ -110,7 +107,7 @@ const SheetAdministracionForm = ({
         </SheetHeader>
 
         {/* Body */}
-        <ScrollArea className="flex-1 px-6">
+        <div className="flex-1 overflow-y-auto px-6 custom-scrollbar">
           <form id="sheet-form" onSubmit={onSubmit} className="space-y-5 py-5">
 
             {/* ── PERSONAL INTERNO (SuperAdmin) ── */}
@@ -320,10 +317,10 @@ const SheetAdministracionForm = ({
             )}
 
           </form>
-        </ScrollArea>
+        </div>
 
         {/* Footer */}
-        <SheetFooter className="px-6 py-4 border-t border-neutral/10">
+        <SheetFooter className="px-6 py-4 border-t border-neutral/10 shrink-0 bg-surface">
           <Button
             form="sheet-form"
             type="submit"

@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { personalInternoService } from "../services/personalInternoService";
 
-export const usePersonalInterno = () => {
+// Añadimos el parámetro isSuperAdmin con valor por defecto false
+export const usePersonalInterno = (isSuperAdmin = false) => {
   const [admins, setAdmins] = useState([]);
   const [adminsBajas, setAdminsBajas] = useState([]);
   const [mostrarBajas, setMostrarBajas] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [enviando, setEnviando] = useState(false);
 
-  // 1. Añadimos confirmPassword al estado inicial
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -18,20 +18,26 @@ export const usePersonalInterno = () => {
   });
 
   const cargarDatos = useCallback(async () => {
+    // MAGIA AQUÍ: Si no es superadmin, no hacemos peticiones al backend
+    if (!isSuperAdmin) {
+      setCargando(false);
+      return;
+    }
+
     setCargando(true);
     try {
       const [datosAdmins, datosBajas] = await Promise.all([
-        personalInternoService.listarAdmins(),
+        personalInternoService.listarAdmins().catch(() => []),
         personalInternoService.listarBajas().catch(() => []),
       ]);
-      setAdmins(datosAdmins);
-      setAdminsBajas(datosBajas);
+      setAdmins(datosAdmins || []);
+      setAdminsBajas(datosBajas || []);
     } catch (error) {
       console.error("Error al cargar administradores:", error);
     } finally {
       setCargando(false);
     }
-  }, []);
+  }, [isSuperAdmin]);
 
   useEffect(() => {
     cargarDatos();
@@ -96,7 +102,7 @@ export const usePersonalInterno = () => {
       console.error("Error al eliminar admin:", error);
       alert(
         error.response?.data?.message ||
-          "Error al eliminar. Puede que sea el SuperAdmin.",
+        "Error al eliminar. Puede que sea el SuperAdmin.",
       );
     }
   };

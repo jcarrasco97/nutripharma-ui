@@ -59,4 +59,3 @@ export const productosService = {
     return res.data;
   },
 };
-

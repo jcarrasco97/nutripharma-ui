@@ -79,7 +79,7 @@ export const useAdministracion = () => {
   const { productos, productosBajas, cargandoProductos, cargarProductos, eliminarProducto, restaurarProducto, toggleStockProducto } = useProductos();
 
   // Personal interno (solo SuperAdmin)
-  const personalHook = usePersonalInterno();
+  const personalHook = usePersonalInterno(isSuperAdmin);
 
   const cargando = cargandoFarmacias || cargandoNutricionistas || cargandoProductos;
 

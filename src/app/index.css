@@ -1,12 +1,12 @@
 /* 1. Importamos la fuente (Inter) con sus pesos más usados */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap");
 
 @import "tailwindcss";
 
 /* AQUÍ ESTÁ LA MAGIA DE TAILWIND v4 */
 @theme {
   /* --- TU TIPOGRAFÍA GLOBAL --- */
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 
   /* 1. Colores Corporativos Base */
   --color-primary: #367933;
@@ -30,8 +30,16 @@
   --color-surface: #ffffff;
 
   /* 2. Gradientes Corporativos */
-  --background-image-gradient-nutri-light: linear-gradient(to right, #bed000, #85ac1c);
-  --background-image-gradient-nutri-dark: linear-gradient(to right, #006633, #68b54e);
+  --background-image-gradient-nutri-light: linear-gradient(
+    to right,
+    #bed000,
+    #85ac1c
+  );
+  --background-image-gradient-nutri-dark: linear-gradient(
+    to right,
+    #006633,
+    #68b54e
+  );
 }
 
 /* --- ESTILOS BASE GLOBALES --- */
@@ -43,14 +51,12 @@
 
 /* --- LA "VACUNA" GLOBAL: ANIMACIONES PARA SHADCN EN TAILWIND V4 --- */
 @layer utilities {
-
   /* 1. Animaciones Maestras (Keyframes) */
   @keyframes pop-in {
     from {
       opacity: 0;
       transform: scale(0.95) translateY(-4px);
     }
-
     to {
       opacity: 1;
       transform: scale(1) translateY(0);
@@ -62,7 +68,6 @@
       opacity: 1;
       transform: scale(1) translateY(0);
     }
-
     to {
       opacity: 0;
       transform: scale(0.95) translateY(-4px);
@@ -73,7 +78,6 @@
     from {
       opacity: 0;
     }
-
     to {
       opacity: 1;
     }
@@ -83,7 +87,6 @@
     from {
       opacity: 1;
     }
-
     to {
       opacity: 0;
     }
@@ -93,7 +96,6 @@
     from {
       transform: translateX(-100%);
     }
-
     to {
       transform: translateX(0);
     }
@@ -103,7 +105,6 @@
     from {
       transform: translateX(0);
     }
-
     to {
       transform: translateX(-100%);
     }
@@ -113,7 +114,6 @@
     from {
       height: 0;
     }
-
     to {
       height: var(--radix-accordion-content-height);
     }
@@ -123,15 +123,12 @@
     from {
       height: var(--radix-accordion-content-height);
     }
-
     to {
       height: 0;
     }
   }
 
   /* 2. Inyección de la Vacuna a los Componentes Radix/Shadcn */
-
-  /* Dropdowns, Selects, Popovers, HoverCards, Tooltips, ContextMenus, Dialogs */
   [data-state="open"][data-side="top"],
   [data-state="open"][data-side="bottom"],
   [data-state="open"][data-side="left"],
@@ -148,7 +145,6 @@
     animation: pop-out 0.15s ease-in forwards;
   }
 
-  /* Fondos oscuros (Overlays) para modales y menús */
   [data-state="open"][data-slot="dialog-overlay"] {
     animation: fade-in 0.2s ease-out forwards;
   }
@@ -157,7 +153,6 @@
     animation: fade-out 0.2s ease-in forwards;
   }
 
-  /* Accordions */
   [data-state="open"][data-slot="accordion-content"] {
     animation: accordion-down 0.2s ease-out forwards;
   }
@@ -166,7 +161,6 @@
     animation: accordion-up 0.2s ease-in forwards;
   }
 
-  /* Panel Lateral Móvil (El que arreglamos en el paso anterior) */
   [data-mobile="true"][data-state="open"] {
     animation: slide-in-left 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
@@ -176,7 +170,7 @@
   }
 }
 
-/* Ocultar el icono de contraseña nativo del navegador (evita duplicados) */
+/* Ocultar el icono de contraseña nativo del navegador */
 input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear,
 input[type="password"]::-webkit-credentials-auto-fill-button {

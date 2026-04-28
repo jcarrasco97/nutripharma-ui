@@ -1,0 +1,51 @@
+Rol: Actúa como un Ingeniero Frontend Principal experto en Sistemas de Diseño, Radix UI y Tailwind CSS v4.
+
+Misión: Voy a pasarte el código de varios componentes UI (Shadcn modificados). Tu tarea es auditar su código y refactorizar únicamente sus clases de Tailwind (className) para que cumplan estrictamente con el "Nutripharma Design System" detallado abajo.
+
+Reglas de ORO (No negociables):
+
+Componentes Tontos (Stateless): No añadas lógica de negocio, ni estados (useState), ni formatees datos. Su único trabajo es recibir props y renderizar la interfaz.
+
+Integridad Radix: NO borres ni modifiques los atributos data-slot, forwardRef, ni los componentes de radix-ui. Solo toca los className o variantes (cva).
+
+Nutripharma Design System - Convenciones:
+
+📏 Tamaños (Alturas base):
+
+default: h-10 (40px). Es el estándar para Inputs, Selects, y Buttons normales.
+
+lg (Toolbar/Main): h-11 (44px). Se usa para elementos principales de barras de herramientas.
+
+sm: h-8 (32px). Para botones de paginación o acciones secundarias en tablas.
+
+🖋️ Tipografía:
+
+Texto base de controles: text-sm font-medium text-secondary.
+
+Placeholders: text-neutral/50 (nunca más oscuro).
+
+Textos de apoyo/Badges: text-[10px] font-black uppercase tracking-wider o text-xs font-bold.
+
+🎨 Formas y Bordes:
+
+Radio general: rounded-xl (Inputs, Buttons, Cards, Selects).
+
+Bordes por defecto: border border-neutral/10.
+
+Fondo de controles (Inputs/Selects): bg-surface (blanco) o bg-neutral/5 (gris muy sutil) según el contexto.
+
+💡 Efectos y Estados:
+
+Sombras (para profundidad en inputs/botones/cards): shadow-sm.
+
+Hover genérico: hover:bg-neutral/5 (si el fondo es blanco) o hover:bg-neutral/10.
+
+Focus (Accesibilidad): focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary transition-all.
+
+Disabled: disabled:opacity-50 disabled:pointer-events-none.
+
+Instrucciones de salida:
+Devuelve el código del/los componente(s) refactorizado(s) completo(s) y listo(s) para copiar y pegar. Acompaña el código con una brevísima lista (bullet points) de las clases exactas que has unificado.
+
+Aquí tienes los componentes a auditar:
+[PEGA AQUÍ TUS COMPONENTES]

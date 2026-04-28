@@ -2,22 +2,26 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   Users, Store, PackagePlus, Shield, Search, ListOrdered,
   ChevronDown, ChevronUp, GripVertical, Plus, Loader2, X,
+  UserCheck, Archive
 } from "lucide-react";
 
-import { useAdministracion } from "./hooks/useAdministracion";
-import SheetAdministracionForm from "./components/SheetAdministracionForm";
-import ListadoAdministracion from "./components/ListadoAdministracion";
-import ModalVerAsignaciones from "./components/ModalVerAsignaciones";
+import { useAdministracion } from "../hooks/useAdministracion";
+import SheetAdministracionForm from "../components/SheetAdministracionForm";
+import ModalVerAsignaciones from "../components/ModalVerAsignaciones";
+import ListadoAdministracion from "../components/ListadoAdministracion";
 
 import { Button } from "@/shared/components/ui/Button";
-import { Input } from "@/shared/components/ui/Input";
+import { Input } from "@/shared/components/ui/Input"; // <-- IMPORTACIÓN SHADCN INPUT
+import { Badge } from "@/shared/components/ui/Badge";
+import { Card, CardHeader, CardTitle, CardContent } from "@/shared/components/ui/Card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/Select";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
 } from "@/shared/components/ui/Sheet";
 import { ScrollArea } from "@/shared/components/ui/ScrollArea";
+import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/Tabs";
 
-// ── Modal Organizar Recomendados (migrado a semántico) ──
+// ── Modal Organizar Recomendados ──
 const ModalOrganizarRecomendados = ({ abierto, onClose, productos }) => {
   const [lista, setLista] = useState([]);
   const dragItem = useRef();
@@ -103,20 +107,8 @@ const ModalOrganizarRecomendados = ({ abierto, onClose, productos }) => {
                   <span className="font-semibold text-sm text-secondary">{prod.nombreProducto}</span>
                 </div>
                 <div className="flex gap-1">
-                  <button
-                    onClick={() => mover(i, -1)}
-                    disabled={i === 0}
-                    className="p-1.5 bg-neutral/10 rounded-lg text-neutral hover:bg-primary/20 hover:text-primary transition-all disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
-                  >
-                    <ChevronUp size={16} />
-                  </button>
-                  <button
-                    onClick={() => mover(i, 1)}
-                    disabled={i === lista.length - 1}
-                    className="p-1.5 bg-neutral/10 rounded-lg text-neutral hover:bg-primary/20 hover:text-primary transition-all disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
-                  >
-                    <ChevronDown size={16} />
-                  </button>
+                  <button onClick={() => mover(i, -1)} disabled={i === 0} className="p-1.5 bg-neutral/10 rounded-lg text-neutral hover:bg-primary/20 hover:text-primary transition-all disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"><ChevronUp size={16} /></button>
+                  <button onClick={() => mover(i, 1)} disabled={i === lista.length - 1} className="p-1.5 bg-neutral/10 rounded-lg text-neutral hover:bg-primary/20 hover:text-primary transition-all disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"><ChevronDown size={16} /></button>
                 </div>
               </div>
             ))}
@@ -135,8 +127,8 @@ const ModalOrganizarRecomendados = ({ abierto, onClose, productos }) => {
 // ── Etiquetas de pestañas ──
 const PESTANAS = [
   { id: "nutricionistas", label: "Nutricionistas", icon: <Users size={16} /> },
-  { id: "farmacias", label: "Red de Farmacias", icon: <Store size={16} /> },
-  { id: "productos", label: "Catálogo Productos", icon: <PackagePlus size={16} /> },
+  { id: "farmacias", label: "Farmacias", icon: <Store size={16} /> },
+  { id: "productos", label: "Productos", icon: <PackagePlus size={16} /> },
 ];
 
 const NOMBRES_PESTANA = {
@@ -152,6 +144,7 @@ const AdministracionPage = () => {
   const [terminoBusqueda, setTerminoBusqueda] = useState("");
   const [ordenAlfabetico, setOrdenAlfabetico] = useState("asc");
   const [modalRecomendados, setModalRecomendados] = useState(false);
+  const [vistaActivos, setVistaActivos] = useState("activos");
 
   if (hook.cargando && hook.nutricionistas.length === 0) {
     return (
@@ -163,29 +156,10 @@ const AdministracionPage = () => {
 
   const term = terminoBusqueda.toLowerCase();
 
-  const matchesNutri = (n) =>
-    !term ||
-    n.nombre?.toLowerCase().includes(term) ||
-    n.apellidos?.toLowerCase().includes(term) ||
-    n.email?.toLowerCase().includes(term);
-
-  const matchesFarm = (f) =>
-    !term ||
-    f.nombre?.toLowerCase().includes(term) ||
-    f.email?.toLowerCase().includes(term) ||
-    f.cif?.toLowerCase().includes(term);
-
-  const matchesProd = (p) =>
-    !term ||
-    p.nombreProducto?.toLowerCase().includes(term) ||
-    p.acronimo?.toLowerCase().includes(term) ||
-    p.referencia?.toLowerCase().includes(term);
-
-  const matchesAdmin = (a) =>
-    !term ||
-    a.nombre?.toLowerCase().includes(term) ||
-    a.apellidos?.toLowerCase().includes(term) ||
-    a.email?.toLowerCase().includes(term);
+  const matchesNutri = (n) => !term || n.nombre?.toLowerCase().includes(term) || n.apellidos?.toLowerCase().includes(term) || n.email?.toLowerCase().includes(term);
+  const matchesFarm = (f) => !term || f.nombre?.toLowerCase().includes(term) || f.email?.toLowerCase().includes(term) || f.cif?.toLowerCase().includes(term);
+  const matchesProd = (p) => !term || p.nombreProducto?.toLowerCase().includes(term) || p.acronimo?.toLowerCase().includes(term) || p.referencia?.toLowerCase().includes(term);
+  const matchesAdmin = (a) => !term || a.nombre?.toLowerCase().includes(term) || a.apellidos?.toLowerCase().includes(term) || a.email?.toLowerCase().includes(term);
 
   const sortNF = (a, b) => {
     const cmp = (a.nombre || "").localeCompare(b.nombre || "");
@@ -209,13 +183,20 @@ const AdministracionPage = () => {
     adminsBajas: (hook.adminsBajas || []).filter(matchesAdmin).sort(sortNF),
   };
 
-  const pestanasVisible = hook.isSuperAdmin
-    ? [...PESTANAS, { id: "personal", label: "Personal (SuperAdmin)", icon: <Shield size={16} /> }]
-    : PESTANAS;
+  const totalActivos = hook.pestana === "nutricionistas" ? hookFiltrado.nutricionistas.length :
+    hook.pestana === "farmacias" ? hookFiltrado.farmacias.length :
+      hook.pestana === "productos" ? hookFiltrado.productos.length :
+        hookFiltrado.admins.length;
+
+  const totalBajas = hook.pestana === "nutricionistas" ? hookFiltrado.nutricionistasBajas.length :
+    hook.pestana === "farmacias" ? hookFiltrado.farmaciasBajas.length :
+      hook.pestana === "productos" ? hookFiltrado.productosBajas.length :
+        hookFiltrado.adminsBajas.length;
+
+  const pestanasVisible = hook.isSuperAdmin ? [...PESTANAS, { id: "personal", label: "Personal", icon: <Shield size={16} /> }] : PESTANAS;
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
-      {/* Sheets */}
       <SheetAdministracionForm
         open={hook.sheetAbierto}
         onOpenChange={(v) => { if (!v) hook.cerrarSheet(); }}
@@ -237,86 +218,92 @@ const AdministracionPage = () => {
         enviandoAdmin={hook.enviandoAdmin}
       />
 
-      <ModalVerAsignaciones
-        modalAsignaciones={hook.modalAsignaciones}
-        cerrarModalAsignaciones={hook.cerrarModalAsignaciones}
-        nutricionistas={hook.nutricionistas}
-      />
+      <ModalVerAsignaciones modalAsignaciones={hook.modalAsignaciones} cerrarModalAsignaciones={hook.cerrarModalAsignaciones} nutricionistas={hook.nutricionistas} />
+      <ModalOrganizarRecomendados abierto={modalRecomendados} onClose={() => setModalRecomendados(false)} productos={hook.productos} />
 
-      <ModalOrganizarRecomendados
-        abierto={modalRecomendados}
-        onClose={() => setModalRecomendados(false)}
-        productos={hook.productos}
-      />
-
-      {/* ── Pestañas superiores ── */}
-      <div className="flex gap-2 border-b border-neutral/10 pb-4 overflow-x-auto">
-        {pestanasVisible.map((tab) => (
-          <button
-            key={tab.id}
-            id={`tab-${tab.id}`}
-            onClick={() => { hook.setPestana(tab.id); setTerminoBusqueda(""); }}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap border ${hook.pestana === tab.id
-              ? "bg-primary text-surface border-primary shadow-sm shadow-primary/20"
-              : "bg-surface text-neutral/70 border-neutral/10 hover:bg-neutral/5 hover:text-secondary hover:border-neutral/20"}`}
-          >
-            {tab.icon} {tab.label}
-          </button>
-        ))}
+      {/* ── Pestañas principales de navegación (DOMINIO) ── */}
+      <div className="border-b border-neutral/10 pb-4">
+        <Tabs value={hook.pestana} onValueChange={(val) => { hook.setPestana(val); setTerminoBusqueda(""); setVistaActivos("activos"); }} className="w-full overflow-x-auto custom-scrollbar pb-1">
+          <TabsList className="h-11 p-1 bg-neutral/5 border border-neutral/10 rounded-xl w-max flex">
+            {pestanasVisible.map((tab) => (
+              <TabsTrigger key={tab.id} value={tab.id} className="gap-2 px-5 text-sm font-bold rounded-lg transition-all duration-200 data-[state=active]:bg-primary data-[state=active]:text-surface data-[state=active]:shadow-sm">
+                {tab.icon} {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       </div>
 
-      {/* ── Header: Buscador + Acciones ── */}
-      <div className="flex flex-col md:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-primary pointer-events-none" />
-          <input
-            type="text"
-            placeholder={`Buscar ${hook.pestana === "productos" ? "productos" : hook.pestana === "farmacias" ? "farmacias" : hook.pestana === "personal" ? "administradores" : "nutricionistas"}...`}
-            value={terminoBusqueda}
-            onChange={(e) => setTerminoBusqueda(e.target.value)}
-            className="w-full bg-surface border border-neutral/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-secondary font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
+      {/* ── CONTENEDOR UNIFICADO TIPO REPOSITORIO (Card) ── */}
+      <Card className="overflow-hidden shadow-sm border-neutral/10">
+        <CardContent className="p-0">
+
+          {/* ── BARRA DE HERRAMIENTAS (Totalmente estandarizada a h-11) ── */}
+          <div className="p-4 border-b border-neutral/10 grid grid-cols-1 md:grid-cols-2 xl:flex xl:flex-row gap-3 items-center bg-neutral/5/30">
+
+            {/* 1. Tabs Activos / Histórico */}
+            <Tabs value={vistaActivos} onValueChange={setVistaActivos} className="w-full xl:w-auto">
+              <TabsList className="h-11 p-1 bg-neutral/5 border border-neutral/10 rounded-xl w-full xl:w-max flex shadow-sm">
+                <TabsTrigger value="activos" className="group flex-1 xl:flex-none gap-2 px-4 text-sm font-bold rounded-lg transition-all duration-200 data-[state=active]:bg-primary data-[state=active]:text-surface data-[state=active]:shadow-sm">
+                  <UserCheck size={16} /> Activos <Badge className="border-none text-[10px] font-black px-1.5 py-0 h-4 bg-primary/10 text-primary group-data-[state=active]:bg-surface/20 group-data-[state=active]:text-surface transition-colors">{totalActivos}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="bajas" className="group flex-1 xl:flex-none gap-2 px-4 text-sm font-bold rounded-lg transition-all duration-200 data-[state=active]:bg-primary data-[state=active]:text-surface data-[state=active]:shadow-sm">
+                  <Archive size={16} /> Histórico {totalBajas > 0 && <Badge className="border-none text-[10px] font-black px-1.5 py-0 h-4 bg-neutral/10 text-neutral/60 group-data-[state=active]:bg-surface/20 group-data-[state=active]:text-surface transition-colors">{totalBajas}</Badge>}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            {/* 2. Buscador (Estandarizado a h-11) */}
+            <div className="relative w-full xl:flex-1">
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-primary z-10 pointer-events-none" />
+              <Input
+                type="text"
+                placeholder={`Buscar ${NOMBRES_PESTANA[hook.pestana].toLowerCase()}...`}
+                value={terminoBusqueda}
+                onChange={(e) => setTerminoBusqueda(e.target.value)}
+                className="w-full h-11 pl-10 bg-surface border-neutral/10 rounded-xl text-sm text-secondary font-medium shadow-sm focus-visible:ring-primary/30 transition-all"
+              />
+            </div>
+
+            {/* 3. Selector de Orden (Estandarizado con !h-11) */}
+            <div className="w-full xl:w-auto">
+              <Select value={ordenAlfabetico} onValueChange={setOrdenAlfabetico}>
+                <SelectTrigger className="w-full xl:w-auto min-w-[160px] !h-11 border-neutral/10 bg-surface text-secondary text-sm font-medium rounded-xl shadow-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="asc">Nombre (A → Z)</SelectItem>
+                  <SelectItem value="desc">Nombre (Z → A)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 4. Botón Organizar (Estandarizado a h-11) */}
+            {hook.pestana === "productos" && (
+              <Button variant="outline" onClick={() => setModalRecomendados(true)} className="w-full xl:w-auto h-11 flex items-center justify-center gap-2 border-neutral/10 text-secondary bg-surface hover:bg-neutral/5 whitespace-nowrap rounded-xl shadow-sm px-4">
+                <ListOrdered size={16} /> Organizar
+              </Button>
+            )}
+
+            {/* 5. Botón Crear (Estandarizado a h-11) */}
+            <Button id="btn-crear-principal" onClick={hook.abrirSheetCrear} className="w-full xl:w-auto h-11 bg-primary hover:bg-primary-hover text-surface font-bold gap-2 whitespace-nowrap rounded-xl shadow-sm px-5 flex items-center justify-center transition-all active:scale-[0.98]">
+              <Plus size={16} /> Crear {NOMBRES_PESTANA[hook.pestana]}
+            </Button>
+
+          </div>
+
+          {/* ── Listado Paginado ── */}
+          <ListadoAdministracion
+            {...hookFiltrado}
+            isActivos={vistaActivos === "activos"}
+            cargando={hook.cargando}
+            cargandoAdmins={hook.cargandoAdmins}
+            abrirSheetEditar={hook.abrirSheetEditar}
+            abrirModalAsignaciones={hook.abrirModalAsignaciones}
           />
-        </div>
 
-        {hook.pestana === "productos" && (
-          <Button
-            variant="outline"
-            onClick={() => setModalRecomendados(true)}
-            className="flex items-center gap-2 border-neutral/10 text-secondary hover:bg-neutral/5"
-          >
-            <ListOrdered size={16} /> Organizar Recomendados
-          </Button>
-        )}
-
-        <div className="relative w-full md:w-44">
-          <Select value={ordenAlfabetico} onValueChange={setOrdenAlfabetico}>
-            <SelectTrigger className="w-full border-neutral/10 bg-surface text-secondary text-sm font-medium">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="asc">Nombre (A → Z)</SelectItem>
-              <SelectItem value="desc">Nombre (Z → A)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <Button
-          id="btn-crear-principal"
-          onClick={hook.abrirSheetCrear}
-          className="bg-primary hover:bg-primary-hover text-surface font-bold gap-2 whitespace-nowrap"
-        >
-          <Plus size={16} /> Crear {NOMBRES_PESTANA[hook.pestana]}
-        </Button>
-      </div>
-
-      {/* ── Listado (100% ancho) ── */}
-      <ListadoAdministracion
-        {...hookFiltrado}
-        cargando={hook.cargando}
-        cargandoAdmins={hook.cargandoAdmins}
-        abrirSheetEditar={hook.abrirSheetEditar}
-        abrirModalAsignaciones={hook.abrirModalAsignaciones}
-      />
+        </CardContent>
+      </Card>
     </div>
   );
 };

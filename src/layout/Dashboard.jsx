@@ -19,7 +19,7 @@ import {
   ValidacionesPage
 } from "@/modules/operations";
 
-import { AdministracionPage, PersonalInternoPage } from "@/modules/organization";
+import { AdministracionPage } from "@/modules/organization";
 import { DocumentacionPage } from "@/modules/documents";
 import { PedidosPage, SuministrosPage, SuministrosAdminPage } from "@/modules/sales";
 
@@ -77,8 +77,6 @@ const Dashboard = () => {
               <HistorialFarmaciaPage />
             ) : hook.vistaActual === "usuarios" ? (
               <AdministracionPage />
-            ) : hook.vistaActual === "personal-interno" ? (
-              <PersonalInternoPage />
             ) : (
               <div className="bg-surface rounded-2xl shadow-sm border border-neutral/10 p-8 min-h-[500px] flex items-center justify-center">                <div className="text-center">
                 <Activity size={48} className="mx-auto text-[#b1cb0c] mb-4" />

@@ -1,131 +1,180 @@
 import React, { useState } from "react";
-import { FileText, Loader2, Download, Trash2 } from "lucide-react";
-import { Badge } from "@/shared/components/ui/Badge";
+import { UploadCloud, FileText, ReceiptText } from "lucide-react";
+
+import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/Tabs";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "@/shared/components/ui/Card";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/shared/components/ui/Sheet";
+import { ScrollArea } from "@/shared/components/ui/ScrollArea";
 import { Button } from "@/shared/components/ui/Button";
-import PanelRepositorio from "@/shared/components/PanelRepositorio";
 
 import { useDocumentacion } from "../hooks/useDocumentacion";
 import PanelSubidaDocumentos from "../components/PanelSubidaDocumentos";
 import SubidaFacturas from "../components/SubidaFacturas";
-import ListadoFacturas from "../components/ListadoFacturas";
-
-// Estas dos funciones van fuera del componente, justo antes del const DocumentacionPage
-const obtenerColorAlcance = () => 'bg-primary text-surface';
-
-const obtenerLabelAlcance = (doc, isAdmin) => {
-  switch (doc.alcance) {
-    case "GLOBAL_TODOS": return "Para todos";
-    case "GLOBAL_NUTRICIONISTAS": return "Solo nutricionistas";
-    case "GLOBAL_FARMACIAS": return "Solo farmacias";
-    case "INDIVIDUAL": return isAdmin ? `Para: ${doc.propietarioEmail}` : "Personal";
-    default: return doc.alcance;
-  }
-};
+import DataTableDocumentos from "../components/DataTableDocumentos";
+import DataTableFacturas from "../components/DataTableFacturas";
 
 const DocumentacionPage = () => {
   const hook = useDocumentacion();
+
+  const [tabActivo, setTabActivo] = useState("documentos");
+  const [sheetAbierto, setSheetAbierto] = useState(false);
   const [updateCounter, setUpdateCounter] = useState(0);
 
-  if (hook.cargando) {
-    return (
-      <div className="flex justify-center p-20">
-        <Loader2 className="animate-spin text-primary" size={48} />
-      </div>
-    );
-  }
+  // ── Botón estandarizado que inyectaremos en la Toolbar de la tabla ──
+  const botonSubir = (
+    <Button
+      onClick={() => setSheetAbierto(true)}
+      // Quitamos el w-full md:w-auto y lo dejamos como w-full xl:w-auto (igual que en Admin)
+      className="w-full xl:w-auto h-11 bg-primary hover:bg-primary-hover text-surface font-bold gap-2 whitespace-nowrap rounded-xl shadow-sm px-5 transition-all active:scale-[0.98]"
+    >
+      <UploadCloud size={16} />
+      {tabActivo === "documentos" ? "Subir Documento" : "Subir Factura"}
+    </Button>
+  );
 
   return (
-    <div className="space-y-8 animate-fade-in pb-10">
-      {/* 1. Panel de subida */}
-      {hook.isAdmin && <PanelSubidaDocumentos {...hook} />}
-      {!hook.isAdmin && !hook.esFarmacia && (
-        <SubidaFacturas onSubidaExitosa={() => setUpdateCounter(c => c + 1)} />
-      )}
-
-      {/* 2. Repositorios en grid de dos columnas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Panel izquierdo: documentos generales */}
-        <PanelRepositorio
-          icono={<FileText size={20} />}
-          titulo="Repositorio Documental"
-          headerClassName="bg-primary text-surface"
-          filtroPrincipal={hook.filtroMes}
-          setFiltroPrincipal={hook.setFiltroMes}
-          opcionesFiltro={[
-            ...(hook.mesesDisponibles ?? []).map((m) => ({
-              value: m,
-              label: m === "Todos" ? "Todas las fechas" : m,
-            })),
-          ]}
-          placeholderFiltro="Todas las fechas"
-          filtroBusqueda={hook.filtroTexto}
-          setFiltroBusqueda={hook.setFiltroTexto}
-          placeholderBusqueda="Buscar documento..."
-          items={hook.documentosFiltrados}
-          cargando={hook.cargando}
-          emptyIcon={<FileText size={32} className="text-neutral/30" />}
-          emptyTitulo="No se encontraron documentos."
-          renderItem={(doc) => (
-            <div
-              key={doc.id}
-              className="border border-neutral/10 bg-neutral/5 p-4 rounded-xl flex justify-between items-center gap-4 hover:border-primary/20 transition-colors"
+    <div className="space-y-6 animate-fade-in pb-10">
+      {/* ── 1. Fila superior: Tabs + Botón Subir ── */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-neutral/10 pb-4">
+        <Tabs
+          value={tabActivo}
+          onValueChange={setTabActivo}
+          className="w-full md:w-auto overflow-x-auto custom-scrollbar"
+        >
+          {/* Bajamos de h-11 a h-10 */}
+          <TabsList className="h-10 p-1 bg-neutral/5 border border-neutral/10 rounded-xl w-max flex shadow-sm">
+            <TabsTrigger
+              value="documentos"
+              className="gap-2 px-5 text-sm font-bold rounded-lg transition-all duration-200 data-[state=active]:bg-primary data-[state=active]:text-surface data-[state=active]:shadow-sm"
             >
-              <div className="min-w-0 flex-1">
-                <Badge className={`border-none px-2 py-0.5 text-[10px] font-black uppercase mb-1.5 inline-block ${obtenerColorAlcance(doc.alcance)}`}>
-                  {obtenerLabelAlcance(doc, hook.isAdmin)}
-                </Badge>
-                <p className="font-bold text-secondary truncate text-sm" title={doc.nombreOriginal}>
-                  {doc.nombreOriginal}
-                </p>
-                <div className="flex text-xs text-neutral/60 font-medium mt-0.5 gap-3">
-                  <span>Subido: {new Date(doc.fechaSubida).toLocaleDateString()}</span>
-                  <span className="font-bold text-primary">
-                    {doc.subidoPor ? doc.subidoPor : "admin@nutripharma.com"}
-                  </span>
+              <FileText size={16} />
+              Documentos
+            </TabsTrigger>
+            <TabsTrigger
+              value="facturas"
+              className="gap-2 px-5 text-sm font-bold rounded-lg transition-all duration-200 data-[state=active]:bg-primary data-[state=active]:text-surface data-[state=active]:shadow-sm"
+            >
+              <ReceiptText size={16} />
+              Facturas
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {/* Bajamos de h-11 a h-10 */}
+        <Button
+          onClick={() => setSheetAbierto(true)}
+          className="w-full md:w-auto h-10 bg-primary hover:bg-primary-hover text-surface font-bold gap-2 whitespace-nowrap rounded-xl shadow-sm px-5 transition-all active:scale-[0.98]"
+        >
+          <UploadCloud size={16} />
+          {tabActivo === "documentos" ? "Subir Documento" : "Subir Factura"}
+        </Button>
+      </div>
+
+      {/* ── 2. Contenedor Unificado (Card) ── */}
+      <Card className="overflow-hidden shadow-sm border-neutral/10">
+        <CardContent className="p-6">
+          {tabActivo === "documentos" && (
+            <DataTableDocumentos
+              documentos={hook.documentosFiltrados}
+              isAdmin={hook.isAdmin}
+              handleBorrar={hook.handleBorrar}
+              handleDescargar={hook.handleDescargar}
+              borrandoId={hook.borrandoId}
+              descargandoId={hook.descargandoId}
+              cargando={hook.cargando}
+              botonSubir={botonSubir} // Pasamos el botón a la toolbar
+            />
+          )}
+
+          {tabActivo === "facturas" && (
+            <DataTableFacturas
+              esAdmin={hook.isAdmin}
+              forceUpdate={updateCounter}
+              botonSubir={botonSubir} // Pasamos el botón a la toolbar
+            />
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── 3. Sheet de subida (Extra ancho y animado) ── */}
+      <Sheet open={sheetAbierto} onOpenChange={setSheetAbierto}>
+        {tabActivo === "documentos" ? (
+          <SheetContent
+            side="right"
+            className="w-full sm:max-w-2xl flex flex-col p-0 h-full data-[state=open]:animate-in data-[state=closed]:animate-out slide-in-from-right-1/2 duration-300"
+          >
+            <SheetHeader className="px-6 pt-6 pb-4 border-b border-neutral/10 shrink-0 bg-primary">
+              <div className="flex items-center gap-3">
+                <div className="bg-surface/20 p-2.5 rounded-xl">
+                  <UploadCloud size={18} className="text-surface" />
+                </div>
+                <div>
+                  <SheetTitle className="text-surface text-base font-bold">
+                    Subir Documento
+                  </SheetTitle>
+                  <p className="text-surface/70 text-xs font-medium mt-0.5">
+                    Sube PDFs, Word o Imágenes directamente a la nube
+                    corporativa.
+                  </p>
                 </div>
               </div>
-              <div className="flex items-center gap-1 flex-shrink-0">
-                {hook.isAdmin && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => hook.handleBorrar(doc.id)}
-                    disabled={hook.borrandoId === doc.id}
-                    className="rounded-lg text-red-500 hover:bg-red-50 hover:text-red-600"
-                    title="Eliminar documento"
-                  >
-                    {hook.borrandoId === doc.id
-                      ? <Loader2 size={16} className="animate-spin" />
-                      : <Trash2 size={16} />
-                    }
-                  </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => hook.handleDescargar(doc.id, doc.nombreOriginal)}
-                  disabled={hook.descargandoId === doc.id}
-                  className="rounded-lg"
-                  title="Descargar documento"
-                >
-                  {hook.descargandoId === doc.id
-                    ? <Loader2 size={16} className="animate-spin" />
-                    : <Download size={16} />
-                  }
-                </Button>
-              </div>
-            </div>
-          )}
-        />
+            </SheetHeader>
 
-        {/* Panel derecho: facturas nutricionistas */}
-        {(hook.isAdmin || (!hook.isAdmin && !hook.esFarmacia)) && (
-          <ListadoFacturas
-            esAdmin={hook.isAdmin}
-            forceUpdate={updateCounter}
-          />
+            <ScrollArea className="flex-1 px-6 py-6">
+              <PanelSubidaDocumentos
+                formulario={hook.formulario}
+                setFormulario={hook.setFormulario}
+                destinatarios={hook.destinatarios}
+                subiendo={hook.subiendo}
+                handleSubir={(e) => {
+                  hook.handleSubir(e);
+                }}
+              />
+            </ScrollArea>
+          </SheetContent>
+        ) : (
+          <SheetContent
+            side="right"
+            className="w-full sm:max-w-2xl flex flex-col p-0 h-full data-[state=open]:animate-in data-[state=closed]:animate-out slide-in-from-right-1/2 duration-300"
+          >
+            <SheetHeader className="px-6 pt-6 pb-4 border-b border-neutral/10 shrink-0 bg-secondary">
+              <div className="flex items-center gap-3">
+                <div className="bg-surface/20 p-2.5 rounded-xl">
+                  <ReceiptText size={18} className="text-surface" />
+                </div>
+                <div>
+                  <SheetTitle className="text-surface text-base font-bold">
+                    Subir Factura de Gastos / Km
+                  </SheetTitle>
+                  <p className="text-surface/70 text-xs font-medium mt-0.5">
+                    El sistema renombrará tu archivo automáticamente:
+                    fecha_Km_Nombre_Apellidos
+                  </p>
+                </div>
+              </div>
+            </SheetHeader>
+
+            <ScrollArea className="flex-1 px-6 py-6">
+              <SubidaFacturas
+                onSubidaExitosa={() => {
+                  setUpdateCounter((c) => c + 1);
+                  setSheetAbierto(false);
+                }}
+              />
+            </ScrollArea>
+          </SheetContent>
         )}
-      </div>
+      </Sheet>
     </div>
   );
 };
