@@ -23,7 +23,7 @@ import { toast } from "sonner";
 
 const columnHelper = createColumnHelper();
 
-const DataTableFacturas = ({ esAdmin, forceUpdate }) => {
+const DataTableFacturas = ({ esAdmin, forceUpdate, toolbarStart, toolbarEnd }) => {
   const [facturas, setFacturas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [borrandoId, setBorrandoId] = useState(null);
@@ -196,11 +196,11 @@ const DataTableFacturas = ({ esAdmin, forceUpdate }) => {
     );
   }
 
-  // ── Toolbar estandarizada a h-11 ──
+  // ── Toolbar estandarizada a h-10 ──
   const filtroToolbar = (
     <div className="w-full md:w-auto">
       <Select value={filtroMes} onValueChange={setFiltroMes}>
-        <SelectTrigger className="w-full md:w-auto min-w-[160px] h-11 border-neutral/10 bg-surface text-secondary text-sm font-medium rounded-xl shadow-sm">
+        <SelectTrigger className="w-full md:w-auto min-w-[160px] h-10 border-neutral/10 bg-surface text-secondary text-sm font-medium rounded-xl shadow-sm">
           <SelectValue placeholder="Mes de subida" />
         </SelectTrigger>
         <SelectContent className="rounded-xl shadow-lg border-neutral/10">
@@ -229,7 +229,9 @@ const DataTableFacturas = ({ esAdmin, forceUpdate }) => {
       searchPlaceholder="Buscar archivo..."
       pageSize={5}
       emptyText="No se han encontrado facturas."
+      toolbarStart={toolbarStart}
       toolbarExtra={filtroToolbar}
+      toolbarEnd={toolbarEnd}
     />
   );
 };

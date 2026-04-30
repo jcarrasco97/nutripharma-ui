@@ -3,12 +3,6 @@ import { UploadCloud, FileText, ReceiptText } from "lucide-react";
 
 import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/Tabs";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from "@/shared/components/ui/Card";
-import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -30,83 +24,66 @@ const DocumentacionPage = () => {
   const [sheetAbierto, setSheetAbierto] = useState(false);
   const [updateCounter, setUpdateCounter] = useState(0);
 
-  // ── Botón estandarizado que inyectaremos en la Toolbar de la tabla ──
+  // ── 1. Botón de Acción Principal (Ahora usa size="lg") ──
   const botonSubir = (
     <Button
       onClick={() => setSheetAbierto(true)}
-      // Quitamos el w-full md:w-auto y lo dejamos como w-full xl:w-auto (igual que en Admin)
-      className="w-full xl:w-auto h-11 bg-primary hover:bg-primary-hover text-surface font-bold gap-2 whitespace-nowrap rounded-xl shadow-sm px-5 transition-all active:scale-[0.98]"
+      className="w-full xl:w-auto bg-primary hover:bg-primary-hover text-surface font-bold gap-2 whitespace-nowrap shadow-sm transition-all active:scale-[0.98]"
     >
       <UploadCloud size={16} />
       {tabActivo === "documentos" ? "Subir Documento" : "Subir Factura"}
     </Button>
   );
 
+  // ── 2. Segmented Control (Estilo Vercel: Compacto y sutil) ──
+  const selectorVista = (
+    <Tabs value={tabActivo} onValueChange={setTabActivo} className="w-full md:w-auto">
+      <TabsList className="h-10 p-1 bg-neutral/5 border border-neutral/10 rounded-xl flex w-full md:w-max shadow-sm">
+        <TabsTrigger
+          value="documentos"
+          className="flex-1 md:flex-none px-4 text-sm font-medium rounded-lg transition-all data-[state=active]:bg-surface data-[state=active]:text-secondary data-[state=active]:shadow-sm text-neutral/50"
+        >
+          Documentos
+        </TabsTrigger>
+        <TabsTrigger
+          value="facturas"
+          className="flex-1 md:flex-none px-4 text-sm font-medium rounded-lg transition-all data-[state=active]:bg-surface data-[state=active]:text-secondary data-[state=active]:shadow-sm text-neutral/50"
+        >
+          Facturas
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
+  );
+
   return (
     <div className="space-y-6 animate-fade-in pb-10">
-      {/* ── 1. Fila superior: Tabs + Botón Subir ── */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-neutral/10 pb-4">
-        <Tabs
-          value={tabActivo}
-          onValueChange={setTabActivo}
-          className="w-full md:w-auto overflow-x-auto custom-scrollbar"
-        >
-          {/* Bajamos de h-11 a h-10 */}
-          <TabsList className="h-10 p-1 bg-neutral/5 border border-neutral/10 rounded-xl w-max flex shadow-sm">
-            <TabsTrigger
-              value="documentos"
-              className="gap-2 px-5 text-sm font-bold rounded-lg transition-all duration-200 data-[state=active]:bg-primary data-[state=active]:text-surface data-[state=active]:shadow-sm"
-            >
-              <FileText size={16} />
-              Documentos
-            </TabsTrigger>
-            <TabsTrigger
-              value="facturas"
-              className="gap-2 px-5 text-sm font-bold rounded-lg transition-all duration-200 data-[state=active]:bg-primary data-[state=active]:text-surface data-[state=active]:shadow-sm"
-            >
-              <ReceiptText size={16} />
-              Facturas
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
 
-        {/* Bajamos de h-11 a h-10 */}
-        <Button
-          onClick={() => setSheetAbierto(true)}
-          className="w-full md:w-auto h-10 bg-primary hover:bg-primary-hover text-surface font-bold gap-2 whitespace-nowrap rounded-xl shadow-sm px-5 transition-all active:scale-[0.98]"
-        >
-          <UploadCloud size={16} />
-          {tabActivo === "documentos" ? "Subir Documento" : "Subir Factura"}
-        </Button>
-      </div>
+      {/* ── 3. Tablas con el Selector Integrado en su Toolbar ── */}
 
-      {/* ── 2. Contenedor Unificado (Card) ── */}
-      <Card className="overflow-hidden shadow-sm border-neutral/10">
-        <CardContent className="p-6">
-          {tabActivo === "documentos" && (
-            <DataTableDocumentos
-              documentos={hook.documentosFiltrados}
-              isAdmin={hook.isAdmin}
-              handleBorrar={hook.handleBorrar}
-              handleDescargar={hook.handleDescargar}
-              borrandoId={hook.borrandoId}
-              descargandoId={hook.descargandoId}
-              cargando={hook.cargando}
-              botonSubir={botonSubir} // Pasamos el botón a la toolbar
-            />
-          )}
+      {tabActivo === "documentos" && (
+        <DataTableDocumentos
+          documentos={hook.documentosFiltrados}
+          isAdmin={hook.isAdmin}
+          handleBorrar={hook.handleBorrar}
+          handleDescargar={hook.handleDescargar}
+          borrandoId={hook.borrandoId}
+          descargandoId={hook.descargandoId}
+          cargando={hook.cargando}
+          toolbarStart={selectorVista}
+          toolbarEnd={botonSubir} // <--- CAMBIADO A toolbarEnd
+        />
+      )}
 
-          {tabActivo === "facturas" && (
-            <DataTableFacturas
-              esAdmin={hook.isAdmin}
-              forceUpdate={updateCounter}
-              botonSubir={botonSubir} // Pasamos el botón a la toolbar
-            />
-          )}
-        </CardContent>
-      </Card>
+      {tabActivo === "facturas" && (
+        <DataTableFacturas
+          esAdmin={hook.isAdmin}
+          forceUpdate={updateCounter}
+          toolbarStart={selectorVista}
+          toolbarEnd={botonSubir} // <--- CAMBIADO A toolbarEnd
+        />
+      )}
 
-      {/* ── 3. Sheet de subida (Extra ancho y animado) ── */}
+      {/* ── 4. Sheet de subida (Se mantiene intacto) ── */}
       <Sheet open={sheetAbierto} onOpenChange={setSheetAbierto}>
         {tabActivo === "documentos" ? (
           <SheetContent

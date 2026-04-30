@@ -1,62 +1,76 @@
-/* 1. Importamos la fuente (Inter) con sus pesos más usados */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap");
+/* index.css */
 
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap");
 @import "tailwindcss";
 
-/* AQUÍ ESTÁ LA MAGIA DE TAILWIND v4 */
+/* ============================================================
+   DESIGN TOKENS — Fuente única de verdad del ERP
+   ============================================================ */
 @theme {
-  /* --- TU TIPOGRAFÍA GLOBAL --- */
+  /* Tipografía */
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 
-  /* 1. Colores Corporativos Base */
+  /* --- Paleta corporativa --- */
   --color-primary: #367933;
+  /* Verde oscuro — CTAs, acción principal  */
   --color-primary-hover: #2d652a;
+  /* Verde oscuro hover                     */
   --color-primary-dark: #006633;
+  /* Verde oscuro profundo (degradado)       */
 
   --color-secondary: #062e3a;
+  /* Azul oscuro — texto, headers, fondo    */
 
   --color-accent: #b1cb0c;
+  /* Verde claro — badges, highlights       */
   --color-accent-light: #bed000;
+  /* Verde claro brillante                  */
 
   --color-neutral: #342c1e;
-  --color-neutral-dark: #342c1e;
+  /* Gris cálido — texto base, bordes       */
 
   --color-destructive: #ef4444;
-  --color-destructive-hover: #ef4444;
-  --color-destructive-dark: #ef4444;
+  /* Rojo — errores, eliminar               */
 
-  /* Fondos Clean SaaS */
+  /* --- Fondos --- */
   --color-background: #f8fafc;
+  /* Fondo de página                        */
   --color-surface: #ffffff;
+  /* Fondo de cards, inputs, tabla          */
 
-  /* 2. Gradientes Corporativos */
-  --background-image-gradient-nutri-light: linear-gradient(
-    to right,
-    #bed000,
-    #85ac1c
-  );
-  --background-image-gradient-nutri-dark: linear-gradient(
-    to right,
-    #006633,
-    #68b54e
-  );
+  /* --- Degradados corporativos --- */
+  --background-image-gradient-nutri-light: linear-gradient(to right, #bed000, #85ac1c);
+  --background-image-gradient-nutri-dark: linear-gradient(to right, #006633, #68b54e);
+
+  /* ============================================================
+     ALTURAS DE CONTROL — Regla de tamaños del ERP
+     Una sola fuente de verdad. Nunca mezclar h-10 y h-11
+     en la misma fila visual.
+     ============================================================
+     h-8  (32px) → controles secundarios: selector filas/página,
+                    botones icon dentro de tabla
+     h-10 (40px) → ESTÁNDAR: inputs, selects, botones de toolbar,
+                    tabs, botones de acción de página
+     h-11 (44px) → SOLO en Sheets/Modales: botones de submit
+                    o CTAs aislados sin elementos adyacentes
+     ============================================================ */
 }
 
-/* --- ESTILOS BASE GLOBALES --- */
+/* --- Estilos base globales --- */
 @layer base {
   body {
     @apply antialiased bg-background text-neutral;
   }
 }
 
-/* --- LA "VACUNA" GLOBAL: ANIMACIONES PARA SHADCN EN TAILWIND V4 --- */
+/* --- Animaciones para componentes Radix/shadcn --- */
 @layer utilities {
-  /* 1. Animaciones Maestras (Keyframes) */
   @keyframes pop-in {
     from {
       opacity: 0;
       transform: scale(0.95) translateY(-4px);
     }
+
     to {
       opacity: 1;
       transform: scale(1) translateY(0);
@@ -68,6 +82,7 @@
       opacity: 1;
       transform: scale(1) translateY(0);
     }
+
     to {
       opacity: 0;
       transform: scale(0.95) translateY(-4px);
@@ -78,6 +93,7 @@
     from {
       opacity: 0;
     }
+
     to {
       opacity: 1;
     }
@@ -87,6 +103,7 @@
     from {
       opacity: 1;
     }
+
     to {
       opacity: 0;
     }
@@ -96,6 +113,7 @@
     from {
       transform: translateX(-100%);
     }
+
     to {
       transform: translateX(0);
     }
@@ -105,6 +123,7 @@
     from {
       transform: translateX(0);
     }
+
     to {
       transform: translateX(-100%);
     }
@@ -114,6 +133,7 @@
     from {
       height: 0;
     }
+
     to {
       height: var(--radix-accordion-content-height);
     }
@@ -123,24 +143,18 @@
     from {
       height: var(--radix-accordion-content-height);
     }
+
     to {
       height: 0;
     }
   }
 
-  /* 2. Inyección de la Vacuna a los Componentes Radix/Shadcn */
-  [data-state="open"][data-side="top"],
-  [data-state="open"][data-side="bottom"],
-  [data-state="open"][data-side="left"],
-  [data-state="open"][data-side="right"],
+  [data-state="open"][data-side],
   [data-slot="dialog-content"][data-state="open"] {
     animation: pop-in 0.15s ease-out forwards;
   }
 
-  [data-state="closed"][data-side="top"],
-  [data-state="closed"][data-side="bottom"],
-  [data-state="closed"][data-side="left"],
-  [data-state="closed"][data-side="right"],
+  [data-state="closed"][data-side],
   [data-slot="dialog-content"][data-state="closed"] {
     animation: pop-out 0.15s ease-in forwards;
   }
@@ -158,7 +172,7 @@
   }
 
   [data-state="closed"][data-slot="accordion-content"] {
-    animation: accordion-up 0.2s ease-in forwards;
+    animation: accordion-up 0.2s ease-out forwards;
   }
 
   [data-mobile="true"][data-state="open"] {
@@ -170,7 +184,7 @@
   }
 }
 
-/* Ocultar el icono de contraseña nativo del navegador */
+/* Ocultar icono nativo de contraseña */
 input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear,
 input[type="password"]::-webkit-credentials-auto-fill-button {

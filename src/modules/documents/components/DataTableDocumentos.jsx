@@ -44,6 +44,8 @@ const DataTableDocumentos = ({
   borrandoId,
   descargandoId,
   cargando,
+  toolbarStart,
+  toolbarEnd,
 }) => {
   const [filtroMes, setFiltroMes] = useState("TODOS");
 
@@ -188,7 +190,7 @@ const DataTableDocumentos = ({
   const filtroToolbar = (
     <div className="w-full md:w-auto">
       <Select value={filtroMes} onValueChange={setFiltroMes}>
-        <SelectTrigger className="w-full md:w-auto min-w-[160px] h-11 border-neutral/10 bg-surface text-secondary text-sm font-medium rounded-xl shadow-sm">
+        <SelectTrigger className="w-full md:w-auto min-w-[160px] h-10 border-neutral/10 bg-surface text-secondary text-sm font-medium rounded-xl shadow-sm">
           <SelectValue placeholder="Mes de subida" />
         </SelectTrigger>
         <SelectContent className="rounded-xl shadow-lg border-neutral/10">
@@ -217,7 +219,9 @@ const DataTableDocumentos = ({
       searchPlaceholder="Buscar documento..."
       pageSize={5}
       emptyText="No se han encontrado documentos."
+      toolbarStart={toolbarStart}
       toolbarExtra={filtroToolbar}
+      toolbarEnd={toolbarEnd}
     />
   );
 };

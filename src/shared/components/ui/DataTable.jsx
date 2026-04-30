@@ -52,9 +52,10 @@ export function DataTable({
   searchKey = "nombre",
   searchPlaceholder = "Filtrar resultados...",
   pageSize = 5,
+  toolbarStart,
   toolbarExtra,
   emptyText = "No se encontraron resultados.",
-  // ── NUEVO INTERRUPTOR (PROP) ──
+  toolbarEnd,
   enableRowSelection = false,
 }) {
   const [sorting, setSorting] = React.useState([]);
@@ -87,8 +88,7 @@ export function DataTable({
   // ── Lógica compartida para renderizar el Selector de Filas ──
   const selectorFilas = (
     <div className="flex items-center gap-2">
-      <p className="text-sm font-medium text-secondary">Filas por página</p>
-      <Select
+      <p className="text-xs font-medium text-neutral/50">Filas por página</p>      <Select
         value={`${table.getState().pagination.pageSize}`}
         onValueChange={(value) => {
           table.setPageSize(Number(value));
@@ -119,7 +119,11 @@ export function DataTable({
     <div className="w-full space-y-4">
       {/* ── BARRA DE HERRAMIENTAS (Toolbar) ── */}
       <div className="flex flex-col md:flex-row items-center gap-3 py-4">
-        {/* 1. Buscador Principal (Se expande con flex-1) */}
+
+        {/* 1. Acción inicial */}
+        {toolbarStart}
+
+        {/* 2. Buscador */}
         {searchKey && (
           <div className="relative w-full md:flex-1">
             <Search
@@ -132,20 +136,20 @@ export function DataTable({
               onChange={(event) =>
                 table.getColumn(searchKey)?.setFilterValue(event.target.value)
               }
-              className="w-full pl-10 bg-surface border-neutral/10 focus-visible:border-primary focus-visible:ring-primary/30 text-secondary rounded-xl shadow-sm h-11"
+              className="w-full pl-10 bg-surface border-neutral/10 focus-visible:border-primary focus-visible:ring-primary/30 text-secondary rounded-xl shadow-sm h-10"
             />
           </div>
         )}
 
-        {/* 2. Filtros Extras (Ej. Selector de Meses) */}
+        {/* 3. Filtros Extras */}
         {toolbarExtra}
 
-        {/* 3. Selector de Columnas */}
+        {/* 4. Selector de Columnas */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
-              className="w-full md:w-auto shrink-0 border-neutral/10 text-secondary bg-surface rounded-xl h-11 shadow-sm font-medium"
+              className="w-full md:w-auto shrink-0 border-neutral/10 text-secondary bg-surface rounded-xl h-10 shadow-sm font-medium"
             >
               <Settings2 className="mr-2 h-4 w-4" />
               Columnas <ChevronDown className="ml-2 h-4 w-4" />
@@ -181,6 +185,9 @@ export function DataTable({
                 );
               })}
           </DropdownMenuContent>
+
+          {/* 5. Acción final */}
+          {toolbarEnd}
         </DropdownMenu>
       </div>
 
@@ -188,7 +195,6 @@ export function DataTable({
       <div className="rounded-xl border border-neutral/10 overflow-hidden bg-surface shadow-sm">
         <Table>
           <TableHeader className="bg-neutral/5 border-b border-neutral/10">
-            {" "}
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow
                 key={headerGroup.id}
@@ -286,7 +292,7 @@ export function DataTable({
           {enableRowSelection && selectorFilas}
 
           {/* Indicador de página actual */}
-          <div className="flex w-[100px] items-center justify-center text-sm font-medium text-secondary">
+          <div className="flex w-[100px] items-center justify-center text-xs font-medium text-neutral/50">
             Página {table.getState().pagination.pageIndex + 1} de{" "}
             {table.getPageCount() || 1}
           </div>
