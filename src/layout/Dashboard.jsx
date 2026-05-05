@@ -38,12 +38,12 @@ const Dashboard = () => {
         <AppSidebar hook={hook} />
 
         {/* Renderizamos el área principal (deslizable) */}
-        {/* CAMBIO 3: bg-surface (Blanco puro) */}
-        <SidebarInset className="flex flex-col flex-1 bg-surface overflow-hidden">
+        {/* 👇 FIX 1: Cambiamos bg-surface por bg-background para que el lienzo sea gris */}
+        <SidebarInset className="flex flex-col flex-1 bg-background overflow-hidden">
 
           {/* HEADER DEL INSET (Fijo arriba) */}
-          {/* CAMBIO 4: bg-surface (Blanco puro) para que se mimetice con la app */}
-          <header className="flex h-16 shrink-0 items-center gap-2 bg-surface px-4 z-10">
+          {/* 👇 FIX 2: Cambiamos bg-surface por bg-background para que la cabecera se funda con el fondo */}
+          <header className="flex h-16 shrink-0 items-center gap-2 bg-background px-4 z-10">
             <SidebarTrigger className="text-neutral/70 hover:text-primary transition-colors" />
             <div className="w-px h-4 bg-neutral/20 mx-2" />
 

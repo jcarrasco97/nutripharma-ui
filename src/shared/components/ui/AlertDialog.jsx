@@ -43,7 +43,7 @@ function AlertDialogContent({ className, size = "default", ...props }) {
         data-slot="alert-dialog-content"
         data-size={size}
         className={cn(
-          "group/alert-dialog-content fixed top-1/2 left-1/2 z-50 grid w-full -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-surface p-6 text-secondary shadow-2xl shadow-neutral/10 ring-1 ring-neutral/10 duration-100 outline-none data-[size=default]:max-w-md data-[size=sm]:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "group/alert-dialog-content fixed top-1/2 left-1/2 z-50 grid w-full -translate-x-1/2 -translate-y-1/2 gap-4 rounded-md bg-surface p-6 text-secondary ring-1 ring-neutral/10 duration-100 outline-none data-[size=default]:max-w-md data-[size=sm]:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className,
         )}
         {...props}
@@ -70,7 +70,7 @@ function AlertDialogFooter({ className, ...props }) {
     <div
       data-slot="alert-dialog-footer"
       className={cn(
-        "-mx-6 -mb-6 mt-2 flex flex-col-reverse gap-2 rounded-b-xl border-t border-neutral/10 bg-neutral/5 p-4 sm:flex-row sm:justify-end",
+        "-mx-6 -mb-6 mt-2 flex flex-col-reverse gap-2 rounded-b-md border-t border-neutral/10 bg-neutral/5 p-4 sm:flex-row sm:justify-end",
         className,
       )}
       {...props}

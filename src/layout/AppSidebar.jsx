@@ -57,8 +57,7 @@ const AppSidebar = ({ hook }) => {
   return (
     <Sidebar collapsible="icon" className="border-r border-neutral/10 bg-background">
       {/* ── HEADER ─────────────────────────────────────────────────────────── */}
-      <SidebarHeader>
-        {/* El group-data-[collapsible=icon]:justify-center asegura que el logo no se descentre al minimizar */}
+      <SidebarHeader className="bg-background">
         <div className="flex items-center gap-3 px-3 py-2 overflow-hidden group-data-[collapsible=icon]:justify-center">
           <img src={logoUrl} alt="Logo NutriPharma" className="size-10 shrink-0" />
           <div className="flex flex-col gap-1 group-data-[collapsible=icon]:hidden">

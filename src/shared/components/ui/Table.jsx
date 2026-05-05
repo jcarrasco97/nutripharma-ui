@@ -4,7 +4,8 @@ import { cn } from "../../utils/utils";
 const Table = React.forwardRef(({ className, ...props }, ref) => (
   <div
     data-slot="table-container"
-    className="relative w-full overflow-x-auto rounded-xl border border-neutral/10 bg-surface shadow-sm"
+    // 👇 AQUÍ LA LIMPIEZA: Hemos borrado el shadow-sm que venía por defecto
+    className="relative w-full overflow-x-auto rounded-xl border border-neutral/10 bg-surface"
   >
     <table
       ref={ref}

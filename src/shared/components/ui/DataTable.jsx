@@ -88,18 +88,20 @@ export function DataTable({
   // ── Lógica compartida para renderizar el Selector de Filas ──
   const selectorFilas = (
     <div className="flex items-center gap-2">
-      <p className="text-xs font-medium text-neutral/50">Filas por página</p>      <Select
+      <p className="text-xs font-medium text-neutral/50">Filas por página</p>
+      <Select
         value={`${table.getState().pagination.pageSize}`}
         onValueChange={(value) => {
           table.setPageSize(Number(value));
         }}
       >
-        <SelectTrigger className="h-8 w-[70px] bg-surface border-neutral/10 rounded-xl shadow-sm focus:ring-primary/30 text-secondary font-bold">
+        {/* 👇 AQUÍ EL FIX: Añadimos size="sm" y quitamos el h-8 del className que no hacía nada */}
+        <SelectTrigger size="sm" className="w-[70px] bg-surface border-neutral/10 rounded-md focus:ring-primary/30 text-secondary font-bold">
           <SelectValue placeholder={table.getState().pagination.pageSize} />
         </SelectTrigger>
         <SelectContent
           side="top"
-          className="rounded-xl shadow-lg border-neutral/10"
+          className="rounded-md border-neutral/10"
         >
           {[5, 10, 20, 30, 40, 50].map((size) => (
             <SelectItem
@@ -125,10 +127,10 @@ export function DataTable({
 
         {/* 2. Buscador */}
         {searchKey && (
-          <div className="relative w-full md:flex-1">
+          <div className="relative w-full md:flex-1 group">
             <Search
               size={16}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-primary z-10 pointer-events-none"
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral/50 group-focus-within:text-primary transition-colors z-10 pointer-events-none"
             />
             <Input
               placeholder={searchPlaceholder}
@@ -136,7 +138,7 @@ export function DataTable({
               onChange={(event) =>
                 table.getColumn(searchKey)?.setFilterValue(event.target.value)
               }
-              className="w-full pl-10 bg-surface border-neutral/10 focus-visible:border-primary focus-visible:ring-primary/30 text-secondary rounded-xl shadow-sm h-10"
+              className="w-full pl-10 bg-surface border-neutral/10 focus-visible:border-primary focus-visible:ring-primary/30 text-secondary rounded-md h-10"
             />
           </div>
         )}
@@ -149,7 +151,7 @@ export function DataTable({
           <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
-              className="w-full md:w-auto shrink-0 border-neutral/10 text-secondary bg-surface rounded-xl h-10 shadow-sm font-medium"
+              className="w-full md:w-auto shrink-0 border-neutral/10 text-secondary bg-surface rounded-md h-10 font-medium"
             >
               <Settings2 className="mr-2 h-4 w-4" />
               Columnas <ChevronDown className="ml-2 h-4 w-4" />
@@ -157,7 +159,7 @@ export function DataTable({
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"
-            className="w-[180px] rounded-xl border-neutral/10 shadow-lg"
+            className="w-[180px] rounded-md border-neutral/10"
           >
             <DropdownMenuLabel className="text-xs font-bold text-neutral/50 uppercase tracking-wider">
               Alternar Columnas
@@ -192,85 +194,85 @@ export function DataTable({
       </div>
 
       {/* ── CUERPO DE LA TABLA ── */}
-      <div className="rounded-xl border border-neutral/10 overflow-hidden bg-surface shadow-sm">
-        <Table>
-          <TableHeader className="bg-neutral/5 border-b border-neutral/10">
-            {table.getHeaderGroups().map((headerGroup) => (
+      {/* 👇 1. Eliminamos el <div> extra que envolvía la tabla y creaba un doble borde */}
+      <Table>
+        {/* 👇 2. Quitamos el border-b redundante. Solo dejamos bg-surface para el fondo blanco */}
+        <TableHeader className="bg-surface">
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow
+              key={headerGroup.id}
+              className="hover:bg-transparent !border-b !border-neutral/10"            >
+              {headerGroup.headers.map((header) => {
+                return (
+                  <TableHead key={header.id} className="py-3 px-4">
+                    {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                      <Button
+                        variant="ghost"
+                        onClick={() =>
+                          header.column.toggleSorting(
+                            header.column.getIsSorted() === "asc",
+                          )
+                        }
+                        className="h-8 px-2 -ml-2 hover:bg-neutral/10 font-bold text-secondary text-xs uppercase tracking-wider transition-colors"
+                      >
+                        {flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
+                        {header.column.getIsSorted() === "desc" ? (
+                          <ArrowUpDown className="ml-2 h-3 w-3 text-primary" />
+                        ) : header.column.getIsSorted() === "asc" ? (
+                          <ArrowUpDown className="ml-2 h-3 w-3 text-primary rotate-180" />
+                        ) : (
+                          <ArrowUpDown className="ml-2 h-3 w-3 text-neutral/50" />
+                        )}
+                      </Button>
+                    ) : (
+                      <span className="font-bold text-secondary text-xs uppercase tracking-wider px-2">
+                        {flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
+                      </span>
+                    )}
+                  </TableHead>
+                );
+              })}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {table.getRowModel().rows?.length ? (
+            table.getRowModel().rows.map((row) => (
               <TableRow
-                key={headerGroup.id}
-                className="hover:bg-transparent border-none"
+                key={row.id}
+                data-state={row.getIsSelected() && "selected"}
+                // 👇 3. Magia absoluta: Al dejar solo "bg-surface", respetamos el border-b 
+                // nativo de 1px del componente Table.jsx, el hover gris y el fondo blanco.
+                className="bg-surface"
               >
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id} className="py-3 px-4">
-                      {header.isPlaceholder ? null : header.column.getCanSort() ? (
-                        <Button
-                          variant="ghost"
-                          onClick={() =>
-                            header.column.toggleSorting(
-                              header.column.getIsSorted() === "asc",
-                            )
-                          }
-                          className="h-8 px-2 -ml-2 hover:bg-neutral/10 font-bold text-secondary text-xs uppercase tracking-wider transition-colors"
-                        >
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
-                          {header.column.getIsSorted() === "desc" ? (
-                            <ArrowUpDown className="ml-2 h-3 w-3 text-primary" />
-                          ) : header.column.getIsSorted() === "asc" ? (
-                            <ArrowUpDown className="ml-2 h-3 w-3 text-primary rotate-180" />
-                          ) : (
-                            <ArrowUpDown className="ml-2 h-3 w-3 text-neutral/50" />
-                          )}
-                        </Button>
-                      ) : (
-                        <span className="font-bold text-secondary text-xs uppercase tracking-wider px-2">
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
-                        </span>
-                      )}
-                    </TableHead>
-                  );
-                })}
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id} className="py-3 px-4">
+                    {flexRender(
+                      cell.column.columnDef.cell,
+                      cell.getContext(),
+                    )}
+                  </TableCell>
+                ))}
               </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  // 👇 AQUÍ LA MAGIA: Quitamos el Javascript y usamos even: y odd: de Tailwind
-                  className="transition-colors border-b border-neutral/5 last:border-none data-[state=selected]:bg-primary/5 hover:bg-primary/10 even:bg-neutral/5 odd:bg-surface"
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="py-3 px-4">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-32 text-center text-neutral/60 font-medium"
-                >
-                  {emptyText}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell
+                colSpan={columns.length}
+                className="h-32 text-center text-neutral/60 font-medium"
+              >
+                {emptyText}
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
 
       {/* ── PAGINACIÓN AVANZADA ── */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 px-2 py-4">
@@ -302,7 +304,7 @@ export function DataTable({
             <Button
               variant="outline"
               size="icon"
-              className="hidden h-8 w-8 lg:flex rounded-xl bg-surface border-neutral/10 shadow-sm text-secondary hover:bg-neutral/5"
+              className="hidden h-8 w-8 lg:flex rounded-md bg-surface border-neutral/10 text-secondary hover:bg-neutral/5"
               onClick={() => table.setPageIndex(0)}
               disabled={!table.getCanPreviousPage()}
             >
@@ -312,7 +314,7 @@ export function DataTable({
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8 rounded-xl bg-surface border-neutral/10 shadow-sm text-secondary hover:bg-neutral/5"
+              className="h-8 w-8 rounded-md bg-surface border-neutral/10 text-secondary hover:bg-neutral/5"
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
             >
@@ -322,7 +324,7 @@ export function DataTable({
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8 rounded-xl bg-surface border-neutral/10 shadow-sm text-secondary hover:bg-neutral/5"
+              className="h-8 w-8 rounded-md bg-surface border-neutral/10 text-secondary hover:bg-neutral/5"
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
             >
@@ -332,7 +334,7 @@ export function DataTable({
             <Button
               variant="outline"
               size="icon"
-              className="hidden h-8 w-8 lg:flex rounded-xl bg-surface border-neutral/10 shadow-sm text-secondary hover:bg-neutral/5"
+              className="hidden h-8 w-8 lg:flex rounded-md bg-surface border-neutral/10 text-secondary hover:bg-neutral/5"
               onClick={() => table.setPageIndex(table.getPageCount() - 1)}
               disabled={!table.getCanNextPage()}
             >

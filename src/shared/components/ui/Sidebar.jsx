@@ -211,7 +211,7 @@ function Sidebar({
                 <div
                     data-sidebar="sidebar"
                     data-slot="sidebar-inner"
-                    className="flex size-full flex-col bg-background group-data-[variant=floating]:rounded-2xl group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-neutral/10"
+                    className="flex size-full flex-col bg-background group-data-[variant=floating]:rounded-md group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-neutral/10"
                 >
                     {children}
                 </div>
@@ -272,7 +272,7 @@ function SidebarInset({ className, ...props }) {
         <main
             data-slot="sidebar-inset"
             className={cn(
-                "relative flex w-full flex-1 flex-col bg-background md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-2xl md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2",
+                "relative flex w-full flex-1 flex-col bg-background md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-md md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2",
                 className
             )}
             {...props}
@@ -285,7 +285,7 @@ function SidebarInput({ className, ...props }) {
         <Input
             data-slot="sidebar-input"
             data-sidebar="input"
-            className={cn("h-8 w-full bg-background shadow-none rounded-xl", className)}
+            className={cn("h-8 w-full bg-background shadow-none rounded-md", className)}
             {...props}
         />
     )
@@ -357,7 +357,7 @@ function SidebarGroupLabel({ className, asChild = false, ...props }) {
             data-slot="sidebar-group-label"
             data-sidebar="group-label"
             className={cn(
-                "flex h-8 shrink-0 items-center rounded-xl px-2 text-xs font-semibold text-neutral/70 ring-primary/50 outline-hidden transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+                "flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-semibold text-neutral/70 ring-primary/50 outline-hidden transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
                 className
             )}
             {...props}
@@ -416,7 +416,7 @@ function SidebarMenuItem({ className, ...props }) {
 
 const sidebarMenuButtonVariants = cva(
     // 1. Clases generales (comportamiento normal abierto)
-    "peer/menu-button group/menu-button flex w-full items-center gap-3 overflow-hidden rounded-xl p-4 text-left text-sm ring-primary/50 outline-hidden transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-10 " +
+    "peer/menu-button group/menu-button flex w-full items-center gap-3 overflow-hidden rounded-md p-4 text-left text-sm ring-primary/50 outline-hidden transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-10 " +
 
     // 👇 --- LA MAGIA DEL PANEL MINIMIZADO (EXPERIMENTA AQUÍ) --- 👇
     "group-data-[collapsible=icon]:size-14! " +         // <-- Cambia el tamaño del cuadrado
@@ -533,7 +533,7 @@ function SidebarMenuSkeleton({ className, showIcon = false, ...props }) {
         <div
             data-slot="sidebar-menu-skeleton"
             data-sidebar="menu-skeleton"
-            className={cn("flex h-10 items-center gap-2 rounded-xl px-2", className)}
+            className={cn("flex h-10 items-center gap-2 rounded-md px-2", className)}
             {...props}
         >
             {showIcon && (
@@ -588,7 +588,7 @@ function SidebarMenuSubButton({ asChild = false, size = "md", isActive = false, 
             data-size={size}
             data-active={isActive}
             className={cn(
-                "flex h-8 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-xl px-2 text-neutral ring-primary/50 outline-hidden group-data-[collapsible=icon]:hidden hover:bg-neutral/5 hover:text-secondary focus-visible:ring-2 active:bg-neutral/10 active:text-secondary disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[size=md]:text-sm data-[size=sm]:text-xs data-active:bg-neutral/5 data-active:text-secondary [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-secondary",
+                "flex h-8 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-md px-2 text-neutral ring-primary/50 outline-hidden group-data-[collapsible=icon]:hidden hover:bg-neutral/5 hover:text-secondary focus-visible:ring-2 active:bg-neutral/10 active:text-secondary disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[size=md]:text-sm data-[size=sm]:text-xs data-active:bg-neutral/5 data-active:text-secondary [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-secondary",
                 className
             )}
             {...props}

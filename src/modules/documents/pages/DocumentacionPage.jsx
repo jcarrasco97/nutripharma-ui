@@ -28,26 +28,26 @@ const DocumentacionPage = () => {
   const botonSubir = (
     <Button
       onClick={() => setSheetAbierto(true)}
-      className="w-full xl:w-auto bg-primary hover:bg-primary-hover text-surface font-bold gap-2 whitespace-nowrap shadow-sm transition-all active:scale-[0.98]"
+      className="w-full xl:w-auto bg-primary hover:bg-primary-hover text-surface font-bold gap-2 whitespace-nowrap transition-all active:scale-[0.98]"
     >
       <UploadCloud size={16} />
       {tabActivo === "documentos" ? "Subir Documento" : "Subir Factura"}
     </Button>
   );
 
-  // ── 2. Segmented Control (Estilo Vercel: Compacto y sutil) ──
+  // ── 2. Segmented Control (Fondo blanco, activo en verde corporativo) ──
   const selectorVista = (
     <Tabs value={tabActivo} onValueChange={setTabActivo} className="w-full md:w-auto">
-      <TabsList className="h-10 p-1 bg-neutral/5 border border-neutral/10 rounded-xl flex w-full md:w-max shadow-sm">
+      <TabsList className="h-10 p-1 bg-surface border border-neutral/10 rounded-md flex w-full md:w-max">
         <TabsTrigger
           value="documentos"
-          className="flex-1 md:flex-none px-4 text-sm font-medium rounded-lg transition-all data-[state=active]:bg-surface data-[state=active]:text-secondary data-[state=active]:shadow-sm text-neutral/50"
+          className="flex-1 md:flex-none px-4 text-sm font-medium rounded-md transition-all data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-neutral/50 hover:text-secondary"
         >
           Documentos
         </TabsTrigger>
         <TabsTrigger
           value="facturas"
-          className="flex-1 md:flex-none px-4 text-sm font-medium rounded-lg transition-all data-[state=active]:bg-surface data-[state=active]:text-secondary data-[state=active]:shadow-sm text-neutral/50"
+          className="flex-1 md:flex-none px-4 text-sm font-medium rounded-md transition-all data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-neutral/50 hover:text-secondary"
         >
           Facturas
         </TabsTrigger>
@@ -92,7 +92,7 @@ const DocumentacionPage = () => {
           >
             <SheetHeader className="px-6 pt-6 pb-4 border-b border-neutral/10 shrink-0 bg-primary">
               <div className="flex items-center gap-3">
-                <div className="bg-surface/20 p-2.5 rounded-xl">
+                <div className="bg-surface/20 p-2.5 rounded-md">
                   <UploadCloud size={18} className="text-surface" />
                 </div>
                 <div>
@@ -126,7 +126,7 @@ const DocumentacionPage = () => {
           >
             <SheetHeader className="px-6 pt-6 pb-4 border-b border-neutral/10 shrink-0 bg-secondary">
               <div className="flex items-center gap-3">
-                <div className="bg-surface/20 p-2.5 rounded-xl">
+                <div className="bg-surface/20 p-2.5 rounded-md">
                   <ReceiptText size={18} className="text-surface" />
                 </div>
                 <div>

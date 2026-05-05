@@ -133,18 +133,18 @@ const DataTableDocumentos = ({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="rounded-xl h-8 w-8"
+                    className="rounded-md h-8 w-8"
                   >
                     <MoreHorizontal size={16} />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
-                  className="rounded-xl shadow-lg border-neutral/10"
+                  className="rounded-md border-neutral/10"
                 >
                   <DropdownMenuItem
                     onClick={() => handleDescargar(doc.id, doc.nombreOriginal)}
-                    className="rounded-lg"
+                    className="rounded-md"
                   >
                     {descargandoId === doc.id ? (
                       <Loader2 size={14} className="animate-spin mr-2" />
@@ -156,7 +156,7 @@ const DataTableDocumentos = ({
                   {isAdmin && (
                     <DropdownMenuItem
                       onClick={() => handleBorrar(doc.id)}
-                      className="rounded-lg text-red-500 focus:text-red-500 focus:bg-red-50 mt-1"
+                      className="rounded-md text-red-500 focus:text-red-500 focus:bg-red-50 mt-1"
                     >
                       {borrandoId === doc.id ? (
                         <Loader2 size={14} className="animate-spin mr-2" />
@@ -179,9 +179,9 @@ const DataTableDocumentos = ({
   if (cargando) {
     return (
       <div className="space-y-3">
-        <Skeleton className="h-14 w-full rounded-xl" />
-        <Skeleton className="h-14 w-full rounded-xl" />
-        <Skeleton className="h-14 w-full rounded-xl" />
+        <Skeleton className="h-14 w-full rounded-md" />
+        <Skeleton className="h-14 w-full rounded-md" />
+        <Skeleton className="h-14 w-full rounded-md" />
       </div>
     );
   }
@@ -190,10 +190,10 @@ const DataTableDocumentos = ({
   const filtroToolbar = (
     <div className="w-full md:w-auto">
       <Select value={filtroMes} onValueChange={setFiltroMes}>
-        <SelectTrigger className="w-full md:w-auto min-w-[160px] h-10 border-neutral/10 bg-surface text-secondary text-sm font-medium rounded-xl shadow-sm">
+        <SelectTrigger className="w-full md:w-auto min-w-[160px] h-10 border-neutral/10 bg-surface text-secondary text-sm font-medium rounded-md">
           <SelectValue placeholder="Mes de subida" />
         </SelectTrigger>
-        <SelectContent className="rounded-xl shadow-lg border-neutral/10">
+        <SelectContent className="rounded-md border-neutral/10">
           <SelectItem value="TODOS" className="font-medium text-secondary">
             Todos los meses
           </SelectItem>
