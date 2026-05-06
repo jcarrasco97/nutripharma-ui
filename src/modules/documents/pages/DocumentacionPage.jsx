@@ -28,7 +28,7 @@ const DocumentacionPage = () => {
   const botonSubir = (
     <Button
       onClick={() => setSheetAbierto(true)}
-      className="w-full xl:w-auto bg-primary hover:bg-primary-hover text-surface font-bold gap-2 whitespace-nowrap transition-all active:scale-[0.98]"
+      className="w-full md:w-auto bg-primary hover:bg-primary-hover text-surface font-bold gap-2 whitespace-nowrap transition-all active:scale-[0.98]"
     >
       <UploadCloud size={16} />
       {tabActivo === "documentos" ? "Subir Documento" : "Subir Factura"}

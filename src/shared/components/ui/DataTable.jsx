@@ -187,10 +187,10 @@ export function DataTable({
                 );
               })}
           </DropdownMenuContent>
-
-          {/* 5. Acción final */}
-          {toolbarEnd}
         </DropdownMenu>
+
+        {/* 5. Acción final */}
+        {toolbarEnd}
       </div>
 
       {/* ── CUERPO DE LA TABLA ── */}
