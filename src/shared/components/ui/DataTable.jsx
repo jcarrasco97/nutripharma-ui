@@ -213,7 +213,8 @@ export function DataTable({
                             header.column.getIsSorted() === "asc",
                           )
                         }
-                        className="h-8 px-2 -ml-2 hover:bg-neutral/10 font-bold text-secondary text-xs uppercase tracking-wider transition-colors"
+                        // 👇 CAMBIO: text-secondary -> text-neutral/50
+                        className="h-8 px-2 -ml-2 hover:bg-neutral/10 font-bold text-neutral/50 text-xs uppercase tracking-wider transition-colors"
                       >
                         {flexRender(
                           header.column.columnDef.header,
@@ -228,7 +229,8 @@ export function DataTable({
                         )}
                       </Button>
                     ) : (
-                      <span className="font-bold text-secondary text-xs uppercase tracking-wider px-2">
+                      // 👇 CAMBIO: text-secondary -> text-neutral/50
+                      <span className="font-bold text-neutral/50 text-xs uppercase tracking-wider px-2">
                         {flexRender(
                           header.column.columnDef.header,
                           header.getContext(),

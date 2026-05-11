@@ -14,7 +14,6 @@ import DataTablePersonal from "../components/DataTablePersonal";
 
 import { Button } from "@/shared/components/ui/Button";
 import { Badge } from "@/shared/components/ui/Badge";
-import { Card, CardContent } from "@/shared/components/ui/Card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/shared/components/ui/Sheet";
 import { ScrollArea } from "@/shared/components/ui/ScrollArea";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/Tabs";
@@ -139,23 +138,23 @@ const NOMBRES_PESTANA = {
 // ── Tabs Activos / Histórico (toolbar reutilizable) ──
 const TabsActivoHistorico = ({ value, onValueChange, totalActivos, totalBajas }) => (
   <Tabs value={value} onValueChange={onValueChange} className="w-full md:w-auto">
-    <TabsList className="h-10 p-1 bg-neutral/5 border border-neutral/10 rounded-md w-full md:w-max flex">
+    <TabsList className="h-10 p-1 bg-surface border border-neutral/10 rounded-md w-full md:w-max flex">
       <TabsTrigger
         value="activos"
-        className="group flex-1 md:flex-none gap-2 px-4 text-sm font-bold rounded-md transition-all duration-200 data-[state=active]:bg-primary data-[state=active]:text-surface"
+        className="group flex-1 md:flex-none gap-2 px-4 text-sm font-medium rounded-md transition-all data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-neutral/50 hover:text-secondary"
       >
         <UserCheck size={15} /> Activos
-        <Badge className="border-none text-[10px] font-black px-1.5 py-0 h-4 bg-primary/10 text-primary group-data-[state=active]:bg-surface/20 group-data-[state=active]:text-surface transition-colors">
+        <Badge className="border-none text-[10px] font-black px-1.5 py-0 h-4 bg-primary/10 text-primary group-data-[state=active]:bg-primary/20 group-data-[state=active]:text-primary transition-colors">
           {totalActivos}
         </Badge>
       </TabsTrigger>
       <TabsTrigger
         value="bajas"
-        className="group flex-1 md:flex-none gap-2 px-4 text-sm font-bold rounded-md transition-all duration-200 data-[state=active]:bg-primary data-[state=active]:text-surface"
+        className="group flex-1 md:flex-none gap-2 px-4 text-sm font-medium rounded-md transition-all data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-neutral/50 hover:text-secondary"
       >
         <Archive size={15} /> Histórico
         {totalBajas > 0 && (
-          <Badge className="border-none text-[10px] font-black px-1.5 py-0 h-4 bg-neutral/10 text-neutral/60 group-data-[state=active]:bg-surface/20 group-data-[state=active]:text-surface transition-colors">
+          <Badge className="border-none text-[10px] font-black px-1.5 py-0 h-4 bg-neutral/10 text-neutral/60 group-data-[state=active]:bg-primary/20 group-data-[state=active]:text-primary transition-colors">
             {totalBajas}
           </Badge>
         )}
@@ -195,15 +194,15 @@ const AdministracionPage = () => {
   // Totales para los tabs
   const totalActivos =
     hook.pestana === "nutricionistas" ? hook.nutricionistas.length :
-    hook.pestana === "farmacias" ? hook.farmacias.length :
-    hook.pestana === "productos" ? hook.productos.length :
-    (hook.admins ?? []).length;
+      hook.pestana === "farmacias" ? hook.farmacias.length :
+        hook.pestana === "productos" ? hook.productos.length :
+          (hook.admins ?? []).length;
 
   const totalBajas =
     hook.pestana === "nutricionistas" ? hook.nutricionistasBajas.length :
-    hook.pestana === "farmacias" ? hook.farmaciasBajas.length :
-    hook.pestana === "productos" ? hook.productosBajas.length :
-    (hook.adminsBajas ?? []).length;
+      hook.pestana === "farmacias" ? hook.farmaciasBajas.length :
+        hook.pestana === "productos" ? hook.productosBajas.length :
+          (hook.adminsBajas ?? []).length;
 
   const pestanasVisible = hook.isSuperAdmin
     ? [...PESTANAS, { id: "personal", label: "Personal", icon: <Shield size={16} /> }]
@@ -300,66 +299,63 @@ const AdministracionPage = () => {
       </div>
 
       {/* ── DataTable por entidad ── */}
-      <Card className="overflow-hidden border-neutral/10">
-        <CardContent className="p-0 px-4 pb-4">
-          {hook.pestana === "nutricionistas" && (
-            <DataTableNutricionistas
-              data={nutricionistasData}
-              cargando={hook.cargando}
-              isActivos={isActivos}
-              abrirSheetEditar={hook.abrirSheetEditar}
-              abrirModalAsignaciones={hook.abrirModalAsignaciones}
-              handleEliminar={hook.handleEliminar}
-              handleRestaurar={hook.handleRestaurar}
-              toolbarStart={tabsToolbar}
-              toolbarEnd={toolbarEnd}
-            />
-          )}
 
-          {hook.pestana === "farmacias" && (
-            <DataTableFarmacias
-              data={farmaciasData}
-              nutricionistas={hook.nutricionistas}
-              cargando={hook.cargando}
-              isActivos={isActivos}
-              abrirSheetEditar={hook.abrirSheetEditar}
-              abrirModalAsignaciones={hook.abrirModalAsignaciones}
-              handleEliminar={hook.handleEliminar}
-              handleRestaurar={hook.handleRestaurar}
-              toolbarStart={tabsToolbar}
-              toolbarEnd={toolbarEnd}
-            />
-          )}
+      {hook.pestana === "nutricionistas" && (
+        <DataTableNutricionistas
+          data={nutricionistasData}
+          cargando={hook.cargando}
+          isActivos={isActivos}
+          abrirSheetEditar={hook.abrirSheetEditar}
+          abrirModalAsignaciones={hook.abrirModalAsignaciones}
+          handleEliminar={hook.handleEliminar}
+          handleRestaurar={hook.handleRestaurar}
+          toolbarStart={tabsToolbar}
+          toolbarEnd={toolbarEnd}
+        />
+      )}
 
-          {hook.pestana === "productos" && (
-            <DataTableProductos
-              data={productosData}
-              cargando={hook.cargando}
-              isActivos={isActivos}
-              abrirSheetEditar={hook.abrirSheetEditar}
-              handleEliminar={hook.handleEliminar}
-              handleRestaurar={hook.handleRestaurar}
-              handleToggleStock={hook.handleToggleStock}
-              toolbarStart={tabsToolbar}
-              toolbarEnd={toolbarEnd}
-            />
-          )}
+      {hook.pestana === "farmacias" && (
+        <DataTableFarmacias
+          data={farmaciasData}
+          nutricionistas={hook.nutricionistas}
+          cargando={hook.cargando}
+          isActivos={isActivos}
+          abrirSheetEditar={hook.abrirSheetEditar}
+          abrirModalAsignaciones={hook.abrirModalAsignaciones}
+          handleEliminar={hook.handleEliminar}
+          handleRestaurar={hook.handleRestaurar}
+          toolbarStart={tabsToolbar}
+          toolbarEnd={toolbarEnd}
+        />
+      )}
 
-          {hook.pestana === "personal" && (
-            <DataTablePersonal
-              data={personalData}
-              cargando={hook.cargandoAdmins}
-              isActivos={isActivos}
-              abrirSheetEditar={hook.abrirSheetEditar}
-              handleEliminar={hook.handleEliminar}
-              handleRestaurar={hook.handleRestaurar}
-              toolbarStart={tabsToolbar}
-              toolbarEnd={toolbarEnd}
-            />
-          )}
-        </CardContent>
-      </Card>
-    </div>
+      {hook.pestana === "productos" && (
+        <DataTableProductos
+          data={productosData}
+          cargando={hook.cargando}
+          isActivos={isActivos}
+          abrirSheetEditar={hook.abrirSheetEditar}
+          handleEliminar={hook.handleEliminar}
+          handleRestaurar={hook.handleRestaurar}
+          handleToggleStock={hook.handleToggleStock}
+          toolbarStart={tabsToolbar}
+          toolbarEnd={toolbarEnd}
+        />
+      )}
+
+      {hook.pestana === "personal" && (
+        <DataTablePersonal
+          data={personalData}
+          cargando={hook.cargandoAdmins}
+          isActivos={isActivos}
+          abrirSheetEditar={hook.abrirSheetEditar}
+          handleEliminar={hook.handleEliminar}
+          handleRestaurar={hook.handleRestaurar}
+          toolbarStart={tabsToolbar}
+          toolbarEnd={toolbarEnd}
+        />
+      )}
+    </div >
   );
 };
 

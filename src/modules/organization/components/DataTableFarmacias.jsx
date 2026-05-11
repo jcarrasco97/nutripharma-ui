@@ -1,7 +1,6 @@
 import React, { useMemo } from "react";
 import { DataTable } from "@/shared/components/ui/DataTable";
 import { createColumnHelper } from "@tanstack/react-table";
-import { Badge } from "@/shared/components/ui/Badge";
 import { Button } from "@/shared/components/ui/Button";
 import { Skeleton } from "@/shared/components/ui/Skeleton";
 import {
@@ -36,9 +35,9 @@ const DataTableFarmacias = ({
         cell: ({ row }) => {
           const f = row.original;
           return (
-            <div className="flex items-center gap-3 min-w-[240px]">
+            <div className="flex items-center gap-3 min-w-[250px]">
               <div
-                className={`p-2.5 rounded-md shrink-0 ${
+                className={`p-2.5 rounded-xl shrink-0 ${
                   isActivos
                     ? "bg-accent/20 text-primary"
                     : "bg-neutral/10 text-neutral/40"
@@ -48,7 +47,7 @@ const DataTableFarmacias = ({
               </div>
               <div>
                 <p
-                  className={`font-bold text-sm leading-tight flex flex-wrap items-center gap-1.5 ${
+                  className={`font-bold text-sm leading-tight ${
                     isActivos ? "text-secondary" : "text-neutral/50 line-through"
                   }`}
                 >
@@ -66,51 +65,43 @@ const DataTableFarmacias = ({
         },
       }),
       columnHelper.accessor("direccion", {
-        id: "contacto",
-        header: "Dirección / CIF",
+        id: "direccion",
+        header: "Dirección",
         enableSorting: false,
-        cell: ({ row }) => {
-          const f = row.original;
-          return (
-            <div className="min-w-[180px]">
-              <p className="text-sm font-medium text-secondary truncate">{f.direccion}</p>
-              <p className="text-xs text-neutral/60 font-medium mt-0.5">CIF: {f.cif}</p>
-            </div>
-          );
-        },
-      }),
-      columnHelper.accessor("esProvinciaLocal", {
-        id: "tipo",
-        header: "Tipo",
-        enableSorting: true,
-        cell: ({ getValue }) => {
-          const local = getValue();
-          return (
-            <Badge
-              className={`border-none text-xs font-bold px-2.5 py-0.5 rounded-md whitespace-nowrap ${
-                local
-                  ? "bg-secondary/10 text-secondary"
-                  : "bg-neutral/10 text-neutral/60"
-              }`}
-            >
-              {local ? "Almería (PVF)" : "Externa (PVP)"}
-            </Badge>
-          );
-        },
-      }),
-      columnHelper.accessor("porcentajeComision", {
-        id: "comision",
-        header: "Comisión",
-        enableSorting: true,
         cell: ({ getValue }) => (
-          <Badge className="bg-accent/20 text-primary border-none text-xs font-bold px-2.5 py-0.5 rounded-md">
-            {getValue()}%
-          </Badge>
+          <span className="text-sm font-medium text-secondary whitespace-nowrap min-w-[200px] block">
+            {getValue() || "—"}
+          </span>
+        ),
+      }),
+      columnHelper.accessor("cif", {
+        id: "cif",
+        header: "CIF",
+        enableSorting: false,
+        cell: ({ getValue }) => (
+          <span className="text-sm font-medium text-secondary whitespace-nowrap">
+            {getValue() || "—"}
+          </span>
         ),
       }),
       columnHelper.display({
+        id: "comisionTipo",
+        header: "Comisión (Tipo)",
+        enableSorting: false,
+        cell: ({ row }) => {
+          const f = row.original;
+          const tipo = f.esProvinciaLocal ? "PVF" : "PVP";
+          const comision = f.porcentajeComision;
+          return (
+            <span className="text-sm font-medium text-secondary whitespace-nowrap">
+              {comision != null ? `${comision}% (${tipo})` : "—"}
+            </span>
+          );
+        },
+      }),
+      columnHelper.display({
         id: "asignaciones",
-        header: "Nutricionistas",
+        header: () => <div className="text-center w-full">Nutricionistas</div>,
         enableSorting: false,
         cell: ({ row }) => {
           const f = row.original;
@@ -118,17 +109,21 @@ const DataTableFarmacias = ({
             n.asignaciones?.some((a) => a.farmaciaId === f.id)
           ).length;
           return (
-            <button
-              onClick={() => isActivos && abrirModalAsignaciones?.(f, "farmacia")}
-              className={`text-[11px] font-bold px-2.5 py-1 rounded-md uppercase transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-                count > 0
-                  ? "bg-secondary/10 text-secondary hover:bg-secondary/20 cursor-pointer"
-                  : "bg-neutral/10 text-neutral/40 cursor-default"
-              }`}
-            >
-              <Users size={11} />
-              {count > 0 ? `${count} Nutricionistas` : "Sin nutricionistas"}
-            </button>
+            <div className="flex justify-center">
+              <button
+                onClick={() => isActivos && count > 0 && abrirModalAsignaciones?.(f, "farmacia")}
+                disabled={!isActivos || count === 0}
+                title={count > 0 ? "Ver nutricionistas asignados" : "Sin nutricionistas"}
+                className={`text-xs font-bold px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 ${
+                  count > 0 && isActivos
+                    ? "bg-secondary/10 text-secondary hover:bg-secondary/20 cursor-pointer"
+                    : "bg-neutral/10 text-neutral/40 cursor-default"
+                }`}
+              >
+                <Users size={14} />
+                <span>{count}</span>
+              </button>
+            </div>
           );
         },
       }),
@@ -142,23 +137,23 @@ const DataTableFarmacias = ({
             <div className="flex justify-end">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-md h-8 w-8">
+                  <Button variant="ghost" size="icon" className="rounded-xl h-8 w-8">
                     <MoreHorizontal size={16} />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="rounded-md border-neutral/10">
+                <DropdownMenuContent align="end" className="rounded-xl border-neutral/10 shadow-lg">
                   {isActivos ? (
                     <>
                       <DropdownMenuItem
                         onClick={() => abrirSheetEditar?.(f)}
-                        className="rounded-md gap-2"
+                        className="rounded-lg gap-2"
                       >
                         <Edit size={14} /> Editar
                       </DropdownMenuItem>
                       <DropdownMenuSeparator className="bg-neutral/10" />
                       <DropdownMenuItem
                         onClick={() => handleEliminar?.(f.id, "farmacia")}
-                        className="rounded-md gap-2 text-red-500 focus:text-red-500 focus:bg-red-50"
+                        className="rounded-lg gap-2 text-red-500 focus:text-red-500 focus:bg-red-50"
                       >
                         <Trash2 size={14} /> Dar de baja
                       </DropdownMenuItem>
@@ -166,7 +161,7 @@ const DataTableFarmacias = ({
                   ) : (
                     <DropdownMenuItem
                       onClick={() => handleRestaurar?.(f.id, "farmacia")}
-                      className="rounded-md gap-2"
+                      className="rounded-lg gap-2"
                     >
                       <RefreshCw size={14} /> Restaurar
                     </DropdownMenuItem>
@@ -185,7 +180,7 @@ const DataTableFarmacias = ({
     return (
       <div className="space-y-3 py-4">
         {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-14 w-full rounded-md" />
+          <Skeleton key={i} className="h-14 w-full rounded-xl" />
         ))}
       </div>
     );
@@ -197,7 +192,7 @@ const DataTableFarmacias = ({
       data={data}
       searchKey="nombre"
       searchPlaceholder="Buscar farmacia..."
-      pageSize={8}
+      pageSize={5}
       emptyText={
         isActivos
           ? "No hay farmacias activas."

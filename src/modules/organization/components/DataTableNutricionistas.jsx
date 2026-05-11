@@ -1,7 +1,6 @@
 import React, { useMemo } from "react";
 import { DataTable } from "@/shared/components/ui/DataTable";
 import { createColumnHelper } from "@tanstack/react-table";
-import { Badge } from "@/shared/components/ui/Badge";
 import { Button } from "@/shared/components/ui/Button";
 import { Skeleton } from "@/shared/components/ui/Skeleton";
 import {
@@ -11,7 +10,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/DropdownMenu";
-import { Archive, Edit, MoreHorizontal, RefreshCw, Store, Trash2 } from "lucide-react";
+// 👇 1. Importamos el icono genérico User
+import { Archive, Edit, MoreHorizontal, RefreshCw, Store, Trash2, User } from "lucide-react";
 
 const columnHelper = createColumnHelper();
 
@@ -34,23 +34,21 @@ const DataTableNutricionistas = ({
         enableSorting: true,
         cell: ({ row }) => {
           const n = row.original;
-          const initials = `${n.nombre?.charAt(0) ?? ""}${n.apellidos?.charAt(0) ?? ""}`;
           return (
-            <div className="flex items-center gap-3 min-w-[220px]">
+            <div className="flex items-center gap-3 min-w-[250px]">
+              {/* 👇 2. Reemplazamos las iniciales por el Icono Genérico (Mismo estilo que Farmacias) */}
               <div
-                className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shrink-0 select-none ${
-                  isActivos
-                    ? "bg-secondary text-surface"
-                    : "bg-neutral/20 text-neutral/60"
-                }`}
+                className={`p-2.5 rounded-xl shrink-0 ${isActivos
+                  ? "bg-secondary/10 text-secondary"
+                  : "bg-neutral/10 text-neutral/40"
+                  }`}
               >
-                {initials}
+                <User size={18} />
               </div>
               <div>
                 <p
-                  className={`font-bold text-sm leading-tight ${
-                    isActivos ? "text-secondary" : "text-neutral/50 line-through"
-                  }`}
+                  className={`font-bold text-sm leading-tight ${isActivos ? "text-secondary" : "text-neutral/50 line-through"
+                    }`}
                 >
                   {n.nombre} {n.apellidos}
                 </p>
@@ -65,49 +63,71 @@ const DataTableNutricionistas = ({
           );
         },
       }),
+      // 👇 3. Email en su propia columna
       columnHelper.accessor("email", {
-        id: "contacto",
-        header: "Contacto",
+        id: "email",
+        header: "Email",
         enableSorting: true,
-        cell: ({ row }) => {
-          const n = row.original;
-          return (
-            <div className="min-w-[180px]">
-              <p className="text-sm font-medium text-secondary truncate">{n.email}</p>
-              <p className="text-xs text-neutral/60 font-medium mt-0.5">{n.telefono}</p>
-            </div>
-          );
-        },
+        cell: ({ getValue }) => (
+          // Hemos quitado el truncate y el max-w-[200px]
+          // Añadimos min-w-[220px] y whitespace-nowrap para que respire
+          <span className="text-sm font-medium text-secondary whitespace-nowrap min-w-[220px] block">
+            {getValue() || "—"}
+          </span>
+        ),
       }),
+      // 👇 3.1. Teléfono en su propia columna
+      columnHelper.accessor("telefono", {
+        id: "telefono",
+        // Forzamos explícitamente la alineación a la izquierda
+        header: () => <div className="text-left w-full">Teléfono</div>,
+        enableSorting: false,
+        cell: ({ getValue }) => (
+          <div className="text-left">
+            <span className="text-sm font-medium text-secondary whitespace-nowrap">
+              {getValue() || "—"}
+            </span>
+          </div>
+        ),
+      }),
+      
+      // 👇 4. Contrato como texto plano (Adiós Badge)
       columnHelper.accessor("horasContratoMensual", {
         id: "horas",
         header: "Contrato",
         enableSorting: true,
         cell: ({ getValue }) => (
-          <Badge className="bg-secondary/10 text-secondary border-none text-xs font-bold px-2.5 py-0.5 rounded-md">
-            {getValue() ?? "–"}h/mes
-          </Badge>
+          <span className="text-sm font-medium text-secondary whitespace-nowrap">
+            {getValue() ? `${getValue()} h/mes` : "—"}
+          </span>
         ),
       }),
+      // 👇 5. Asignaciones estilo Github/Vercel (Icono + Número)
+      // 👇 Columna FARMACIAS centrada
       columnHelper.display({
         id: "asignaciones",
-        header: "Farmacias",
+        // 1. Centramos el texto del Header
+        header: () => <div className="text-center w-full">Farmacias</div>,
         enableSorting: false,
         cell: ({ row }) => {
           const n = row.original;
           const count = n.asignaciones?.length ?? 0;
           return (
-            <button
-              onClick={() => isActivos && abrirModalAsignaciones?.(n, "nutricionista")}
-              className={`text-[11px] font-bold px-2.5 py-1 rounded-md uppercase transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-                count > 0
-                  ? "bg-accent/20 text-primary hover:bg-accent/40 cursor-pointer"
+            // 2. Centramos el Badge dentro de la celda
+            <div className="flex justify-center">
+              <button
+                onClick={() => isActivos && count > 0 && abrirModalAsignaciones?.(n, "nutricionista")}
+                disabled={!isActivos || count === 0}
+                title={count > 0 ? "Ver farmacias asignadas" : "Sin asignaciones"}
+                className={`text-xs font-bold px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 ${count > 0 && isActivos
+                  ? "bg-accent/20 text-primary hover:bg-accent/30 cursor-pointer"
                   : "bg-neutral/10 text-neutral/40 cursor-default"
-              }`}
-            >
-              <Store size={11} />
-              {count > 0 ? `${count} Farmacias` : "Sin asignaciones"}
-            </button>
+                  }`}
+              >
+                <Store size={14} />
+                <span>{count}</span>
+              </button>
+            </div>
           );
         },
       }),
@@ -121,23 +141,23 @@ const DataTableNutricionistas = ({
             <div className="flex justify-end">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-md h-8 w-8">
+                  <Button variant="ghost" size="icon" className="rounded-xl h-8 w-8">
                     <MoreHorizontal size={16} />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="rounded-md border-neutral/10">
+                <DropdownMenuContent align="end" className="rounded-xl border-neutral/10 shadow-lg">
                   {isActivos ? (
                     <>
                       <DropdownMenuItem
                         onClick={() => abrirSheetEditar?.(n)}
-                        className="rounded-md gap-2"
+                        className="rounded-lg gap-2"
                       >
                         <Edit size={14} /> Editar
                       </DropdownMenuItem>
                       <DropdownMenuSeparator className="bg-neutral/10" />
                       <DropdownMenuItem
                         onClick={() => handleEliminar?.(n.id, "nutricionista")}
-                        className="rounded-md gap-2 text-red-500 focus:text-red-500 focus:bg-red-50"
+                        className="rounded-lg gap-2 text-red-500 focus:text-red-500 focus:bg-red-50"
                       >
                         <Trash2 size={14} /> Dar de baja
                       </DropdownMenuItem>
@@ -145,7 +165,7 @@ const DataTableNutricionistas = ({
                   ) : (
                     <DropdownMenuItem
                       onClick={() => handleRestaurar?.(n.id, "nutricionista")}
-                      className="rounded-md gap-2"
+                      className="rounded-lg gap-2"
                     >
                       <RefreshCw size={14} /> Restaurar
                     </DropdownMenuItem>
@@ -164,7 +184,7 @@ const DataTableNutricionistas = ({
     return (
       <div className="space-y-3 py-4">
         {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-14 w-full rounded-md" />
+          <Skeleton key={i} className="h-14 w-full rounded-xl" />
         ))}
       </div>
     );
@@ -176,7 +196,7 @@ const DataTableNutricionistas = ({
       data={data}
       searchKey="nombre"
       searchPlaceholder="Buscar nutricionista..."
-      pageSize={8}
+      pageSize={5}
       emptyText={
         isActivos
           ? "No hay nutricionistas activos."
