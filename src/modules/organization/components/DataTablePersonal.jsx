@@ -26,7 +26,7 @@ const DataTablePersonal = ({
         return (
           <div className="flex items-center gap-3 min-w-[250px]">
             <div
-              className={`p-2.5 rounded-xl shrink-0 ${
+              className={`p-2.5 rounded-md shrink-0 ${
                 isActivos ? "bg-secondary/10 text-secondary" : "bg-neutral/10 text-neutral/40"
               }`}
             >
@@ -83,26 +83,26 @@ const DataTablePersonal = ({
           <div className="flex justify-end">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-xl h-8 w-8">
+                <Button variant="ghost" size="icon" className="rounded-md h-8 w-8">
                   <MoreHorizontal size={16} />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="rounded-xl border-neutral/10 shadow-lg">
+              <DropdownMenuContent align="end" className="rounded-md border-neutral/10 shadow-lg">
                 {isActivos ? (
                   <>
-                    <DropdownMenuItem onClick={() => abrirSheetEditar?.(a)} className="rounded-lg gap-2">
+                    <DropdownMenuItem onClick={() => abrirSheetEditar?.(a)} className="rounded-md gap-2">
                       <Edit size={14} /> Editar
                     </DropdownMenuItem>
                     <DropdownMenuSeparator className="bg-neutral/10" />
                     <DropdownMenuItem
                       onClick={() => handleEliminar?.(a.id, "admin")}
-                      className="rounded-lg gap-2 text-red-500 focus:text-red-500 focus:bg-red-50"
+                      className="rounded-md gap-2 text-red-500 focus:text-red-500 focus:bg-red-50"
                     >
                       <Trash2 size={14} /> Dar de baja
                     </DropdownMenuItem>
                   </>
                 ) : (
-                  <DropdownMenuItem onClick={() => handleRestaurar?.(a.id, "admin")} className="rounded-lg gap-2">
+                  <DropdownMenuItem onClick={() => handleRestaurar?.(a.id, "admin")} className="rounded-md gap-2">
                     <RefreshCw size={14} /> Restaurar
                   </DropdownMenuItem>
                 )}
@@ -118,7 +118,7 @@ const DataTablePersonal = ({
     return (
       <div className="space-y-3 py-4">
         {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-14 w-full rounded-xl" />
+          <Skeleton key={i} className="h-14 w-full rounded-md" />
         ))}
       </div>
     );

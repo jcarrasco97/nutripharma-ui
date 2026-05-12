@@ -38,7 +38,7 @@ const DataTableNutricionistas = ({
             <div className="flex items-center gap-3 min-w-[250px]">
               {/* 👇 2. Reemplazamos las iniciales por el Icono Genérico (Mismo estilo que Farmacias) */}
               <div
-                className={`p-2.5 rounded-xl shrink-0 ${isActivos
+                className={`p-2.5 rounded-md shrink-0 ${isActivos
                   ? "bg-secondary/10 text-secondary"
                   : "bg-neutral/10 text-neutral/40"
                   }`}
@@ -63,6 +63,35 @@ const DataTableNutricionistas = ({
           );
         },
       }),
+
+      // 👇 4. Contrato como texto plano (Adiós Badge)
+      columnHelper.accessor("horasContratoMensual", {
+        id: "horas",
+        header: "Contrato",
+        enableSorting: true,
+        cell: ({ getValue }) => (
+          <div className="text-left">
+            <span className="text-sm font-medium text-secondary whitespace-nowrap">
+              {getValue() ? `${getValue()} h` : "—"}
+            </span>
+          </div>
+        ),
+      }),
+
+      // 👇 3.1. Teléfono en su propia columna
+      columnHelper.accessor("telefono", {
+        id: "telefono",
+        // Forzamos explícitamente la alineación a la izquierda
+        header: "Teléfono",
+        enableSorting: true,
+        cell: ({ getValue }) => (
+          <div className="text-left">
+            <span className="text-sm font-medium text-secondary whitespace-nowrap">
+              {getValue() || "—"}
+            </span>
+          </div>
+        ),
+      }),
       // 👇 3. Email en su propia columna
       columnHelper.accessor("email", {
         id: "email",
@@ -76,39 +105,14 @@ const DataTableNutricionistas = ({
           </span>
         ),
       }),
-      // 👇 3.1. Teléfono en su propia columna
-      columnHelper.accessor("telefono", {
-        id: "telefono",
-        // Forzamos explícitamente la alineación a la izquierda
-        header: () => <div className="text-left w-full">Teléfono</div>,
-        enableSorting: false,
-        cell: ({ getValue }) => (
-          <div className="text-left">
-            <span className="text-sm font-medium text-secondary whitespace-nowrap">
-              {getValue() || "—"}
-            </span>
-          </div>
-        ),
-      }),
-      
-      // 👇 4. Contrato como texto plano (Adiós Badge)
-      columnHelper.accessor("horasContratoMensual", {
-        id: "horas",
-        header: "Contrato",
-        enableSorting: true,
-        cell: ({ getValue }) => (
-          <span className="text-sm font-medium text-secondary whitespace-nowrap">
-            {getValue() ? `${getValue()} h/mes` : "—"}
-          </span>
-        ),
-      }),
+
       // 👇 5. Asignaciones estilo Github/Vercel (Icono + Número)
       // 👇 Columna FARMACIAS centrada
       columnHelper.display({
         id: "asignaciones",
         // 1. Centramos el texto del Header
-        header: () => <div className="text-center w-full">Farmacias</div>,
-        enableSorting: false,
+        header: "Farmacias",
+        enableSorting: true,
         cell: ({ row }) => {
           const n = row.original;
           const count = n.asignaciones?.length ?? 0;
@@ -119,7 +123,7 @@ const DataTableNutricionistas = ({
                 onClick={() => isActivos && count > 0 && abrirModalAsignaciones?.(n, "nutricionista")}
                 disabled={!isActivos || count === 0}
                 title={count > 0 ? "Ver farmacias asignadas" : "Sin asignaciones"}
-                className={`text-xs font-bold px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 ${count > 0 && isActivos
+                className={`text-xs font-bold px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 ${count > 0 && isActivos
                   ? "bg-accent/20 text-primary hover:bg-accent/30 cursor-pointer"
                   : "bg-neutral/10 text-neutral/40 cursor-default"
                   }`}
@@ -141,23 +145,23 @@ const DataTableNutricionistas = ({
             <div className="flex justify-end">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-xl h-8 w-8">
+                  <Button variant="ghost" size="icon" className="rounded-md h-8 w-8">
                     <MoreHorizontal size={16} />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="rounded-xl border-neutral/10 shadow-lg">
+                <DropdownMenuContent align="end" className="rounded-md border-neutral/10 shadow-lg">
                   {isActivos ? (
                     <>
                       <DropdownMenuItem
                         onClick={() => abrirSheetEditar?.(n)}
-                        className="rounded-lg gap-2"
+                        className="rounded-md gap-2"
                       >
                         <Edit size={14} /> Editar
                       </DropdownMenuItem>
                       <DropdownMenuSeparator className="bg-neutral/10" />
                       <DropdownMenuItem
                         onClick={() => handleEliminar?.(n.id, "nutricionista")}
-                        className="rounded-lg gap-2 text-red-500 focus:text-red-500 focus:bg-red-50"
+                        className="rounded-md gap-2 text-red-500 focus:text-red-500 focus:bg-red-50"
                       >
                         <Trash2 size={14} /> Dar de baja
                       </DropdownMenuItem>
@@ -165,7 +169,7 @@ const DataTableNutricionistas = ({
                   ) : (
                     <DropdownMenuItem
                       onClick={() => handleRestaurar?.(n.id, "nutricionista")}
-                      className="rounded-lg gap-2"
+                      className="rounded-md gap-2"
                     >
                       <RefreshCw size={14} /> Restaurar
                     </DropdownMenuItem>
@@ -184,7 +188,7 @@ const DataTableNutricionistas = ({
     return (
       <div className="space-y-3 py-4">
         {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-14 w-full rounded-xl" />
+          <Skeleton key={i} className="h-14 w-full rounded-md" />
         ))}
       </div>
     );

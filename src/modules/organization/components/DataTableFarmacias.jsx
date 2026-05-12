@@ -34,25 +34,34 @@ const DataTableFarmacias = ({
         enableSorting: true,
         cell: ({ row }) => {
           const f = row.original;
+          const esPVF = f.esProvinciaLocal;
           return (
             <div className="flex items-center gap-3 min-w-[250px]">
               <div
-                className={`p-2.5 rounded-xl shrink-0 ${
-                  isActivos
-                    ? "bg-accent/20 text-primary"
-                    : "bg-neutral/10 text-neutral/40"
-                }`}
+                className={`p-2.5 rounded-md shrink-0 ${isActivos
+                  ? "bg-accent/20 text-primary"
+                  : "bg-neutral/10 text-neutral/40"
+                  }`}
               >
                 <Store size={18} />
               </div>
               <div>
-                <p
-                  className={`font-bold text-sm leading-tight ${
-                    isActivos ? "text-secondary" : "text-neutral/50 line-through"
-                  }`}
-                >
-                  {f.nombre}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p
+                    className={`font-bold text-sm leading-tight ${isActivos ? "text-secondary" : "text-neutral/50 line-through"
+                      }`}
+                  >
+                    {f.nombre}
+                  </p>
+                  <span
+                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${esPVF
+                      ? "bg-accent/20 text-primary"
+                      : "bg-neutral/10 text-neutral/60"
+                      }`}
+                  >
+                    {esPVF ? "PVF" : "PVP"}
+                  </span>
+                </div>
                 {!isActivos && f.fechaBaja && (
                   <p className="text-[10px] text-red-500 font-bold flex items-center gap-1 mt-0.5">
                     <Archive size={10} />
@@ -64,10 +73,21 @@ const DataTableFarmacias = ({
           );
         },
       }),
+
+      columnHelper.accessor("porcentajeComision", {
+        id: "comision",
+        header: "Comisión",
+        enableSorting: true,
+        cell: ({ getValue }) => (
+          <span className="text-sm font-medium text-secondary whitespace-nowrap">
+            {getValue() != null ? `${getValue()}%` : "—"}
+          </span>
+        ),
+      }),
       columnHelper.accessor("direccion", {
         id: "direccion",
         header: "Dirección",
-        enableSorting: false,
+        enableSorting: true,
         cell: ({ getValue }) => (
           <span className="text-sm font-medium text-secondary whitespace-nowrap min-w-[200px] block">
             {getValue() || "—"}
@@ -77,31 +97,30 @@ const DataTableFarmacias = ({
       columnHelper.accessor("cif", {
         id: "cif",
         header: "CIF",
-        enableSorting: false,
+        enableSorting: true,
         cell: ({ getValue }) => (
           <span className="text-sm font-medium text-secondary whitespace-nowrap">
             {getValue() || "—"}
           </span>
         ),
       }),
-      columnHelper.display({
-        id: "comisionTipo",
-        header: "Comisión (Tipo)",
-        enableSorting: false,
-        cell: ({ row }) => {
-          const f = row.original;
-          const tipo = f.esProvinciaLocal ? "PVF" : "PVP";
-          const comision = f.porcentajeComision;
-          return (
-            <span className="text-sm font-medium text-secondary whitespace-nowrap">
-              {comision != null ? `${comision}% (${tipo})` : "—"}
-            </span>
-          );
-        },
+
+      columnHelper.accessor("email", {
+        id: "email",
+        header: "Email",
+        enableSorting: true,
+        enableHiding: true,
+        meta: { defaultHidden: true },
+        cell: ({ getValue }) => (
+          <span className="text-sm font-medium text-secondary whitespace-nowrap min-w-[200px] block">
+            {getValue() || "—"}
+          </span>
+        ),
       }),
+
       columnHelper.display({
         id: "asignaciones",
-        header: () => <div className="text-center w-full">Nutricionistas</div>,
+        header: "Nutricionistas",
         enableSorting: false,
         cell: ({ row }) => {
           const f = row.original;
@@ -111,14 +130,17 @@ const DataTableFarmacias = ({
           return (
             <div className="flex justify-center">
               <button
-                onClick={() => isActivos && count > 0 && abrirModalAsignaciones?.(f, "farmacia")}
+                onClick={() =>
+                  isActivos && count > 0 && abrirModalAsignaciones?.(f, "farmacia")
+                }
                 disabled={!isActivos || count === 0}
-                title={count > 0 ? "Ver nutricionistas asignados" : "Sin nutricionistas"}
-                className={`text-xs font-bold px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 ${
-                  count > 0 && isActivos
-                    ? "bg-secondary/10 text-secondary hover:bg-secondary/20 cursor-pointer"
-                    : "bg-neutral/10 text-neutral/40 cursor-default"
-                }`}
+                title={
+                  count > 0 ? "Ver nutricionistas asignados" : "Sin nutricionistas"
+                }
+                className={`text-xs font-bold px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 ${count > 0 && isActivos
+                  ? "bg-secondary/10 text-secondary hover:bg-secondary/20 cursor-pointer"
+                  : "bg-neutral/10 text-neutral/40 cursor-default"
+                  }`}
               >
                 <Users size={14} />
                 <span>{count}</span>
@@ -137,23 +159,26 @@ const DataTableFarmacias = ({
             <div className="flex justify-end">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-xl h-8 w-8">
+                  <Button variant="ghost" size="icon" className="rounded-md h-8 w-8">
                     <MoreHorizontal size={16} />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="rounded-xl border-neutral/10 shadow-lg">
+                <DropdownMenuContent
+                  align="end"
+                  className="rounded-md border-neutral/10 shadow-lg"
+                >
                   {isActivos ? (
                     <>
                       <DropdownMenuItem
                         onClick={() => abrirSheetEditar?.(f)}
-                        className="rounded-lg gap-2"
+                        className="rounded-md gap-2"
                       >
                         <Edit size={14} /> Editar
                       </DropdownMenuItem>
                       <DropdownMenuSeparator className="bg-neutral/10" />
                       <DropdownMenuItem
                         onClick={() => handleEliminar?.(f.id, "farmacia")}
-                        className="rounded-lg gap-2 text-red-500 focus:text-red-500 focus:bg-red-50"
+                        className="rounded-md gap-2 text-red-500 focus:text-red-500 focus:bg-red-50"
                       >
                         <Trash2 size={14} /> Dar de baja
                       </DropdownMenuItem>
@@ -173,14 +198,21 @@ const DataTableFarmacias = ({
         },
       }),
     ],
-    [isActivos, nutricionistas, abrirSheetEditar, abrirModalAsignaciones, handleEliminar, handleRestaurar]
+    [
+      isActivos,
+      nutricionistas,
+      abrirSheetEditar,
+      abrirModalAsignaciones,
+      handleEliminar,
+      handleRestaurar,
+    ]
   );
 
   if (cargando) {
     return (
       <div className="space-y-3 py-4">
         {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-14 w-full rounded-xl" />
+          <Skeleton key={i} className="h-14 w-full rounded-md" />
         ))}
       </div>
     );

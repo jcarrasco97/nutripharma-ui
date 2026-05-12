@@ -60,7 +60,12 @@ export function DataTable({
 }) {
   const [sorting, setSorting] = React.useState([]);
   const [columnFilters, setColumnFilters] = React.useState([]);
-  const [columnVisibility, setColumnVisibility] = React.useState({});
+  const [columnVisibility, setColumnVisibility] = React.useState(() =>
+    columns.reduce((acc, col) => {
+      if (col.meta?.defaultHidden) acc[col.id] = false;
+      return acc;
+    }, {})
+  );
   const [rowSelection, setRowSelection] = React.useState({});
 
   const table = useReactTable({
@@ -118,7 +123,7 @@ export function DataTable({
   );
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-1">
       {/* ── BARRA DE HERRAMIENTAS (Toolbar) ── */}
       <div className="flex flex-col md:flex-row items-center gap-3 py-4">
 
@@ -194,9 +199,7 @@ export function DataTable({
       </div>
 
       {/* ── CUERPO DE LA TABLA ── */}
-      {/* 👇 1. Eliminamos el <div> extra que envolvía la tabla y creaba un doble borde */}
       <Table>
-        {/* 👇 2. Quitamos el border-b redundante. Solo dejamos bg-surface para el fondo blanco */}
         <TableHeader className="bg-surface">
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow
@@ -204,7 +207,7 @@ export function DataTable({
               className="hover:bg-transparent !border-b !border-neutral/10"            >
               {headerGroup.headers.map((header) => {
                 return (
-                  <TableHead key={header.id} className="py-3 px-4">
+                  <TableHead key={header.id} className="px-4">
                     {header.isPlaceholder ? null : header.column.getCanSort() ? (
                       <Button
                         variant="ghost"
