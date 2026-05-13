@@ -18,7 +18,10 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/shared/componen
 import {
   ConsultasPage, HistorialFarmaciaPage,
   DashboardAdminPage, DashboardFarmaciaPage, DashboardNutriPage,
-  ValidacionesPage
+  ValidacionesConsultasPage,
+  ValidacionesPedidosPage,
+  ValidacionesSuministrosPage,
+  CierreCajaPage,
 } from "@/modules/operations";
 
 import { AdministracionPage } from "@/modules/organization";
@@ -62,8 +65,8 @@ const TopHeader = ({ tituloVistaActual, hook }) => {
                     setIsHoverMenuOpen(false);
                   }}
                   className={`flex items-center gap-3 px-3 py-2 rounded-md text-[13px] transition-all duration-200 ${isActive
-                      ? "bg-primary/10 text-primary font-bold"
-                      : "bg-transparent text-neutral/70 font-medium hover:bg-neutral/10 hover:text-secondary"
+                    ? "bg-primary/10 text-primary font-bold"
+                    : "bg-transparent text-neutral/70 font-medium hover:bg-neutral/10 hover:text-secondary"
                     }`}
                 >
                   <Icono size={18} strokeWidth={isActive ? 2.5 : 2} className="shrink-0" />
@@ -86,6 +89,12 @@ const TopHeader = ({ tituloVistaActual, hook }) => {
     </header>
   );
 };
+const titulosExtra = {
+  "validaciones-consultas": "Consultas",
+  "validaciones-pedidos": "Pedidos",
+  "validaciones-suministros": "Material",
+  "cierre-caja": "Cierre de Caja",
+};
 
 
 // ─── COMPONENTE PRINCIPAL (Layout Inset) ───
@@ -94,7 +103,10 @@ const Dashboard = () => {
 
   if (!hook.usuario) return null;
 
-  const tituloVistaActual = hook.menuItems.find(item => item.id === hook.vistaActual)?.label || "Dashboard";
+  const tituloVistaActual =
+    hook.menuItems.find(item => item.id === hook.vistaActual)?.label ||
+    titulosExtra[hook.vistaActual] ||
+    "Dashboard";
 
   return (
     <TooltipProvider>
@@ -125,8 +137,14 @@ const Dashboard = () => {
               <DocumentacionPage />
             ) : hook.vistaActual === "suministros" ? (
               <SuministrosPage />
-            ) : hook.vistaActual === "validaciones" ? (
-              <ValidacionesPage />
+            ) : hook.vistaActual === "validaciones-consultas" ? (
+              <ValidacionesConsultasPage />
+            ) : hook.vistaActual === "validaciones-pedidos" ? (
+              <ValidacionesPedidosPage />
+            ) : hook.vistaActual === "validaciones-suministros" ? (
+              <ValidacionesSuministrosPage />
+            ) : hook.vistaActual === "cierre-caja" ? (
+              <CierreCajaPage />
             ) : hook.vistaActual === "admin-suministros" ? (
               <SuministrosAdminPage />
             ) : hook.vistaActual === "historial-farmacia" ? (

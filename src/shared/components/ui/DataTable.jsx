@@ -57,6 +57,7 @@ export function DataTable({
   emptyText = "No se encontraron resultados.",
   toolbarEnd,
   enableRowSelection = false,
+  showColumnsToggle = true,
 }) {
   const [sorting, setSorting] = React.useState([]);
   const [columnFilters, setColumnFilters] = React.useState([]);
@@ -152,6 +153,7 @@ export function DataTable({
         {toolbarExtra}
 
         {/* 4. Selector de Columnas */}
+        {showColumnsToggle && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -193,6 +195,7 @@ export function DataTable({
               })}
           </DropdownMenuContent>
         </DropdownMenu>
+        )}
 
         {/* 5. Acción final */}
         {toolbarEnd}

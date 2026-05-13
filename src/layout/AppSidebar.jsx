@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import {
   LogOut, Activity, Stethoscope, ShoppingCart,
-  PackageOpen, Settings, FileText, ChevronDown
+  PackageOpen, Settings, FileText, ChevronDown,
+  Package, FileBox, Calculator,
 } from "lucide-react";
 
 import {
@@ -61,20 +62,21 @@ const AppSidebar = ({ hook }) => {
 
   // ─── ESTRATEGIA DE REFACTORIZACIÓN (Strangler Fig Pattern) ───
 
-  // 1. ⚠️ PRONTO LO CAMBIAREMOS: Mantenemos las rutas actuales dinámicas,
-  //    pero excluimos las que ya consideramos "Terminadas".
   const rutasTerminadas = ['usuarios', 'documentacion'];
   const legacyItems = hook.menuItems.filter(item => !rutasTerminadas.includes(item.id));
+  const empresaItems = hook.menuItems.filter(item => rutasTerminadas.includes(item.id));
 
-  // 2. NUEVA ESTRUCTURA VISUAL: Operaciones (A futuro enlazará a las rutas nuevas)
+  // 2. NUEVA ESTRUCTURA VISUAL: Operaciones (rutas nuevas independientes)
   const operacionesItems = hook.isAdmin ? [
     { id: "validaciones-consultas", label: "Consultas", icon: Stethoscope },
-    { id: "pedidos", label: "Pedidos", icon: ShoppingCart },
-    { id: "admin-suministros", label: "Material", icon: PackageOpen },
-  ] : []; // Si no es admin, esto puede ir variando según diseñemos
+    { id: "validaciones-pedidos", label: "Pedidos", icon: Package },
+    { id: "validaciones-suministros", label: "Material", icon: FileBox },
+  ] : [];
 
-  // 3. RUTAS TERMINADAS (Módulo Empresa)
-  const empresaItems = hook.menuItems.filter(item => rutasTerminadas.includes(item.id));
+  // 3. CONTABILIDAD (solo para admin)
+  const contabilidadItems = hook.isAdmin ? [
+    { id: "cierre-caja", label: "Cierre de Caja", icon: Calculator },
+  ] : [];
 
 
   return (
@@ -191,7 +193,40 @@ const AppSidebar = ({ hook }) => {
             </SidebarGroup>
           )}
 
-          {/* GRUPO 3: Empresa (TERMINADO) */}
+          {/* GRUPO 3: Contabilidad */}
+          {contabilidadItems.length > 0 && (
+            <SidebarGroup className="p-0">
+              <SidebarGroupLabel className="text-[10px] font-bold text-neutral/40 tracking-widest uppercase mb-1 px-2">
+                Contabilidad
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="gap-0.5">
+                  {contabilidadItems.map((item) => {
+                    const isActive = hook.vistaActual === item.id;
+                    const Icono = item.icon;
+                    return (
+                      <SidebarMenuItem key={item.id}>
+                        <SidebarMenuButton
+                          tooltip={item.label}
+                          isActive={isActive}
+                          onClick={() => {
+                            hook.setVistaActual(item.id);
+                            setOpenMobile(false);
+                          }}
+                          className={isActive ? NAV_ACTIVE : NAV_BASE}
+                        >
+                          <Icono size={16} strokeWidth={isActive ? 2.5 : 2} className="shrink-0" />
+                          <span className="truncate">{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
+
+          {/* GRUPO 4: Empresa (TERMINADO) */}
           {empresaItems.length > 0 && (
             <SidebarGroup className="p-0">
               <SidebarGroupLabel className="text-[10px] font-bold text-neutral/40 tracking-widest uppercase mb-1 px-2">

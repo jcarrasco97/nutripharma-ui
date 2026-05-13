@@ -5,9 +5,9 @@ import { pedidosService } from "@/modules/sales/pedidos";
 import { suministrosService } from "@/modules/sales/suministros";
 import { nutricionistasService } from "@/modules/organization/nutricionistas";
 
-export const useValidaciones = () => {
+export const useValidaciones = (pestañaInicial = "consultas") => {
   // 1. ESTADOS DE NAVEGACIÓN Y DATOS
-  const [pestañaActual, setPestañaActual] = useState("consultas");
+  const [pestañaActual, setPestañaActual] = useState(pestañaInicial);
   const [pendientes, setPendientes] = useState([]);
   const [historial, setHistorial] = useState([]);
   const [cargando, setCargando] = useState(false);

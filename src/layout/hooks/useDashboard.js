@@ -7,10 +7,10 @@ import {
   Stethoscope,
   Package,
   FileText,
-  ShieldCheck,
   Users,
   History,
-  Shield,
+  Calculator,
+  FileBox,
 } from "lucide-react";
 
 export const useDashboard = () => {
@@ -41,8 +41,6 @@ export const useDashboard = () => {
   const [vistaActual, setVistaActual] = useState(() => {
     const hash = window.location.hash.replace("#", "");
     if (hash) return hash;
-
-    // Asignamos la vista por defecto correcta para cada rol
     if (isNutricionista) return "resumen";
     if (isFarmacia) return "resumen-farmacia";
     return "resumen-admin";
@@ -68,7 +66,7 @@ export const useDashboard = () => {
     return () => window.removeEventListener("popstate", manejarBotonAtras);
   }, []);
 
-  const [menuAbierto, setMenuAbierto] = useState(false);
+
 
   useEffect(() => {
     if (!usuario) {
@@ -109,7 +107,6 @@ export const useDashboard = () => {
       if (!items.some((i) => i.id === "pedidos"))
         items.push({ id: "pedidos", label: "Pedidos", icon: ShoppingCart });
 
-      items.push({ id: "validaciones", label: "Validaciones", icon: ShieldCheck });
       items.push({ id: "usuarios", label: "Administración", icon: Users });
     }
 
@@ -124,8 +121,6 @@ export const useDashboard = () => {
     usuario,
     vistaActual,
     setVistaActual,
-    menuAbierto,
-    setMenuAbierto,
     handleLogout,
     menuItems,
     isAdmin,
