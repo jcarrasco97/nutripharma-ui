@@ -2,7 +2,6 @@
 export { default as ValidacionesConsultasPage } from './pages/ValidacionesConsultasPage';
 export { default as ValidacionesPedidosPage } from './pages/ValidacionesPedidosPage';
 export { default as ValidacionesSuministrosPage } from './pages/ValidacionesSuministrosPage';
-export { default as CierreCajaPage } from './pages/CierreCajaPage';
 
 // Componentes y Hooks
 export { default as PanelLiquidacion } from './components/PanelLiquidacion';

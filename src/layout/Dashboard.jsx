@@ -16,17 +16,18 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/shared/componen
 
 // --- IMPORTACIONES MAESTRAS DE LOS MÓDULOS ---
 import {
-  ConsultasPage, HistorialFarmaciaPage,
-  DashboardAdminPage, DashboardFarmaciaPage, DashboardNutriPage,
-  ValidacionesConsultasPage,
-  ValidacionesPedidosPage,
-  ValidacionesSuministrosPage,
-  CierreCajaPage,
+  ConsultasPage,
+  HistorialFarmaciaPage,
+  DashboardAdminPage,
+  DashboardFarmaciaPage,
+  DashboardNutriPage,
+  ValidacionesConsultasPage,   // <-- AÑADE ESTA
+  ValidacionesSuministrosPage, // <-- AÑADE ESTA
 } from "@/modules/operations";
 
 import { AdministracionPage } from "@/modules/organization";
 import { DocumentacionPage } from "@/modules/documents";
-import { PedidosPage, SuministrosPage, SuministrosAdminPage } from "@/modules/sales";
+import { PedidosPage, SuministrosPage } from "@/modules/sales";
 
 import { useIsMobile } from "@/shared/hooks/use-mobile" // Asegúrate de ajustar esta ruta si es necesario
 
@@ -89,13 +90,11 @@ const TopHeader = ({ tituloVistaActual, hook }) => {
     </header>
   );
 };
+
 const titulosExtra = {
   "validaciones-consultas": "Consultas",
-  "validaciones-pedidos": "Pedidos",
   "validaciones-suministros": "Material",
-  "cierre-caja": "Cierre de Caja",
 };
-
 
 // ─── COMPONENTE PRINCIPAL (Layout Inset) ───
 const Dashboard = () => {
@@ -129,24 +128,18 @@ const Dashboard = () => {
               <DashboardFarmaciaPage />
             ) : hook.vistaActual === "resumen-admin" && hook.isAdmin ? (
               <DashboardAdminPage setVistaActual={hook.setVistaActual} />
-            ) : hook.vistaActual === "consultas" ? (
-              <ConsultasPage />
             ) : hook.vistaActual === "pedidos" ? (
               <PedidosPage />
-            ) : hook.vistaActual === "documentacion" ? (
-              <DocumentacionPage />
-            ) : hook.vistaActual === "suministros" ? (
-              <SuministrosPage />
+            ) : hook.vistaActual === "consultas" ? (
+              <ConsultasPage />
             ) : hook.vistaActual === "validaciones-consultas" ? (
               <ValidacionesConsultasPage />
-            ) : hook.vistaActual === "validaciones-pedidos" ? (
-              <ValidacionesPedidosPage />
+            ) : hook.vistaActual === "suministros" ? (
+              <SuministrosPage />
             ) : hook.vistaActual === "validaciones-suministros" ? (
               <ValidacionesSuministrosPage />
-            ) : hook.vistaActual === "cierre-caja" ? (
-              <CierreCajaPage />
-            ) : hook.vistaActual === "admin-suministros" ? (
-              <SuministrosAdminPage />
+            ) : hook.vistaActual === "documentacion" ? (
+              <DocumentacionPage />
             ) : hook.vistaActual === "historial-farmacia" ? (
               <HistorialFarmaciaPage />
             ) : hook.vistaActual === "usuarios" ? (

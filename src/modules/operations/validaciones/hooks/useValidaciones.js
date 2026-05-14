@@ -190,6 +190,7 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
   };
 
   const iniciarProcesoEnvio = (pedido) => {
+    setDetalleSeleccionado(null); // Cierra el Dialog de detalle antes de abrir el modal de reparto
     setPedidoEnProceso(pedido);
     const nutrisDeEstaFarmacia = listaNutrisGlobal.filter((n) =>
       n.asignaciones?.some((a) => a.farmaciaNombre === pedido.farmaciaNombre),

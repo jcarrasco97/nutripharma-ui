@@ -1,16 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
+import { ShoppingCart, Gift, Wallet, Loader2, X } from "lucide-react";
 import { Button } from "@/shared/components/ui/Button";
-import {
-  ShoppingCart,
-  ShoppingBag,
-  Wallet,
-  Info,
-  Plus,
-  Minus,
-  Loader2,
-  Gift
-} from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/shared/components/ui/Dialog";
 
+/**
+ * CestaPedidos — Responsiva
+ *
+ * Mobile (<xl): barra fija bottom-0 con resumen + "Ver Cesta" (Dialog) + "Procesar"
+ * Desktop (xl+): sidebar sticky con lista completa + totales + botón
+ */
 const CestaPedidos = ({
   carrito,
   modificarCantidad,
@@ -23,14 +21,16 @@ const CestaPedidos = ({
   esAdmin,
   getPrecioAplicado,
 }) => {
+  const [modalAbierto, setModalAbierto] = useState(false);
 
-  // 🧠 LÓGICA DE AGRUPACIÓN
+  // ── Agrupación ────────────────────────────────────────────────────────────
   const itemsAgrupados = Object.values(
     carrito.reduce((acc, item) => {
       if (!acc[item.productoId]) {
         acc[item.productoId] = {
           productoId: item.productoId,
-          productoInfo: item.productoInfo,
+          nombre: item.productoInfo.nombreProducto,
+          precio: getPrecioAplicado(item.productoInfo),
           cantidadReal: 0,
           cantidadSaldo: 0,
           bonificados: 0,
@@ -40,210 +40,200 @@ const CestaPedidos = ({
         acc[item.productoId].cantidadSaldo += item.cantidad;
       } else {
         acc[item.productoId].cantidadReal += item.cantidad;
-        acc[item.productoId].bonificados += item.bonificados;
+        acc[item.productoId].bonificados  += item.bonificados;
       }
       return acc;
     }, {})
+  ).filter((i) => i.cantidadReal > 0 || i.cantidadSaldo > 0);
+
+  const totalItems  = carrito.reduce((s, i) => s + i.cantidad, 0);
+  const cestaVacia  = itemsAgrupados.length === 0;
+  const ctaDisabled = cestaVacia || !farmaciaSeleccionada;
+
+  // ── Lista de items (reutilizada en sidebar y modal) ──────────────────────
+  const ItemList = () => (
+    <div className="divide-y divide-neutral/8">
+      {cestaVacia ? (
+        <div className="flex flex-col items-center justify-center py-10 text-center">
+          <ShoppingCart size={28} className="text-neutral/20 mb-2" />
+          <p className="text-sm text-neutral/40 font-medium">Cesta vacía</p>
+        </div>
+      ) : itemsAgrupados.map((item) => (
+        <div key={item.productoId} className="py-3">
+          <div className="flex items-start justify-between gap-2 mb-1">
+            <p className="text-sm font-medium text-secondary leading-snug flex-1 min-w-0 truncate">
+              {item.nombre}
+            </p>
+            <p className="text-sm font-bold text-secondary whitespace-nowrap shrink-0">
+              {((item.cantidadReal + item.cantidadSaldo) * item.precio).toFixed(2)}€
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium">
+            {item.cantidadReal > 0 && (
+              <span className="text-neutral/50">
+                {item.cantidadReal}× compra real
+              </span>
+            )}
+            {item.bonificados > 0 && (
+              <span className="flex items-center gap-0.5 text-primary font-bold">
+                <Gift size={10} /> +{item.bonificados}
+              </span>
+            )}
+            {item.cantidadSaldo > 0 && (
+              <span className="flex items-center gap-0.5 text-primary font-bold bg-primary/5 border border-primary/15 px-1.5 py-0.5 rounded">
+                <Wallet size={10} /> {item.cantidadSaldo}× saldo
+              </span>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  // ── Bloque de Totales (reutilizado) ──────────────────────────────────────
+  const Totales = () => (
+    <div className="space-y-1.5 pt-3 border-t border-neutral/10">
+      {totalVirtual > 0 && (
+        <div className="flex justify-between text-xs font-medium text-primary">
+          <span className="flex items-center gap-1"><Wallet size={11} /> Saldo descontado</span>
+          <span>−{totalVirtual.toFixed(2)}€</span>
+        </div>
+      )}
+      <div className="flex justify-between items-end">
+        <div>
+          <p className="text-[10px] font-bold text-neutral/40 uppercase tracking-wider">
+            Total a pagar
+          </p>
+          {!umbralAlcanzado && totalReal > 0 && !esAdmin && (
+            <p className="text-[10px] text-amber-600 font-medium mt-0.5">Mín. 80€</p>
+          )}
+        </div>
+        <p className="text-xl font-bold text-secondary">{totalReal.toFixed(2)}€</p>
+      </div>
+    </div>
   );
 
   return (
-    <div className="bg-white rounded-[3rem] shadow-xl border border-gray-100 p-8 sticky top-6">
-      <div className="flex items-center justify-between mb-8 pb-4 border-b border-gray-50">
-        <div className="flex items-center gap-3">
-          <div
-            className={`p-3 rounded-2xl ${esAdmin ? "bg-[#062e3a]/10 text-[#062e3a]" : "bg-[#b1cb0c]/20 text-[#367933]"}`}
+    <>
+      {/* ══════════════════════════════════════════════════════════
+          DESKTOP (xl+): Sidebar sticky
+         ══════════════════════════════════════════════════════════ */}
+      <div className="hidden xl:flex flex-col gap-4">
+        <div className="bg-surface rounded-lg border border-neutral/10 p-5 sticky top-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-neutral/10">
+            <div className="flex items-center gap-2">
+              <ShoppingCart size={16} className="text-primary" />
+              <h3 className="text-sm font-bold text-secondary">Mi Cesta</h3>
+            </div>
+            {totalItems > 0 && (
+              <span className="text-[10px] font-bold text-white bg-secondary px-2 py-0.5 rounded-md">
+                {totalItems} items
+              </span>
+            )}
+          </div>
+
+          {/* Lista */}
+          <div className="max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
+            <ItemList />
+          </div>
+
+          {/* Totales */}
+          {!cestaVacia && <Totales />}
+
+          {/* CTA */}
+          <Button
+            onClick={handleRealizarPedido}
+            disabled={ctaDisabled}
+            className="w-full h-11 mt-4 rounded-md bg-primary text-white hover:bg-primary-hover font-bold text-sm"
           >
-            <ShoppingCart size={24} />
-          </div>
-          <h3 className="text-xl font-black text-[#062e3a]">Mi Cesta</h3>
+            {enviando
+              ? <Loader2 size={16} className="animate-spin" />
+              : esAdmin ? "Procesar Proxy" : "Procesar Pedido"
+            }
+          </Button>
         </div>
-        <span className="bg-[#062e3a] text-white text-xs font-black px-4 py-1.5 rounded-full">
-          {carrito.reduce((total, item) => total + item.cantidad, 0)} items
-        </span>
       </div>
 
-      <div className="space-y-4 max-h-[400px] overflow-y-auto pr-4 mb-8 custom-scrollbar">
-        {itemsAgrupados.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center bg-[#f4f7f4] rounded-[2rem] border-2 border-dashed border-gray-200">
-            <ShoppingCart size={48} className="text-gray-300 mb-4" />
-            <p className="text-[#342c1e]/60 font-bold">Tu cesta está vacía.</p>
-          </div>
-        ) : (
-          itemsAgrupados.map((item) => {
-            const precioUnitario = getPrecioAplicado(item.productoInfo);
-            const subtotalReal = item.cantidadReal * precioUnitario;
-            const subtotalSaldo = item.cantidadSaldo * precioUnitario;
-            const totalUnidadesFisicas = item.cantidadReal + item.cantidadSaldo + item.bonificados;
-
-            return (
-              <div
-                key={item.productoId}
-                className="bg-[#f4f7f4] p-6 rounded-[1.5rem] border-2 border-transparent"
-              >
-                {/* 1. CABECERA DEL PRODUCTO (Solo Nombre y Total Unidades) */}
-                <div className="flex justify-between items-center mb-4 border-b border-gray-200/60 pb-4">
-                  <p className="font-black text-[#062e3a] text-sm pr-4 uppercase">
-                    {item.productoInfo.nombreProducto}
-                  </p>
-                  <div className="bg-[#062e3a]/5 px-3 py-1 rounded-lg text-right">
-                    <p className="text-[14px] font-black text-[#062e3a] uppercase tracking-wider">
-                      {totalUnidadesFisicas} Unidades
-                    </p>
-                  </div>
-                </div>
-
-                {/* 2. DESGLOSE Y CONTROLES */}
-                <div className="space-y-4">
-
-                  {/* Fila: Compra Regular */}
-                  {item.cantidadReal > 0 && (
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <span className="text-[10px] font-black text-[#342c1e]/60 uppercase tracking-widest block mb-0.5">
-                          Compra Regular
-                        </span>
-                        <span className="text-sm font-black text-[#062e3a]">
-                          {subtotalReal.toFixed(2)}€
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        {item.bonificados > 0 && (
-                          <div className="flex items-center gap-1 bg-[#b1cb0c]/20 text-[#367933] px-2 py-1 rounded-lg text-[12px] font-black">
-                            <Gift size={14} /> +{item.bonificados} Regalo
-                          </div>
-                        )}
-                        <div className="flex items-center bg-white rounded-xl p-1 border border-gray-200 shadow-sm">
-                          <button
-                            onClick={() => modificarCantidad(item.productoId, -1, false)}
-                            className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
-                          >
-                            <Minus size={14} />
-                          </button>
-                          <input
-                            type="number"
-                            min="0"
-                            value={item.cantidadReal === 0 ? "" : item.cantidadReal}
-                            onFocus={(e) => e.target.select()} // UX PRO: Al pinchar, selecciona todo el texto para reescribir encima
-                            onChange={(e) => {
-                              // 1. Capturamos lo que escribe. Si borra todo, asumimos 0.
-                              const nuevoValor = e.target.value === "" ? 0 : parseInt(e.target.value, 10);
-                              if (isNaN(nuevoValor) || nuevoValor < 0) return;
-
-                              // 2. Calculamos la diferencia (delta) para usar tu hook existente
-                              const delta = nuevoValor - item.cantidadReal;
-                              modificarCantidad(item.productoId, delta, false);
-                            }}
-                            // El truco de Tailwind para ocultar las flechitas feas del input number
-                            className="w-10 text-center font-black text-xs text-[#062e3a] bg-transparent outline-none focus:bg-[#b1cb0c]/10 focus:ring-1 focus:ring-[#b1cb0c]/50 rounded transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          />
-                          <button
-                            onClick={() => modificarCantidad(item.productoId, 1, false)}
-                            className="p-1.5 text-gray-400 hover:text-[#367933] transition-colors"
-                          >
-                            <Plus size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Fila: Usando Saldo */}
-                  {item.cantidadSaldo > 0 && (
-                    <div className="flex items-center justify-between pt-2">
-                      <div>
-                        <span className="flex items-center gap-1 text-[10px] font-black text-[#367933] uppercase tracking-widest mb-0.5">
-                          <Wallet size={12} /> Usando Saldo
-                        </span>
-                        <span className="text-sm font-black text-[#367933]">
-                          {subtotalSaldo.toFixed(2)}€
-                        </span>
-                      </div>
-
-                      <div className="flex items-center bg-[#b1cb0c]/10 rounded-xl p-1 border border-[#b1cb0c]/30 shadow-sm">
-                        <button
-                          onClick={() => modificarCantidad(item.productoId, -1, true)}
-                          className="p-1.5 text-[#367933]/60 hover:text-red-500 transition-colors"
-                        >
-                          <Minus size={14} />
-                        </button>
-                        <input
-                          type="number"
-                          min="0"
-                          value={item.cantidadSaldo === 0 ? "" : item.cantidadSaldo}
-                          onFocus={(e) => e.target.select()}
-                          onChange={(e) => {
-                            const nuevoValor = e.target.value === "" ? 0 : parseInt(e.target.value, 10);
-                            if (isNaN(nuevoValor) || nuevoValor < 0) return;
-                            const delta = nuevoValor - item.cantidadSaldo;
-                            modificarCantidad(item.productoId, delta, true);
-                          }}
-                          className="w-10 text-center font-black text-xs text-[#367933] bg-transparent outline-none focus:bg-[#367933]/10 focus:ring-1 focus:ring-[#367933]/30 rounded transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-                        <button
-                          onClick={() => modificarCantidad(item.productoId, 1, true)}
-                          className="p-1.5 text-[#367933]/60 hover:text-[#367933] transition-colors"
-                        >
-                          <Plus size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      {/* 3. TICKET DE RESUMEN FINAL (Visualmente distinto) */}
-      <div className="bg-[#062e3a] rounded-[2rem] p-6 space-y-4 mb-8 relative overflow-hidden shadow-lg border border-[#062e3a]">
-
-        {totalVirtual > 0 && (
-          <div className="flex justify-between items-center px-2 text-sm font-bold text-white/80 border-b border-white/10 pb-4">
-            <span>
-              <Wallet size={14} className="inline mr-2" />
-              Saldo descontado
-            </span>
-            <span className="text-[#bed000] font-black tracking-wide">
-              -{totalVirtual.toFixed(2)}€
-            </span>
-          </div>
-        )}
-
-        <div className="flex justify-between items-end pt-2 px-2">
-          <div>
-            <p className="text-xs font-black text-white/60 uppercase tracking-widest">
-              A Pagar Real
+      {/* ══════════════════════════════════════════════════════════
+          MOBILE (<xl): Barra fija inferior
+         ══════════════════════════════════════════════════════════ */}
+      <div className="xl:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-neutral/10">
+        <div className="px-4 py-3 flex items-center gap-3">
+          {/* Izquierda: Totales */}
+          <div className="flex-1 min-w-0">
+            <p className="text-base font-bold text-secondary leading-none">
+              Total: {totalReal.toFixed(2)}€
             </p>
-            {!umbralAlcanzado && totalReal > 0 && (
-              <p className="text-[10px] text-red-400 font-bold flex items-center gap-1 mt-1 bg-red-400/10 px-2 py-0.5 rounded-md">
-                <Info size={10} /> Mínimo 80€
+            {totalVirtual > 0 && (
+              <p className="text-[11px] text-primary font-medium mt-0.5 flex items-center gap-1">
+                <Wallet size={10} /> Saldo descontado: −{totalVirtual.toFixed(2)}€
+              </p>
+            )}
+            {!umbralAlcanzado && totalReal > 0 && !esAdmin && (
+              <p className="text-[10px] text-amber-600 font-medium mt-0.5">
+                Faltan {(80 - totalReal).toFixed(2)}€ para el monedero
               </p>
             )}
           </div>
-          <p className={`text-4xl font-black ${umbralAlcanzado ? "text-white" : "text-white/50"}`}>
-            {totalReal.toFixed(2)}€
-          </p>
+
+          {/* Derecha: Botones */}
+          <div className="flex items-center gap-2 shrink-0">
+            {!cestaVacia && (
+              <Button
+                variant="outline"
+                onClick={() => setModalAbierto(true)}
+                className="h-10 rounded-md border-neutral/20 text-secondary text-xs font-medium"
+              >
+                Ver cesta
+              </Button>
+            )}
+            <Button
+              onClick={handleRealizarPedido}
+              disabled={ctaDisabled}
+              className="h-10 rounded-md bg-primary text-white hover:bg-primary-hover font-bold text-sm px-5"
+            >
+              {enviando
+                ? <Loader2 size={14} className="animate-spin" />
+                : "Procesar"
+              }
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* 👇 BOTÓN CORPORATIVO IMPLEMENTADO 👇 */}
-      <Button
-        onClick={handleRealizarPedido}
-        disabled={
-          carrito.length === 0 ||
-          (!umbralAlcanzado && totalVirtual > 0) ||
-          !farmaciaSeleccionada
-        }
-        isLoading={enviando}
-        variant="primary"
-        className="w-full py-5 rounded-[1.5rem] text-lg"
-      >
-        <ShoppingBag size={24} />
-        {esAdmin ? "Procesar Proxy" : "Confirmar Pedido"}
-      </Button>
-    </div>
+      {/* ── Modal de desglose (mobile) ── */}
+      <Dialog open={modalAbierto} onOpenChange={setModalAbierto}>
+        <DialogContent className="max-w-sm rounded-xl border border-neutral/10 bg-surface p-0 gap-0">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-neutral/10">
+            <DialogHeader className="p-0">
+              <DialogTitle className="text-sm font-bold text-secondary flex items-center gap-2">
+                <ShoppingCart size={15} className="text-primary" /> Resumen
+              </DialogTitle>
+              <DialogDescription className="sr-only">
+                Desglose de los productos en tu cesta antes de confirmar el pedido.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="px-5 py-4 max-h-[60vh] overflow-y-auto">
+            <ItemList />
+          </div>
+
+          <div className="px-5 py-4 border-t border-neutral/10 space-y-3">
+            <Totales />
+            <Button
+              onClick={() => { setModalAbierto(false); handleRealizarPedido(); }}
+              disabled={ctaDisabled}
+              className="w-full h-11 rounded-md bg-primary text-white hover:bg-primary-hover font-bold text-sm"
+            >
+              {enviando ? <Loader2 size={16} className="animate-spin" /> : "Confirmar Pedido"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 

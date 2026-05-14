@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 import {
-  LogOut, Activity, Stethoscope, ShoppingCart,
-  PackageOpen, Settings, FileText, ChevronDown,
-  Package, FileBox, Calculator,
+  LogOut, Settings, ChevronDown,
 } from "lucide-react";
 
 import {
@@ -60,24 +58,24 @@ const AppSidebar = ({ hook }) => {
   const nombreReal = hook.usuario?.nombre || "Usuario";
   const iniciales = nombreReal.substring(0, 2).toUpperCase();
 
-  // ─── ESTRATEGIA DE REFACTORIZACIÓN (Strangler Fig Pattern) ───
+  // ─── GRUPOS DE NAVEGACIÓN (Feature-Based por entidad) ───
+  const resumenIds = ['resumen', 'resumen-farmacia', 'resumen-admin'];
 
-  const rutasTerminadas = ['usuarios', 'documentacion'];
-  const legacyItems = hook.menuItems.filter(item => !rutasTerminadas.includes(item.id));
-  const empresaItems = hook.menuItems.filter(item => rutasTerminadas.includes(item.id));
+  // 👇 FIX puente: Admin usa rutas de validaciones excepto para Pedidos
+  const operacionesIds = hook.isAdmin
+    ? ['validaciones-consultas', 'pedidos', 'validaciones-suministros']
+    : ['consultas', 'pedidos', 'suministros'];
 
-  // 2. NUEVA ESTRUCTURA VISUAL: Operaciones (rutas nuevas independientes)
-  const operacionesItems = hook.isAdmin ? [
-    { id: "validaciones-consultas", label: "Consultas", icon: Stethoscope },
-    { id: "validaciones-pedidos", label: "Pedidos", icon: Package },
-    { id: "validaciones-suministros", label: "Material", icon: FileBox },
-  ] : [];
+  const empresaIds = ['usuarios', 'documentacion'];
 
-  // 3. CONTABILIDAD (solo para admin)
-  const contabilidadItems = hook.isAdmin ? [
-    { id: "cierre-caja", label: "Cierre de Caja", icon: Calculator },
-  ] : [];
-
+  const inicioItems = hook.menuItems.filter(item => resumenIds.includes(item.id));
+  const operacionesItems = hook.menuItems.filter(item => operacionesIds.includes(item.id));
+  const empresaItems = hook.menuItems.filter(item => empresaIds.includes(item.id));
+  const otrosItems = hook.menuItems.filter(item =>
+    !resumenIds.includes(item.id) &&
+    !operacionesIds.includes(item.id) &&
+    !empresaIds.includes(item.id)
+  );
 
   return (
     <>
@@ -130,12 +128,12 @@ const AppSidebar = ({ hook }) => {
         {/* ── NAVEGACIÓN ── */}
         <SidebarContent className="px-3 pt-2 gap-5">
 
-          {/* GRUPO 1: Vistas Legacy */}
-          {legacyItems.length > 0 && (
+          {/* GRUPO 1: Inicio (resumen según rol) */}
+          {inicioItems.length > 0 && (
             <SidebarGroup className="p-0">
               <SidebarGroupContent>
                 <SidebarMenu className="gap-0.5">
-                  {legacyItems.map((item) => {
+                  {inicioItems.map((item) => {
                     const isActive = hook.vistaActual === item.id;
                     const Icono = item.icon;
                     return (
@@ -160,7 +158,7 @@ const AppSidebar = ({ hook }) => {
             </SidebarGroup>
           )}
 
-          {/* GRUPO 2: Operaciones (NUEVO DISEÑO) */}
+          {/* GRUPO 2: Operaciones (visible para TODOS los roles) */}
           {operacionesItems.length > 0 && (
             <SidebarGroup className="p-0">
               <SidebarGroupLabel className="text-[10px] font-bold text-neutral/40 tracking-widest uppercase mb-1 px-2">
@@ -193,15 +191,12 @@ const AppSidebar = ({ hook }) => {
             </SidebarGroup>
           )}
 
-          {/* GRUPO 3: Contabilidad */}
-          {contabilidadItems.length > 0 && (
+          {/* GRUPO 3: Otros (historial-farmacia, etc.) */}
+          {otrosItems.length > 0 && (
             <SidebarGroup className="p-0">
-              <SidebarGroupLabel className="text-[10px] font-bold text-neutral/40 tracking-widest uppercase mb-1 px-2">
-                Contabilidad
-              </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu className="gap-0.5">
-                  {contabilidadItems.map((item) => {
+                  {otrosItems.map((item) => {
                     const isActive = hook.vistaActual === item.id;
                     const Icono = item.icon;
                     return (
@@ -226,7 +221,7 @@ const AppSidebar = ({ hook }) => {
             </SidebarGroup>
           )}
 
-          {/* GRUPO 4: Empresa (TERMINADO) */}
+          {/* GRUPO 4: Empresa */}
           {empresaItems.length > 0 && (
             <SidebarGroup className="p-0">
               <SidebarGroupLabel className="text-[10px] font-bold text-neutral/40 tracking-widest uppercase mb-1 px-2">

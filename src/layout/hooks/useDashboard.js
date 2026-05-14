@@ -99,13 +99,16 @@ export const useDashboard = () => {
 
       items.push({ id: "historial-farmacia", label: "Historial", icon: History });
     }
-
     if (isAdmin) {
       if (!items.some((i) => i.id === "resumen-admin"))
         items.push({ id: "resumen-admin", label: "Dashboard", icon: BarChart3 });
 
-      if (!items.some((i) => i.id === "pedidos"))
-        items.push({ id: "pedidos", label: "Pedidos", icon: ShoppingCart });
+      // 👇 FIX: Añadimos explícitamente las tres operaciones para el Admin
+      items.push({ id: "validaciones-consultas", label: "Consultas", icon: Stethoscope });
+      if (!items.some((i) => i.id === "pedidos")) {
+        items.push({ id: "pedidos", label: "Pedidos", icon: ShoppingCart }); // Pedidos ya está unificado
+      }
+      items.push({ id: "validaciones-suministros", label: "Material", icon: Package });
 
       items.push({ id: "usuarios", label: "Administración", icon: Users });
     }
