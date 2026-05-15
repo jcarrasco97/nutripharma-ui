@@ -59,32 +59,35 @@ const CestaPedidos = ({
           <p className="text-sm text-neutral/40 font-medium">Cesta vacía</p>
         </div>
       ) : itemsAgrupados.map((item) => (
-        <div key={item.productoId} className="py-3">
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <p className="text-sm font-medium text-secondary leading-snug flex-1 min-w-0 truncate">
+        <div key={item.productoId} className="flex items-start justify-between gap-3 py-3">
+          {/* Izquierda: nombre + tags */}
+          <div className="flex flex-col gap-2 flex-1 min-w-0">
+            <p className="text-sm font-medium text-secondary leading-snug truncate">
               {item.nombre}
             </p>
-            <p className="text-sm font-bold text-secondary whitespace-nowrap shrink-0">
-              {((item.cantidadReal + item.cantidadSaldo) * item.precio).toFixed(2)}€
-            </p>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {item.cantidadReal > 0 && (
+                <span className="text-[10px] font-medium text-neutral/50">{item.cantidadReal}× real</span>
+              )}
+              {item.bonificados > 0 && (
+                <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-primary">
+                  <Gift size={10} /> +{item.bonificados}
+                </span>
+              )}
+              {item.cantidadSaldo > 0 && (
+                <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-blue-500 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded">
+                  <Wallet size={9} /> {item.cantidadSaldo}× saldo
+                </span>
+              )}
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium">
-            {item.cantidadReal > 0 && (
-              <span className="text-neutral/50">
-                {item.cantidadReal}× compra real
-              </span>
-            )}
-            {item.bonificados > 0 && (
-              <span className="flex items-center gap-0.5 text-primary font-bold">
-                <Gift size={10} /> +{item.bonificados}
-              </span>
-            )}
-            {item.cantidadSaldo > 0 && (
-              <span className="flex items-center gap-0.5 text-primary font-bold bg-primary/5 border border-primary/15 px-1.5 py-0.5 rounded">
-                <Wallet size={10} /> {item.cantidadSaldo}× saldo
-              </span>
-            )}
+          {/* Derecha: total uds */}
+          <div className="text-right shrink-0">
+            <span className="text-[9px] uppercase tracking-wider text-neutral/40 block">Total</span>
+            <span className="text-xl font-medium text-secondary tabular-nums">
+              {item.cantidadReal + item.cantidadSaldo + item.bonificados}
+            </span>
           </div>
         </div>
       ))}

@@ -374,8 +374,8 @@ const PedidosPage = () => {
                   </>
                 )}
 
-                <Button onClick={() => setVistaActiva("nuevo")} className="bg-primary text-white hover:bg-[#006633] rounded-md gap-2 h-10 px-4">
-                  <Plus size={16} /> Nuevo Pedido Proxy
+                <Button onClick={() => setVistaActiva("nuevo")} className="bg-primary text-white rounded-md gap-2 h-8 x-4">
+                  <Plus size={16} /> Nuevo Pedido
                 </Button>
               </div>
             </div>

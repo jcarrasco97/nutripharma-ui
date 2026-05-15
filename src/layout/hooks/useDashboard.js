@@ -9,8 +9,8 @@ import {
   FileText,
   Users,
   History,
-  Calculator,
-  FileBox,
+  Calendar,
+  FileBarChart,
 } from "lucide-react";
 
 export const useDashboard = () => {
@@ -27,7 +27,6 @@ export const useDashboard = () => {
     }
   });
 
-  // 👇 CIRUGÍA 1: Movemos la lectura de ROLES arriba para que el estado sepa quién eres al instante
   const userRoles = Array.isArray(usuario?.roles)
     ? usuario.roles.map((r) => (typeof r === "string" ? r : r.authority))
     : [];
@@ -37,36 +36,27 @@ export const useDashboard = () => {
   const isFarmacia = userRoles.includes("ROLE_FARMACIA");
   const isSuperAdmin = userRoles.includes("ROLE_SUPERADMIN");
 
-  // 1. Inicialización de vistaActual (ahora sí sabe qué roles tienes)
   const [vistaActual, setVistaActual] = useState(() => {
     const hash = window.location.hash.replace("#", "");
     if (hash) return hash;
     if (isNutricionista) return "resumen";
     if (isFarmacia) return "resumen-farmacia";
-    return "resumen-admin";
+    // Admin: la vista inicial es ahora "rendimiento" (ex "resumen-admin")
+    return "rendimiento";
   });
 
-  // 2. Sincronizar la URL cuando haces clic en el menú
   useEffect(() => {
-    if (vistaActual) {
-      window.history.pushState(null, "", `#${vistaActual}`);
-    }
+    if (vistaActual) window.history.pushState(null, "", `#${vistaActual}`);
   }, [vistaActual]);
 
-  // 3. Escuchar cuando el usuario le da al botón "Atrás" del navegador
   useEffect(() => {
     const manejarBotonAtras = () => {
       const hash = window.location.hash.replace("#", "");
-      if (hash) {
-        setVistaActual(hash); // Cambiamos la vista internamente
-      }
+      if (hash) setVistaActual(hash);
     };
-
     window.addEventListener("popstate", manejarBotonAtras);
     return () => window.removeEventListener("popstate", manejarBotonAtras);
   }, []);
-
-
 
   useEffect(() => {
     if (!usuario) {
@@ -83,6 +73,7 @@ export const useDashboard = () => {
   const menuItems = useMemo(() => {
     const items = [];
 
+    // ── NUTRICIONISTA ──────────────────────────────────────────────────────────
     if (isNutricionista && !isAdmin) {
       items.push({ id: "resumen", label: "Resumen", icon: BarChart3 });
       items.push({ id: "pedidos", label: "Liquidación", icon: ShoppingCart });
@@ -90,32 +81,35 @@ export const useDashboard = () => {
       items.push({ id: "suministros", label: "Suministros", icon: Package });
     }
 
+    // ── FARMACIA ───────────────────────────────────────────────────────────────
     if (isFarmacia) {
       if (!items.some((i) => i.id === "resumen-farmacia"))
         items.push({ id: "resumen-farmacia", label: "Resumen", icon: BarChart3 });
-
       if (!items.some((i) => i.id === "pedidos"))
         items.push({ id: "pedidos", label: "Pedidos", icon: ShoppingCart });
-
       items.push({ id: "historial-farmacia", label: "Historial", icon: History });
     }
-    if (isAdmin) {
-      if (!items.some((i) => i.id === "resumen-admin"))
-        items.push({ id: "resumen-admin", label: "Dashboard", icon: BarChart3 });
 
-      // 👇 FIX: Añadimos explícitamente las tres operaciones para el Admin
+    // ── ADMIN ──────────────────────────────────────────────────────────────────
+    if (isAdmin) {
+      // Grupo "Inicio" — los tres nuevos ítems sustituyen a "resumen-admin"
+      items.push({ id: "rendimiento", label: "Rendimiento", icon: BarChart3 });
+      items.push({ id: "calendario", label: "Calendario", icon: Calendar });
+      items.push({ id: "informes", label: "Informes", icon: FileBarChart });
+
+      // Grupo "Área de trabajo"
       items.push({ id: "validaciones-consultas", label: "Consultas", icon: Stethoscope });
-      if (!items.some((i) => i.id === "pedidos")) {
-        items.push({ id: "pedidos", label: "Pedidos", icon: ShoppingCart }); // Pedidos ya está unificado
-      }
+      if (!items.some((i) => i.id === "pedidos"))
+        items.push({ id: "pedidos", label: "Pedidos", icon: ShoppingCart });
       items.push({ id: "validaciones-suministros", label: "Material", icon: Package });
 
+      // Planos
       items.push({ id: "usuarios", label: "Administración", icon: Users });
     }
 
-    if (!items.some((i) => i.id === "documentacion")) {
+    // Documentación — visible para todos los roles
+    if (!items.some((i) => i.id === "documentacion"))
       items.push({ id: "documentacion", label: "Documentación", icon: FileText });
-    }
 
     return items;
   }, [isAdmin, isNutricionista, isFarmacia, isSuperAdmin]);

@@ -43,7 +43,7 @@ const CustomTooltipClinico = ({ active, payload, label }) => {
   return null;
 };
 
-const ModalGeneradorInformes = ({ isOpen, onClose, farmacias = [], nutricionistas = [] }) => {
+const ModalGeneradorInformes = ({ isOpen, onClose, farmacias = [], nutricionistas = [], modoPagina = false }) => {
   const [filtros, setFiltros] = useState({
     tipo: "PRODUCTOS",
     anioInicio: new Date().getFullYear(),
@@ -61,7 +61,7 @@ const ModalGeneradorInformes = ({ isOpen, onClose, farmacias = [], nutricionista
   const [loadingPdf, setLoadingPdf] = useState(false);
   const chartRef = useRef(null);
 
-  if (!isOpen) return null;
+  if (!isOpen && !modoPagina) return null;
 
   const handlePreview = async () => {
     setLoadingPreview(true);
@@ -167,9 +167,8 @@ const ModalGeneradorInformes = ({ isOpen, onClose, farmacias = [], nutricionista
     });
   };
 
-  return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-[#062e3a]/60 backdrop-blur-sm">
-      <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-6xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+  const content = (
+    <>
 
         <div className="bg-[#062e3a] p-6 text-white flex justify-between items-center shrink-0">
           <div className="flex items-center gap-3">
@@ -333,6 +332,21 @@ const ModalGeneradorInformes = ({ isOpen, onClose, farmacias = [], nutricionista
             Emitir Informe Oficial PDF
           </button>
         </div>
+    </>
+  );
+
+  if (modoPagina) {
+    return (
+      <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 w-full flex flex-col overflow-hidden min-h-[80vh]">
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-[#062e3a]/60 backdrop-blur-sm">
+      <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-6xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+        {content}
       </div>
     </div>
   );
