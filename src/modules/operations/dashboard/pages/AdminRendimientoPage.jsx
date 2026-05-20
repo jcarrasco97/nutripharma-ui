@@ -7,7 +7,7 @@ import AdminGraficaFacturacion from "../components/admin/AdminGraficaFacturacion
 
 const AdminRendimientoPage = ({ setVistaActual }) => {
   const hook = useDashboardAdmin();
-  const [pestana, setPestana] = useState("auditoria");
+  const [pestana, setPestana] = useState("global");
 
   if (hook.cargando && hook.facturacion.length === 0) {
     return (
@@ -26,8 +26,8 @@ const AdminRendimientoPage = ({ setVistaActual }) => {
 
       <div className="flex gap-2">
         {[
-          { id: "auditoria", label: "Auditoría" },
-          { id: "facturacion", label: "Facturación" },
+          { id: "global", label: "Global" },
+          { id: "individual", label: "Individual" },
         ].map((tab) => {
           const isActive = pestana === tab.id;
           return (
@@ -46,9 +46,9 @@ const AdminRendimientoPage = ({ setVistaActual }) => {
         })}
       </div>
 
-      {pestana === "auditoria" && <AdminAuditoriaPanel />}
+      {pestana === "individual" && <AdminAuditoriaPanel />}
       
-      {pestana === "facturacion" && (
+      {pestana === "global" && (
         <AdminGraficaFacturacion
           anio={hook.anio}
           setAnio={hook.setAnio}
