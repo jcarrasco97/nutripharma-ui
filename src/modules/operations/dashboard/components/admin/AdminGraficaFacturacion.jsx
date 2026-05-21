@@ -1,15 +1,26 @@
-import React, { useState } from "react";
-import { TrendingUp, ChevronLeft, ChevronRight, Filter } from "lucide-react";
+import React, { useState, useMemo } from "react";
+import { TrendingUp, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   BarChart,
   Bar,
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
   Legend,
-  ResponsiveContainer,
+  LabelList,
 } from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/shared/components/ui/Chart";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/shared/components/ui/Select";
 
 const AdminGraficaFacturacion = ({
   anio,
@@ -25,135 +36,225 @@ const AdminGraficaFacturacion = ({
   const [showConsultas, setShowConsultas] = useState(true);
   const [showPedidos, setShowPedidos] = useState(true);
 
+  // ── MEJORA 1: KPIs calculados a partir de la prop facturacion ──────────────
+  const kpis = useMemo(() => {
+    if (!facturacion?.length) return null;
+    const totalConsultas = facturacion.reduce((s, m) => s + (m.ingresosConsultas || 0), 0);
+    const totalProductos = facturacion.reduce((s, m) => s + (m.ingresosPedidos || 0), 0);
+    const totalAnio = totalConsultas + totalProductos;
+    const mejorMes = facturacion.reduce((best, m) => {
+      const t = (m.ingresosConsultas || 0) + (m.ingresosPedidos || 0);
+      return t > best.total ? { mes: m.mesTexto, total: t } : best;
+    }, { mes: "—", total: 0 });
+    const pctConsultas = totalAnio > 0 ? Math.round((totalConsultas / totalAnio) * 100) : 0;
+    return { totalAnio, totalConsultas, totalProductos, mejorMes, pctConsultas };
+  }, [facturacion]);
+
   return (
-  <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
-    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-      <div className="flex items-center gap-4">
-        <div className="bg-[#062e3a]/10 p-3 rounded-2xl text-[#062e3a]">
-          <TrendingUp size={28} />
+    <div className="bg-surface rounded-md border border-neutral/10 p-5">
+      {/* Cabecera compacta */}
+      <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
+        {/* Icono + Título */}
+        <div className="flex items-center gap-2">
+          <TrendingUp size={18} className="text-secondary" />
+          <div>
+            <h2 className="text-sm font-semibold text-secondary leading-tight">
+              Facturación Global
+            </h2>
+            <p className="text-xs text-neutral/50 leading-tight">
+              Ingresos por Consultas y Venta de Productos
+            </p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-2xl font-black text-[#062e3a]">
-            Facturación Global
-          </h2>
-          <p className="text-[#342c1e] font-medium">
-            Ingresos por Consultas y Venta de Productos
-          </p>
+
+        {/* Controles derechos */}
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Filtro farmacia */}
+          <Select
+            value={filtroFarmacia || "__all__"}
+            onValueChange={(val) => setFiltroFarmacia(val === "__all__" ? "" : val)}
+          >
+            <SelectTrigger size="default" className="w-[180px]">
+              <SelectValue placeholder="Todas las Farmacias" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Todas las Farmacias</SelectItem>
+              {listadoFarmacias.map((f) => (
+                <SelectItem key={f.id} value={String(f.id)}>
+                  {f.nombre}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Filtro nutricionista */}
+          <Select
+            value={filtroNutri || "__all__"}
+            onValueChange={(val) => setFiltroNutri(val === "__all__" ? "" : val)}
+          >
+            <SelectTrigger size="default" className="w-[180px]">
+              <SelectValue placeholder="Todas las Nutricionistas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Todas las Nutricionistas</SelectItem>
+              {listadoNutricionistas.map((n) => (
+                <SelectItem key={n.id} value={String(n.id)}>
+                  {n.nombre} {n.apellidos}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Toggles Consultas / Productos */}
+          <div className="flex items-center gap-1 bg-neutral/5 border border-neutral/10 rounded-md p-0.5">
+            <button
+              onClick={() => setShowConsultas(!showConsultas)}
+              className={`px-3 h-8 rounded-md text-xs font-medium transition-all flex items-center gap-1.5
+                ${showConsultas
+                  ? "bg-surface text-primary shadow-sm"
+                  : "text-neutral/40 hover:text-secondary"
+                }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${showConsultas ? "bg-[#b1cb0c]" : "bg-neutral/30"}`} />
+              Consultas
+            </button>
+            <button
+              onClick={() => setShowPedidos(!showPedidos)}
+              className={`px-3 h-8 rounded-md text-xs font-medium transition-all flex items-center gap-1.5
+                ${showPedidos
+                  ? "bg-surface text-secondary shadow-sm"
+                  : "text-neutral/40 hover:text-secondary"
+                }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${showPedidos ? "bg-secondary" : "bg-neutral/30"}`} />
+              Productos
+            </button>
+          </div>
+
+          {/* Selector de año */}
+          <div className="flex items-center gap-2 bg-neutral/5 border border-neutral/10 rounded-md px-3 h-10">
+            <button
+              onClick={() => setAnio(anio - 1)}
+              className="hover:text-primary text-secondary transition-colors"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className="text-sm font-medium text-secondary min-w-[2.5rem] text-center">
+              {anio}
+            </span>
+            <button
+              onClick={() => setAnio(anio + 1)}
+              className="hover:text-primary text-secondary transition-colors"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
       </div>
-      
-      {/* Zona de Súper Filtros */}
-      <div className="flex gap-3 my-4 md:my-0 flex-1 md:mx-6 items-center">
-        <select
-          value={filtroFarmacia}
-          onChange={(e) => setFiltroFarmacia(e.target.value)}
-          className="flex-1 bg-[#f4f7f4] border border-gray-200 text-[#062e3a] text-xs font-bold rounded-xl focus:ring-[#367933] focus:border-[#367933] block p-2 outline-none appearance-none"
-        >
-          <option value="">Todas las Famacias</option>
-          {listadoFarmacias.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.nombre}
-            </option>
-          ))}
-        </select>
 
-        <select
-          value={filtroNutri}
-          onChange={(e) => setFiltroNutri(e.target.value)}
-          className="flex-1 bg-[#f4f7f4] border border-gray-200 text-[#062e3a] text-xs font-bold rounded-xl focus:ring-[#367933] focus:border-[#367933] block p-2 outline-none appearance-none"
-        >
-          <option value="">Todas las Nutricionistas</option>
-          {listadoNutricionistas.map((n) => (
-            <option key={n.id} value={n.id}>
-              {n.nombre} {n.apellidos}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* ── MEJORA 1: Fila de KPIs ────────────────────────────────────────────── */}
+      {kpis && kpis.totalAnio > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+          {/* Total acumulado */}
+          <div className="bg-neutral/[0.03] border border-neutral/10 rounded-md px-4 py-3">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-neutral/40 mb-1">
+              Total acumulado
+            </p>
+            <p className="text-lg font-semibold text-secondary tabular-nums">
+              {kpis.totalAnio.toLocaleString("es-ES")}€
+            </p>
+          </div>
 
-      <div className="flex flex-wrap items-center justify-end gap-4 w-full md:w-auto">
-        {/* Toggles Interactivas */}
-        <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-xl border border-gray-200">
-          <button
-            onClick={() => setShowConsultas(!showConsultas)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2
-              ${showConsultas ? "bg-[#b1cb0c]/20 text-[#367933]" : "text-gray-400 hover:bg-gray-100"}
-            `}
-          >
-            <div className={`w-2 h-2 rounded-full ${showConsultas ? "bg-[#b1cb0c]" : "bg-gray-400"}`}></div>
-            Consultas
-          </button>
-          
-          <button
-            onClick={() => setShowPedidos(!showPedidos)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2
-              ${showPedidos ? "bg-[#062e3a]/10 text-[#062e3a]" : "text-gray-400 hover:bg-gray-100"}
-            `}
-          >
-            <div className={`w-2 h-2 rounded-full ${showPedidos ? "bg-[#062e3a]" : "bg-gray-400"}`}></div>
-            Productos
-          </button>
+          {/* Consultas */}
+          <div className="bg-neutral/[0.03] border border-neutral/10 rounded-md px-4 py-3">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-neutral/40 mb-1">
+              Consultas
+            </p>
+            <p className="text-lg font-semibold text-primary tabular-nums">
+              {kpis.totalConsultas.toLocaleString("es-ES")}€
+            </p>
+            <p className="text-[10px] text-neutral/40 mt-0.5">
+              {kpis.pctConsultas}% del total
+            </p>
+          </div>
+
+          {/* Productos */}
+          <div className="bg-neutral/[0.03] border border-neutral/10 rounded-md px-4 py-3">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-neutral/40 mb-1">
+              Productos
+            </p>
+            <p className="text-lg font-semibold text-secondary tabular-nums">
+              {kpis.totalProductos.toLocaleString("es-ES")}€
+            </p>
+          </div>
+
+          {/* Mejor mes */}
+          <div className="bg-neutral/[0.03] border border-neutral/10 rounded-md px-4 py-3">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-neutral/40 mb-1">
+              Mejor mes
+            </p>
+            <p className="text-lg font-semibold text-secondary tabular-nums">
+              {kpis.mejorMes.mes}
+            </p>
+            <p className="text-[10px] text-neutral/40 mt-0.5">
+              {kpis.mejorMes.total.toLocaleString("es-ES")}€
+            </p>
+          </div>
         </div>
+      )}
 
-        <div className="bg-gray-50 px-4 py-2 rounded-xl flex items-center gap-4 border border-gray-200">
-          <button
-            onClick={() => setAnio(anio - 1)}
-            className="hover:text-[#367933] text-[#062e3a] font-bold"
-          >
-            <ChevronLeft size={20} />
-          </button>
-          <span className="font-black text-lg text-[#062e3a]">{anio}</span>
-          <button
-            onClick={() => setAnio(anio + 1)}
-            className="hover:text-[#367933] text-[#062e3a] font-bold"
-          >
-            <ChevronRight size={20} />
-          </button>
-        </div>
-      </div>
-    </div>
-
-    {/* Altura fija definida para evitar fallos de Recharts */}
-    <div className="h-[400px] w-full min-h-[300px]">
-      <ResponsiveContainer width="100%" height="100%" minHeight={300} minWidth={100}>
+      {/* Gráfica — ChartContainer gestiona las dimensiones */}
+      <ChartContainer
+        config={{
+          consultas: { color: "#b1cb0c", label: "Consultas" },
+          productos: { color: "#062e3a", label: "Productos" },
+        }}
+        className="h-[360px] w-full"
+      >
         <BarChart
           data={facturacion}
-          margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
+          margin={{ top: 24, right: 30, left: 0, bottom: 0 }}
         >
           <CartesianGrid
             strokeDasharray="3 3"
             vertical={false}
-            stroke="#f3f4f6"
+            stroke="var(--color-border, #f3f4f6)"
           />
           <XAxis
             dataKey="mesTexto"
             axisLine={false}
             tickLine={false}
-            tick={{ fill: "#342c1e", fontWeight: "bold" }}
+            tick={{ fill: "#342c1e", fontWeight: "500", fontSize: 12 }}
           />
           <YAxis
             axisLine={false}
             tickLine={false}
-            tick={{ fill: "#342c1e", fontWeight: "bold" }}
+            tick={{ fill: "#342c1e", fontWeight: "500", fontSize: 12 }}
             tickFormatter={(value) => `${value}€`}
             width={60}
           />
-          <Tooltip
-            cursor={{ fill: "#f4f7f4" }}
-            contentStyle={{
-              borderRadius: "1rem",
-              border: "none",
-              boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
-            }}
-            formatter={(value) => [`${value} €`]}
+
+          {/* ── MEJORA 2: Tooltip personalizado con ChartTooltipContent ────────── */}
+          <ChartTooltip
+            cursor={{ fill: "var(--color-neutral, #f4f7f4)", opacity: 0.08 }}
+            content={
+              <ChartTooltipContent
+                hideLabel={false}
+                labelKey="mesTexto"
+                nameKey="name"
+                indicator="dot"
+              />
+            }
           />
+
           <Legend
             wrapperStyle={{
-              paddingTop: "20px",
-              fontWeight: "bold",
-              color: "#062e3a",
+              paddingTop: "16px",
+              fontSize: "12px",
+              color: "var(--color-text-secondary)",
             }}
           />
+
           {showConsultas && (
             <Bar
               dataKey="ingresosConsultas"
@@ -163,6 +264,7 @@ const AdminGraficaFacturacion = ({
               radius={showPedidos ? [0, 0, 4, 4] : [4, 4, 4, 4]}
             />
           )}
+
           {showPedidos && (
             <Bar
               dataKey="ingresosPedidos"
@@ -170,12 +272,25 @@ const AdminGraficaFacturacion = ({
               stackId="a"
               fill="#062e3a"
               radius={showConsultas ? [4, 4, 0, 0] : [4, 4, 4, 4]}
-            />
+            >
+              {/* ── MEJORA 3: Label con el total del mes (solo cuando ambas barras activas) */}
+              {showPedidos && showConsultas && (
+                <LabelList
+                  dataKey="ingresosPedidos"
+                  position="top"
+                  formatter={(val, entry) =>
+                    val > 0
+                      ? `${(val + (entry?.ingresosConsultas || 0)).toLocaleString("es-ES")}€`
+                      : ""
+                  }
+                  style={{ fontSize: 10, fill: "#062e3a", fontWeight: 500 }}
+                />
+              )}
+            </Bar>
           )}
         </BarChart>
-      </ResponsiveContainer>
+      </ChartContainer>
     </div>
-  </div>
   );
 };
 

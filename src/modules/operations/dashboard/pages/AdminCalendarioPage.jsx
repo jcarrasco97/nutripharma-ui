@@ -4,6 +4,7 @@ import { useDashboardAdmin } from "../hooks/useDashboardAdmin";
 import AdminCalendarioOperativo from "../components/admin/AdminCalendarioOperativo";
 import ModalResumenDiario from "../components/admin/ModalResumenDiario";
 import ModalConsultaLectura from "../components/admin/ModalConsultaLectura";
+import ModalDetallePedido from "@/modules/sales/pedidos/components/ModalDetallePedido";
 import { dashboardService } from "../services/dashboardService";
 
 const AdminCalendarioPage = ({ setVistaActual }) => {
@@ -82,6 +83,17 @@ const AdminCalendarioPage = ({ setVistaActual }) => {
             setIsResumenDiarioOpen(true);
           }}
           onIrAGestionar={(c) => hook.handleDeepLinkValidacion(c, setVistaActual)}
+        />
+      )}
+
+      {/* Modal detalle pedido */}
+      {pedidoDetalle && (
+        <ModalDetallePedido
+          pedido={pedidoDetalle}
+          onCerrar={() => {
+            setPedidoDetalle(null);
+            setIsResumenDiarioOpen(true);
+          }}
         />
       )}
     </div>

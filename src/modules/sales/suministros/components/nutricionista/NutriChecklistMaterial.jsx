@@ -1,26 +1,72 @@
 import React from "react";
-import { CheckSquare, Clock, Send, Loader2 } from "lucide-react";
+import { CheckCircle2, Clock, Send, Loader2 } from "lucide-react";
+import { Button } from "@/shared/components/ui/Button";
 
 const NutriChecklistMaterial = ({ materiales, seleccionados, onCheckbox, onSolicitar, enviando }) => (
-  <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8">
-    <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
-      <div className="bg-[#367933]/10 p-3 rounded-2xl text-[#367933]"><CheckSquare size={24} /></div>
-      <h2 className="text-2xl font-black text-[#062e3a]">Solicitar Material</h2>
-    </div>
-    <div className="space-y-3 mb-8">
-      {materiales.map((mat) => (
-        <label key={mat.id} className={`flex items-center p-4 border-2 rounded-2xl transition-all duration-200 ${!mat.disponible ? "border-gray-100 bg-[#f4f7f4] cursor-not-allowed opacity-70" : seleccionados.includes(mat.id) ? "border-[#367933] bg-[#b1cb0c]/10 cursor-pointer shadow-sm" : "border-gray-100 hover:border-[#b1cb0c]/50 hover:bg-gray-50 cursor-pointer"}`}>
-          <input type="checkbox" checked={seleccionados.includes(mat.id)} onChange={() => onCheckbox(mat.id)} disabled={!mat.disponible} className="w-5 h-5 text-[#367933] rounded border-gray-300 focus:ring-[#367933]" />
-          <div className="ml-4 flex-1 flex justify-between items-center">
-            <div><span className="block font-black text-[#062e3a] text-lg">{mat.nombre}</span><span className="block text-xs font-bold text-[#342c1e]/60 mt-0.5">Cantidad estándar: {mat.cantidadEstandar} uds.</span></div>
-            {!mat.disponible && <span className="text-[10px] font-black bg-amber-100 text-amber-700 px-2 py-1 rounded-md uppercase flex items-center gap-1"><Clock size={10} strokeWidth={3} /> En curso</span>}
+  <div className="space-y-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      {materiales.map((mat) => {
+        const isSelected = seleccionados.includes(mat.id);
+        const isDisabled = !mat.disponible;
+
+        return (
+          <div
+            key={mat.id}
+            onClick={() => !isDisabled && onCheckbox(mat.id)}
+            className={`relative p-4 rounded-md border transition-all flex gap-3 items-start select-none ${
+              isDisabled
+                ? "opacity-50 cursor-not-allowed bg-neutral/5"
+                : isSelected
+                ? "bg-primary/5 border-primary shadow-sm cursor-pointer"
+                : "bg-surface border-neutral/10 hover:border-neutral/30 cursor-pointer"
+            }`}
+          >
+            {/* Checkbox visual decorativo */}
+            <div
+              className={`w-5 h-5 rounded-md border flex items-center justify-center mt-0.5 shrink-0 transition-colors ${
+                isSelected
+                  ? "bg-primary border-primary text-surface"
+                  : "border-neutral/30 bg-surface"
+              }`}
+            >
+              {isSelected && <CheckCircle2 size={14} />}
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-secondary text-sm leading-tight">{mat.nombre}</p>
+              <p className="text-xs font-medium text-neutral/50 mt-1">
+                Cantidad estándar: {mat.cantidadEstandar} uds.
+              </p>
+            </div>
+
+            {isDisabled && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 px-2 py-0.5 rounded-md shrink-0">
+                <Clock size={10} /> En curso
+              </span>
+            )}
           </div>
-        </label>
-      ))}
+        );
+      })}
     </div>
-    <button onClick={onSolicitar} disabled={seleccionados.length === 0 || enviando} className="w-full bg-[#367933] hover:bg-[#006633] disabled:bg-gray-300 text-white font-black py-4 rounded-[1.25rem] flex items-center justify-center transition-colors shadow-lg shadow-[#367933]/20">
-      {enviando ? <Loader2 className="animate-spin" size={20} /> : <><Send size={18} className="mr-2" /> Enviar Petición</>}
-    </button>
+
+    {seleccionados.length > 0 && (
+      <div className="bg-neutral/5 border border-neutral/10 rounded-md px-4 py-2.5 flex items-center justify-between">
+        <p className="text-xs font-medium text-neutral/60">
+          <span className="font-bold text-primary">{seleccionados.length}</span>{" "}
+          {seleccionados.length === 1 ? "material seleccionado" : "materiales seleccionados"}
+        </p>
+      </div>
+    )}
+
+    <Button
+      onClick={onSolicitar}
+      disabled={seleccionados.length === 0 || enviando}
+      isLoading={enviando}
+      className="w-full gap-1.5 rounded-md bg-primary hover:bg-primary-hover text-surface font-semibold h-10 shadow-md shadow-primary/20"
+    >
+      <Send size={15} />
+      Enviar Petición ({seleccionados.length})
+    </Button>
   </div>
 );
 

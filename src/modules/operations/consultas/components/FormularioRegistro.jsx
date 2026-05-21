@@ -1,14 +1,23 @@
 import React from "react";
 import {
-  Stethoscope,
   AlertTriangle,
   CheckCircle,
   Camera,
-  ChevronDown,
   Eye,
   RefreshCw,
   Trash2,
 } from "lucide-react";
+import { Input } from "@/shared/components/ui/Input";
+import { Label } from "@/shared/components/ui/Label";
+import { Button } from "@/shared/components/ui/Button";
+import { Textarea } from "@/shared/components/ui/Textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/Select";
 
 const FormularioRegistro = ({
   farmacias,
@@ -36,22 +45,7 @@ const FormularioRegistro = ({
   };
 
   return (
-    <div className="xl:col-span-1 bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8 h-fit animate-fade-in flex flex-col space-y-6">
-      {/* CABECERA */}
-      <div className="flex items-center gap-4 pb-4 border-b border-gray-100">
-        <div className="bg-[#b1cb0c]/20 p-3 rounded-2xl text-[#367933]">
-          <Stethoscope size={28} />
-        </div>
-        <div>
-          <h2 className="text-2xl font-black text-[#062e3a] leading-tight">
-            Registrar Turno
-          </h2>
-          <p className="text-[11px] font-bold text-[#342c1e]/50 uppercase tracking-widest mt-0.5">
-            Ingreso de jornada
-          </p>
-        </div>
-      </div>
-
+    <div className="space-y-6">
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -62,42 +56,45 @@ const FormularioRegistro = ({
         {/* FARMACIA Y FECHA */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="md:col-span-2">
-            <label className="block text-[10px] font-black text-[#062e3a]/50 uppercase tracking-widest mb-1.5 ml-1">
+            <Label className="text-xs font-bold text-neutral/50 uppercase tracking-wider mb-2 block">
               Farmacia
-            </label>
-            <div className="relative">
-              <select
-                name="farmaciaId"
-                value={formulario.farmaciaId}
-                onChange={onChange}
-                className="w-full bg-[#f4f7f4] border border-transparent focus:border-[#b1cb0c] rounded-xl px-4 py-3.5 text-sm font-bold text-[#062e3a] outline-none appearance-none transition-all cursor-pointer"
-                required
-              >
-                {farmacias.length === 0 && (
-                  <option value="">Sin farmacias asignadas</option>
+            </Label>
+            <Select
+              name="farmaciaId"
+              value={formulario.farmaciaId?.toString()}
+              onValueChange={(val) =>
+                onChange({ target: { name: "farmaciaId", value: val } })
+              }
+              required
+            >
+              <SelectTrigger className="h-10 bg-surface border-neutral/10 text-secondary rounded-md">
+                <SelectValue placeholder="Seleccione una farmacia" />
+              </SelectTrigger>
+              <SelectContent>
+                {farmacias.length === 0 ? (
+                  <SelectItem value="none" disabled>
+                    Sin farmacias asignadas
+                  </SelectItem>
+                ) : (
+                  farmacias.map((f) => (
+                    <SelectItem key={f.id} value={f.id.toString()}>
+                      {f.nombre}
+                    </SelectItem>
+                  ))
                 )}
-                {farmacias.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.nombre}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                size={16}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-[#062e3a]/40 pointer-events-none"
-              />
-            </div>
+              </SelectContent>
+            </Select>
           </div>
           <div className="md:col-span-1">
-            <label className="block text-[10px] font-black text-[#062e3a]/50 uppercase tracking-widest mb-1.5 ml-1">
+            <Label className="text-xs font-bold text-neutral/50 uppercase tracking-wider mb-2 block">
               Fecha
-            </label>
-            <input
+            </Label>
+            <Input
               type="date"
               name="fecha"
               value={formulario.fecha}
               onChange={onChange}
-              className="w-full px-4 py-3.5 bg-[#f4f7f4] border border-transparent focus:border-[#b1cb0c] rounded-xl text-sm font-bold text-[#062e3a] outline-none transition-all"
+              className="h-10 bg-surface border-neutral/10 rounded-md text-secondary"
               required
             />
           </div>
@@ -106,58 +103,58 @@ const FormularioRegistro = ({
         {/* ENTRADA Y SALIDA */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-[10px] font-black text-[#062e3a]/50 uppercase tracking-widest mb-1.5 ml-1">
+            <Label className="text-xs font-bold text-neutral/50 uppercase tracking-wider mb-2 block">
               Entrada
-            </label>
-            <div className="relative">
-              <select
-                name="horaInicio"
-                value={formulario.horaInicio}
-                onChange={onChange}
-                className="w-full bg-[#f4f7f4] border border-transparent focus:border-[#b1cb0c] rounded-xl pl-4 pr-8 py-3.5 text-sm font-black text-[#062e3a] outline-none appearance-none transition-all cursor-pointer"
-              >
+            </Label>
+            <Select
+              name="horaInicio"
+              value={formulario.horaInicio}
+              onValueChange={(val) =>
+                onChange({ target: { name: "horaInicio", value: val } })
+              }
+            >
+              <SelectTrigger className="h-10 bg-surface border-neutral/10 text-secondary rounded-md">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
                 {opcionesHora.map((h) => (
-                  <option
+                  <SelectItem
                     key={`ini-${h}`}
                     value={h}
                     disabled={estaBloqueado(h)}
                   >
                     {h} {estaBloqueado(h) ? " (Ocupado)" : ""}
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
-              <ChevronDown
-                size={14}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#062e3a]/40 pointer-events-none"
-              />
-            </div>
+              </SelectContent>
+            </Select>
           </div>
           <div>
-            <label className="block text-[10px] font-black text-[#062e3a]/50 uppercase tracking-widest mb-1.5 ml-1">
+            <Label className="text-xs font-bold text-neutral/50 uppercase tracking-wider mb-2 block">
               Salida
-            </label>
-            <div className="relative">
-              <select
-                name="horaFin"
-                value={formulario.horaFin}
-                onChange={onChange}
-                className="w-full bg-[#f4f7f4] border border-transparent focus:border-[#b1cb0c] rounded-xl pl-4 pr-8 py-3.5 text-sm font-black text-[#062e3a] outline-none appearance-none transition-all cursor-pointer"
-              >
+            </Label>
+            <Select
+              name="horaFin"
+              value={formulario.horaFin}
+              onValueChange={(val) =>
+                onChange({ target: { name: "horaFin", value: val } })
+              }
+            >
+              <SelectTrigger className="h-10 bg-surface border-neutral/10 text-secondary rounded-md">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
                 {opcionesHora.map((h) => (
-                  <option
+                  <SelectItem
                     key={`fin-${h}`}
                     value={h}
                     disabled={estaBloqueado(h)}
                   >
                     {h} {estaBloqueado(h) ? " (Ocupado)" : ""}
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
-              <ChevronDown
-                size={14}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#062e3a]/40 pointer-events-none"
-              />
-            </div>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -177,10 +174,10 @@ const FormularioRegistro = ({
             { id: "personalFarmacia", label: "Personal" },
           ].map((item) => (
             <div key={item.id} className="relative">
-              <label className="block text-[10px] font-black text-[#062e3a]/50 uppercase tracking-widest mb-1.5 ml-1">
+              <Label className="text-xs font-bold text-neutral/50 uppercase tracking-wider mb-2 block">
                 {item.label}
-              </label>
-              <input
+              </Label>
+              <Input
                 type="number"
                 inputMode="numeric"
                 pattern="[0-9]*"
@@ -188,7 +185,7 @@ const FormularioRegistro = ({
                 value={formulario[item.id]}
                 onChange={onChange}
                 onFocus={(e) => e.target.select()}
-                className="w-full bg-[#f4f7f4] border border-transparent focus:border-[#062e3a] focus:bg-white rounded-xl py-3 px-4 text-sm font-bold text-[#062e3a] outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="h-10 bg-surface border-neutral/10 rounded-md text-secondary"
               />
             </div>
           ))}
@@ -196,46 +193,33 @@ const FormularioRegistro = ({
 
         {/* OBSERVACIONES */}
         <div>
-          <label className="block text-[10px] font-black text-[#062e3a]/50 uppercase tracking-widest mb-1.5 ml-1">
+          <Label className="text-xs font-bold text-neutral/50 uppercase tracking-wider mb-2 block">
             Observaciones (Opcional)
-          </label>
-          <textarea
+          </Label>
+          <Textarea
             name="observacionesJornada"
             value={formulario.observacionesJornada}
             onChange={onChange}
             rows="2"
             placeholder="Añade notas de la jornada..."
-            className="w-full bg-[#f4f7f4] border border-transparent focus:border-[#b1cb0c] rounded-xl px-4 py-3 text-sm text-[#062e3a] outline-none resize-none transition-all placeholder:font-medium placeholder:text-[#062e3a]/30 font-bold"
-          ></textarea>
+            className="bg-surface border-neutral/10 rounded-md text-secondary resize-none font-bold"
+          />
         </div>
 
         {/* EVIDENCIA FOTOGRÁFICA */}
-        <div className="flex flex-col gap-2 pt-2 border-t border-gray-100">
-          <span className="text-[10px] font-black text-[#062e3a]/50 uppercase tracking-widest flex items-center gap-1.5">
+        <div className="flex flex-col gap-2 pt-2 border-t border-neutral/10">
+          <span className="text-xs font-bold text-neutral/50 uppercase tracking-wider flex items-center gap-1.5 mb-2 block">
             <Camera size={14} /> Evidencia (Opcional)
           </span>
 
           {!previewUrl ? (
-            <label className="cursor-pointer flex items-center justify-center gap-1.5 w-full py-3 rounded-xl bg-[#f4f7f4] hover:bg-gray-200 text-[#062e3a] text-[10px] font-black uppercase tracking-widest transition-colors border border-gray-200">
-              Añadir Foto
-              <input
-                type="file"
-                className="hidden"
-                accept="image/*"
-                onChange={handleArchivoChange}
-              />
-            </label>
-          ) : (
-            <div className="flex gap-2 w-full">
-              <button
-                type="button"
-                onClick={onVerPreview}
-                className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl bg-[#062e3a]/10 hover:bg-[#062e3a]/20 text-[#062e3a] text-[10px] font-black uppercase tracking-widest transition-colors"
-              >
-                <Eye size={14} /> Ver
-              </button>
-              <label className="flex-1 cursor-pointer flex items-center justify-center gap-1.5 py-3 rounded-xl bg-[#b1cb0c]/20 hover:bg-[#b1cb0c]/40 text-[#367933] text-[10px] font-black uppercase tracking-widest transition-colors border border-[#b1cb0c]/50">
-                <RefreshCw size={14} /> Sustituir
+            <Button
+              variant="outline"
+              className="w-full h-10 rounded-md cursor-pointer text-xs font-bold uppercase tracking-wider bg-neutral/5 hover:bg-neutral/10 text-secondary border border-neutral/10"
+              asChild
+            >
+              <label>
+                Añadir Foto
                 <input
                   type="file"
                   className="hidden"
@@ -243,25 +227,52 @@ const FormularioRegistro = ({
                   onChange={handleArchivoChange}
                 />
               </label>
-              <button
+            </Button>
+          ) : (
+            <div className="flex gap-2 w-full">
+              <Button
                 type="button"
+                variant="outline"
+                onClick={onVerPreview}
+                className="flex-1 h-10 rounded-md text-xs font-bold uppercase tracking-wider"
+              >
+                <Eye size={14} /> Ver
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1 h-10 rounded-md cursor-pointer text-xs font-bold uppercase tracking-wider"
+                asChild
+              >
+                <label>
+                  <RefreshCw size={14} /> Sustituir
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleArchivoChange}
+                  />
+                </label>
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
                 onClick={() => handleArchivoChange({ target: { files: [] } })}
-                className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 text-[10px] font-black uppercase tracking-widest transition-colors border border-red-200"
+                className="flex-1 h-10 rounded-md text-xs font-bold uppercase tracking-wider"
               >
                 <Trash2 size={14} /> Borrar
-              </button>
+              </Button>
             </div>
           )}
         </div>
 
         {/* BOTÓN SUBMIT */}
-        <button
+        <Button
           type="submit"
           disabled={farmacias.length === 0 || !duracionValida()}
-          className="w-full bg-[#367933] hover:bg-[#006633] text-white font-black py-4 rounded-xl transition-all shadow-md shadow-[#367933]/20 flex justify-center items-center gap-2 mt-4 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full h-10 bg-primary hover:bg-primary-hover text-surface font-bold rounded-md transition-all active:scale-[0.98] flex justify-center items-center gap-2 mt-4"
         >
           <CheckCircle size={18} /> Enviar
-        </button>
+        </Button>
       </form>
     </div>
   );

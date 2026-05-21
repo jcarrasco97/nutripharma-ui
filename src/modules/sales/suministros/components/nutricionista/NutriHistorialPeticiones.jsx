@@ -1,5 +1,44 @@
-import React from "react";
-import { ClipboardList, Filter, ArrowUpDown, Clock } from "lucide-react";
+import React, { useState, useMemo } from "react";
+import { createColumnHelper } from "@tanstack/react-table";
+import { Clock, Package, X, MoreHorizontal, Eye } from "lucide-react";
+
+import { DataTable } from "@/shared/components/ui/DataTable";
+import { Badge } from "@/shared/components/ui/Badge";
+import { Button } from "@/shared/components/ui/Button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/DropdownMenu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/Select";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/shared/components/ui/Dialog";
+
+const columnHelper = createColumnHelper();
+
+/**
+ * Badge de estado con colores según valor.
+ */
+const estadoBadge = (estado) => {
+  const e = estado || "";
+  let classes =
+    "text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider whitespace-nowrap ";
+  if (e === "APROBADO") classes += "bg-primary/10 text-primary";
+  else if (["CANCELADO", "RECHAZADO"].includes(e))
+    classes += "bg-destructive/10 text-destructive";
+  else classes += "bg-amber-100 text-amber-700";
+  return <span className={classes}>{e.replace("_", " ")}</span>;
+};
 
 const NutriHistorialPeticiones = ({
   peticionesFiltradas,
@@ -11,114 +50,229 @@ const NutriHistorialPeticiones = ({
   setOrdenFiltro,
   mesesDisponibles,
 }) => {
-  return (
-    <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8 h-fit">
-      <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
-        <div className="bg-[#062e3a]/10 p-3 rounded-2xl text-[#062e3a]">
-          <ClipboardList size={24} />
-        </div>
-        <h2 className="text-2xl font-black text-[#062e3a]">Mis Peticiones</h2>
-      </div>
+  // ── Estado del modal de detalle ──
+  const [detalle, setDetalle] = useState(null);
 
-      {/* Barra de Filtros Interna */}
-      <div className="flex flex-wrap gap-3 mb-8">
-        <div className="relative flex-1 min-w-[120px]">
-          <Filter
-            size={14}
-            className="absolute left-3.5 top-3.5 text-gray-400"
-          />
-          <select
-            value={mesFiltro}
-            onChange={(e) => setMesFiltro(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 text-xs font-bold text-[#062e3a] border-2 border-transparent rounded-xl bg-[#f4f7f4] focus:bg-white focus:border-[#b1cb0c] transition-colors outline-none appearance-none"
-          >
-            {mesesDisponibles.map((mes) => (
-              <option key={mes} value={mes}>
-                {mes === "Todos" ? "Todos los meses" : mes}
-              </option>
-            ))}
-          </select>
-        </div>
+  const opciones = useMemo(() => {
+    return mesesDisponibles.filter((m) => m !== "Todos");
+  }, [mesesDisponibles]);
 
-        <div className="relative flex-1 min-w-[120px]">
-          <Filter
-            size={14}
-            className="absolute left-3.5 top-3.5 text-gray-400"
-          />
-          <select
-            value={estadoFiltro}
-            onChange={(e) => setEstadoFiltro(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 text-xs font-bold text-[#062e3a] border-2 border-transparent rounded-xl bg-[#f4f7f4] focus:bg-white focus:border-[#b1cb0c] transition-colors outline-none appearance-none"
-          >
-            <option value="Todos">Todos los estados</option>
-            <option value="SOLICITADO">Solicitados</option>
-            <option value="APROBADO">Aprobados</option>
-            <option value="CANCELADO">Cancelados</option>
-          </select>
-        </div>
+  const formatoMesCorto = (key) => {
+    if (!key || key === "Todos") return "Todos los meses";
+    const [year, month] = key.split("-");
+    if (!year || !month) return key;
+    const nombre = new Date(year, month - 1).toLocaleString("es-ES", {
+      month: "short",
+    });
+    return `${nombre.charAt(0).toUpperCase() + nombre.slice(1).replace(".", "")} ${year}`;
+  };
 
-        <div className="relative flex-1 min-w-[120px]">
-          <ArrowUpDown
-            size={14}
-            className="absolute left-3.5 top-3.5 text-gray-400"
-          />
-          <select
-            value={ordenFiltro}
-            onChange={(e) => setOrdenFiltro(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 text-xs font-bold text-[#062e3a] border-2 border-transparent rounded-xl bg-[#f4f7f4] focus:bg-white focus:border-[#b1cb0c] transition-colors outline-none appearance-none"
-          >
-            <option value="recientes">Más Recientes</option>
-            <option value="antiguos">Más Antiguos</option>
-          </select>
-        </div>
-      </div>
+  // ── Columnas: Materiales | Fecha | Estado ──
+  const columns = useMemo(
+    () => [
+      // 1. Materiales — primer nombre + badge "+X" clicable
+      columnHelper.accessor("materiales", {
+        id: "materiales",
+        header: "Materiales",
+        enableSorting: true,
+        cell: ({ row }) => {
+          const items = row.original.materiales || [];
+          const primero = items[0]?.nombre || "Sin material";
+          const resto = items.length - 1;
 
-      {/* Listado scrolleable */}
-      <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-        {peticionesFiltradas.length === 0 ? (
-          <p className="text-sm font-bold text-[#342c1e]/50 text-center py-12 bg-[#f4f7f4] rounded-2xl border-2 border-dashed border-gray-200">
-            No se encontraron peticiones.
-          </p>
-        ) : (
-          peticionesFiltradas.map((pet) => (
-            <div
-              key={pet.id}
-              className="border-2 border-gray-50 rounded-[1.5rem] p-5 flex flex-col gap-3 hover:border-[#b1cb0c]/30 hover:shadow-md transition-all bg-white"
-            >
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-black flex items-center gap-1.5 text-[#062e3a]">
-                  <Clock size={14} className="text-[#367933]" />{" "}
-                  {pet.fechaPeticion}
-                </span>
-                <span
-                  className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${
-                    pet.estado === "SOLICITADO"
-                      ? "bg-[#b1cb0c]/20 text-[#367933]"
-                      : pet.estado === "APROBADO"
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-red-100 text-red-700"
-                  }`}
+          return (
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm font-semibold text-secondary truncate">
+                {primero}
+              </span>
+              {resto > 0 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDetalle(row.original);
+                  }}
+                  className="shrink-0"
                 >
-                  {pet.estado}
-                </span>
+                  <Badge
+                    size="sm"
+                    className="text-[10px] font-bold border-none bg-primary/10 text-primary rounded-md cursor-pointer hover:bg-primary/20 transition-colors px-1.5 py-0.5 h-auto"
+                  >
+                    +{resto}
+                  </Badge>
+                </button>
+              )}
+            </div>
+          );
+        },
+      }),
+
+      // 2. Fecha
+      columnHelper.accessor("fechaPeticion", {
+        id: "fecha",
+        header: "Fecha",
+        enableSorting: true,
+        cell: ({ getValue }) => {
+          const raw = getValue();
+          if (!raw) return <span className="text-neutral/40">—</span>;
+          return (
+            <span className="text-sm font-medium text-secondary whitespace-nowrap">
+              {new Date(raw).toLocaleDateString("es-ES", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+              })}
+            </span>
+          );
+        },
+      }),
+
+      // 3. Estado
+      columnHelper.accessor("estado", {
+        id: "estado",
+        header: "Estado",
+        enableSorting: true,
+        cell: ({ getValue }) => estadoBadge(getValue()),
+      }),
+
+      // 4. Acciones
+      columnHelper.display({
+        id: "acciones",
+        header: "",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex justify-end">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-md h-8 w-8">
+                  <MoreHorizontal size={16} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="rounded-md border-neutral/10 shadow-lg w-40">
+                <DropdownMenuItem
+                  onClick={() => setDetalle(row.original)}
+                  className="rounded-md gap-2 text-sm font-medium cursor-pointer"
+                >
+                  <Eye size={14} /> Ver detalles
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        ),
+      }),
+    ],
+    []
+  );
+
+  // ── Toolbar: Filtros Shadcn Select ──
+  const toolbar = (
+    <div className="flex items-center gap-2 flex-wrap">
+      <Select
+        value={mesFiltro || "Todos"}
+        onValueChange={(val) => setMesFiltro(val)}
+      >
+        <SelectTrigger className="h-10 w-[160px] bg-surface border-neutral/10 rounded-md text-secondary font-medium">
+          <SelectValue placeholder="Todos los meses" />
+        </SelectTrigger>
+        <SelectContent className="rounded-md border-neutral/10">
+          <SelectItem value="Todos">Todos los meses</SelectItem>
+          {opciones.map((m) => (
+            <SelectItem key={m} value={m} className="font-medium">
+              {formatoMesCorto(m)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
+  return (
+    <>
+      <DataTable
+        columns={columns}
+        data={peticionesFiltradas}
+        searchKey={null}
+        showColumnsToggle={true}
+        pageSize={10}
+        emptyText="No se encontraron peticiones."
+        toolbarStart={toolbar}
+      />
+
+      {/* ── Modal de detalle completo de la petición ── */}
+      <Dialog
+        open={!!detalle}
+        onOpenChange={(open) => {
+          if (!open) setDetalle(null);
+        }}
+      >
+        <DialogContent className="p-0 overflow-hidden max-w-md border border-neutral/10 bg-surface flex flex-col gap-0">
+          <DialogTitle className="sr-only">Detalle de petición</DialogTitle>
+
+          {/* Header */}
+          <div className="bg-secondary px-4 py-3 flex justify-between items-center shrink-0">
+            <div className="flex items-center gap-2">
+              <Package size={15} className="text-accent" />
+              <span className="text-surface text-sm font-semibold">
+                Detalle de Petición
+              </span>
+            </div>
+            <button
+              onClick={() => setDetalle(null)}
+              className="text-surface/40 hover:text-surface transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          {/* Body */}
+          {detalle && (
+            <div className="px-5 py-5 space-y-3 overflow-y-auto custom-scrollbar">
+              {/* Info de cabecera */}
+              <div className="bg-surface border border-neutral/10 p-4 rounded-md flex justify-between items-center">
+                <div>
+                  <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-0.5">
+                    Petición de Material
+                  </p>
+                  <p className="text-xs font-medium text-neutral/50 mt-0.5 flex items-center gap-1">
+                    <Clock size={11} />
+                    {new Date(detalle.fechaPeticion).toLocaleString("es-ES", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+                {estadoBadge(detalle.estado)}
               </div>
-              <div className="text-sm text-[#062e3a] mt-2 bg-[#f4f7f4] p-4 rounded-xl border border-gray-100">
-                <ul className="list-disc pl-5 text-xs font-bold text-[#062e3a] space-y-1.5">
-                  {pet.materiales.map((m, idx) => (
-                    <li key={idx} className="marker:text-[#367933]">
-                      {m.nombre}{" "}
-                      <span className="text-[#342c1e]/60 font-medium">
-                        ({m.cantidadEstandar} uds)
+
+              {/* Lista de materiales completa */}
+              <div className="border border-neutral/10 rounded-md overflow-hidden">
+                <p className="bg-neutral/5 text-[10px] font-bold text-neutral/50 uppercase px-4 py-2.5 border-b border-neutral/10 tracking-wider">
+                  Materiales Solicitados
+                </p>
+                <div className="divide-y divide-neutral/5 bg-surface">
+                  {detalle.materiales?.map((m, i) => (
+                    <div
+                      key={i}
+                      className="flex justify-between items-center px-4 py-2.5"
+                    >
+                      <span className="text-sm font-semibold text-secondary">
+                        {m.nombre}
                       </span>
-                    </li>
+                      <Badge className="text-[10px] font-bold border-none bg-primary/10 text-primary rounded-md h-auto px-1.5 py-0.5">
+                        {m.cantidadEstandar} uds
+                      </Badge>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </div>
             </div>
-          ))
-        )}
-      </div>
-    </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 

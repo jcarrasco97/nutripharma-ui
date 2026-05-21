@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { jwtDecode } from "jwt-decode"; // 👈 1. Importamos jwtDecode
 
 import { consultasService } from "@/modules/operations/consultas";
 import { pedidosService } from "@/modules/sales/pedidos";
@@ -12,6 +13,7 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
   const [historial, setHistorial] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [listaNutrisGlobal, setListaNutrisGlobal] = useState([]);
+
   // --- ESTADOS PARA LIQUIDACIÓN (CIERRE DE CAJA) ---
   const [subPestañaConsultas, setSubPestañaConsultas] = useState("validar");
   const [pendientesLiquidar, setPendientesLiquidar] = useState([]);
@@ -19,12 +21,14 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
   const [filtroNutriLiquidacion, setFiltroNutriLiquidacion] = useState("");
   const [filtroMesLiquidacion, setFiltroMesLiquidacion] = useState("ALL");
   const [ordenLiquidacion, setOrdenLiquidacion] = useState("FECHA_DESC");
+
   // 2. ESTADOS DE MODALES Y EDICIÓN
   const [detalleSeleccionado, setDetalleSeleccionado] = useState(null);
   const [mostrarModalReparto, setMostrarModalReparto] = useState(false);
   const [repartosActuales, setRepartosActuales] = useState([]);
   const [pedidoEnProceso, setPedidoEnProceso] = useState(null);
   const [enviando, setEnviando] = useState(false);
+
   // --- ESTADOS PARA LA EVIDENCIA (FOTO) ---
   const [urlEvidenciaModal, setUrlEvidenciaModal] = useState(null);
 
@@ -36,39 +40,48 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
   });
 
   // =========================================================================
-  // CARGA DE DATOS
+  // CARGA DE DATOS SEGURA (ROLE-BASED)
   // =========================================================================
   const cargarDatos = useCallback(async () => {
     setCargando(true);
     try {
+      // 👇 2. Decodificamos el token para saber si es Admin o Nutricionista
+      const token = localStorage.getItem("token");
+      const decoded = jwtDecode(token);
+      const userRoles = Array.isArray(decoded.roles)
+        ? decoded.roles.map((r) => (typeof r === "string" ? r : r.authority))
+        : [];
+      const soyAdmin = userRoles.includes("ROLE_ADMIN") || userRoles.includes("ROLE_SUPERADMIN");
+
       if (pestañaActual === "consultas") {
+        // 👇 3. Bifurcamos las llamadas: Si no es admin, pide sus propias consultas y no carga el listado de nutris
         const [todas, nutris] = await Promise.all([
-          consultasService.obtenerTodas(),
-          nutricionistasService.listarTodas().catch(() => [])
+          soyAdmin ? consultasService.obtenerTodas() : consultasService.obtenerMisConsultas(),
+          soyAdmin ? nutricionistasService.listarTodas().catch(() => []) : Promise.resolve([])
         ]);
 
         setListaNutrisGlobal(nutris);
-
-        // El Mazo de Cartas (Solo Pendientes o con Incidencia)
         setPendientes(todas.filter(c => c.estado === "PENDIENTE_VALIDACION" || c.estado === "CON_INCIDENCIA"));
-
-        // La Bandeja de Liquidación (Solo Validadas listas para cobrar)
         setPendientesLiquidar(todas.filter(c => c.estado === "VALIDADA"));
-
-        // EL HISTORIAL ENTERPRISE (BIEN)
-        // Mostramos absolutamente todas las consultas para tener el control total.
-        // (Opcional: puedes mantener el filtro de BORRADOR si no quieres que el admin vea lo que la nutri aún no ha terminado de escribir).
         setHistorial(todas.filter(c => c.estado !== "BORRADOR"));
+
       } else if (pestañaActual === "pedidos") {
+        // 👇 4. Bifurcamos Pedidos (El error principal)
         const [todos, nutris] = await Promise.all([
-          pedidosService.obtenerTodos(),
-          nutricionistasService.listarTodas(),
+          soyAdmin ? pedidosService.obtenerTodos() : pedidosService.obtenerMisPedidos(),
+          soyAdmin ? nutricionistasService.listarTodas().catch(() => []) : Promise.resolve([])
         ]);
+
         setPendientes(todos.filter((p) => p.estado === "PENDIENTE_ENVIO"));
         setHistorial(todos.filter((p) => p.estado !== "PENDIENTE_ENVIO"));
         setListaNutrisGlobal(nutris);
+
       } else if (pestañaActual === "suministros") {
-        const todos = await suministrosService.listarPeticionesAdmin();
+        // 👇 5. Bifurcamos Suministros
+        const todos = soyAdmin
+          ? await suministrosService.listarPeticionesAdmin()
+          : await suministrosService.obtenerMisPeticiones();
+
         setPendientes(todos.filter((s) => s.estado === "SOLICITADO"));
         setHistorial(todos.filter((s) => s.estado !== "SOLICITADO"));
       }
@@ -152,8 +165,6 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
         historial.find(h => h.id.toString() === targetId);
 
       if (encontrada) {
-        // 👇 CIRUGÍA: Añadimos un pequeño retraso (300ms) para que la página "respire" 
-        // y termine su animación antes de lanzar el modal.
         setTimeout(() => {
           abrirDetalleConsulta(encontrada);
         }, 250);
@@ -190,7 +201,7 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
   };
 
   const iniciarProcesoEnvio = (pedido) => {
-    setDetalleSeleccionado(null); // Cierra el Dialog de detalle antes de abrir el modal de reparto
+    setDetalleSeleccionado(null);
     setPedidoEnProceso(pedido);
     const nutrisDeEstaFarmacia = listaNutrisGlobal.filter((n) =>
       n.asignaciones?.some((a) => a.farmaciaNombre === pedido.farmaciaNombre),
@@ -356,6 +367,7 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
       setEnviando(false);
     }
   };
+
   // =========================================================================
   // 🧭 NAVEGACIÓN MODO ENFOQUE (EL MAZO DE CARTAS)
   // =========================================================================
@@ -404,7 +416,6 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
   };
 
   const seleccionarTodasLiquidacion = (idsVisibles) => {
-    // Si ya están todas seleccionadas, las deselecciona. Si no, selecciona todas las visibles.
     const todasSeleccionadas = idsVisibles.every(id => seleccionadasLiquidacion.includes(id));
     if (todasSeleccionadas) {
       setSeleccionadasLiquidacion(prev => prev.filter(id => !idsVisibles.includes(id)));
@@ -420,7 +431,7 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
     setEnviando(true);
     try {
       await consultasService.liquidarLote(seleccionadasLiquidacion);
-      setSeleccionadasLiquidacion([]); // Limpiamos la cesta
+      setSeleccionadasLiquidacion([]);
       cargarDatos();
       alert("¡Liquidación completada con éxito!");
     } catch (error) {
@@ -431,13 +442,11 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
     }
   };
 
-
-  // Exponemos TODO lo que la UI necesita para pintarse
   return {
     pestañaActual,
     setPestañaActual,
     pendientes,
-    historial, // <--- Dato en bruto inyectado correctamente
+    historial,
     cargando,
     enviando,
     detalleSeleccionado,
@@ -451,7 +460,6 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
     pedidoEnProceso,
     setPedidoEnProceso,
 
-    // Acciones
     abrirDetalleConsulta,
     handleEditarYValidar,
     handleCancelarConsulta,
@@ -466,7 +474,6 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
     handleBorrarEvidenciaAdmin,
     cerrarModalEvidencia,
 
-    // Utilidades
     calcularTotalesPedido,
     agruparLineasPorProducto,
 
@@ -476,7 +483,7 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
     haySiguiente,
     irAnterior,
     irSiguiente,
-    // Liquidación
+
     subPestañaConsultas,
     setSubPestañaConsultas,
     pendientesLiquidar,
