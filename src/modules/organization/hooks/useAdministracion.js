@@ -230,12 +230,21 @@ export const useAdministracion = () => {
           pvf: Number(itemEditando.pvf),
           pvp: Number(itemEditando.pvp),
         });
+      } else if (pestana === "personal") {
+        const { personalInternoService } = await import("@/modules/organization/personal");
+        await personalInternoService.actualizarAdmin(itemEditando.id, {
+          email: itemEditando.email,
+          password: itemEditando.password || undefined,
+          nombre: itemEditando.nombre,
+          apellidos: itemEditando.apellidos,
+        });
+        await personalHook.cargarDatos();
       }
       cerrarSheet();
       cargarDatos();
     } catch (error) {
       console.error("Error al actualizar:", error);
-      alert("Error al actualizar los datos.");
+      alert(error.response?.data?.message || "Error al actualizar los datos.");
     }
   };
 

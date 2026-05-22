@@ -136,5 +136,6 @@ export const usePersonalInterno = (isSuperAdmin = false) => {
     handleCrear,
     handleEliminar,
     handleRestaurar,
+    cargarDatos,
   };
 };

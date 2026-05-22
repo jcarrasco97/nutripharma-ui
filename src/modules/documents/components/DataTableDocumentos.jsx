@@ -44,7 +44,6 @@ const DataTableDocumentos = ({
   borrandoId,
   descargandoId,
   cargando,
-  toolbarStart,
   toolbarEnd,
 }) => {
   const [filtroMes, setFiltroMes] = useState("TODOS");
@@ -219,7 +218,6 @@ const DataTableDocumentos = ({
       searchPlaceholder="Buscar documento..."
       pageSize={5}
       emptyText="No se han encontrado documentos."
-      toolbarStart={toolbarStart}
       toolbarExtra={filtroToolbar}
       toolbarEnd={toolbarEnd}
     />

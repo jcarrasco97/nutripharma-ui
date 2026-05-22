@@ -104,6 +104,16 @@ const DataTableFarmacias = ({
           </span>
         ),
       }),
+      columnHelper.accessor("telefono", {
+        id: "telefono",
+        header: "Teléfono",
+        enableSorting: true,
+        cell: ({ getValue }) => (
+          <span className={`text-sm font-medium whitespace-nowrap ${getValue() ? "text-secondary" : "text-neutral/40"}`}>
+            {getValue() || "—"}
+          </span>
+        ),
+      }),
 
       columnHelper.accessor("email", {
         id: "email",

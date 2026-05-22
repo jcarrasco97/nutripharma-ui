@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { ShoppingCart, Gift, Wallet, Loader2, X } from "lucide-react";
+import { ShoppingCart, Gift, Wallet, Loader2, X, MessageSquarePlus, Check } from "lucide-react";
 import { Button } from "@/shared/components/ui/Button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/shared/components/ui/Dialog";
+import { Textarea } from "@/shared/components/ui/Textarea";
 
 /**
  * CestaPedidos — Responsiva
@@ -20,8 +21,11 @@ const CestaPedidos = ({
   handleRealizarPedido,
   esAdmin,
   getPrecioAplicado,
+  observacionesPedido,
+  setObservacionesPedido,
 }) => {
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [modalNotas, setModalNotas] = useState(false);
 
   // ── Agrupación ────────────────────────────────────────────────────────────
   const itemsAgrupados = Object.values(
@@ -49,6 +53,7 @@ const CestaPedidos = ({
   const totalItems  = carrito.reduce((s, i) => s + i.cantidad, 0);
   const cestaVacia  = itemsAgrupados.length === 0;
   const ctaDisabled = cestaVacia || !farmaciaSeleccionada;
+  const tieneNota   = observacionesPedido?.trim()?.length > 0;
 
   // ── Lista de items (reutilizada en sidebar y modal) ──────────────────────
   const ItemList = () => (
@@ -117,6 +122,23 @@ const CestaPedidos = ({
     </div>
   );
 
+  // ── Botón sutil de observaciones ─────────────────────────────────────────
+  const BotonNotas = ({ className = "" }) => (
+    <button
+      type="button"
+      onClick={() => setModalNotas(true)}
+      className={`inline-flex items-center gap-1.5 text-[11px] font-medium transition-colors rounded-md px-2.5 py-1.5 ${
+        tieneNota
+          ? "text-primary bg-primary/10 hover:bg-primary/15"
+          : "text-neutral/50 hover:text-secondary hover:bg-neutral/5"
+      } ${className}`}
+      title={tieneNota ? "Editar observaciones" : "Añadir observaciones"}
+    >
+      {tieneNota ? <Check size={12} /> : <MessageSquarePlus size={12} />}
+      {tieneNota ? "Nota añadida" : "Añadir nota"}
+    </button>
+  );
+
   return (
     <>
       {/* ══════════════════════════════════════════════════════════
@@ -145,11 +167,16 @@ const CestaPedidos = ({
           {/* Totales */}
           {!cestaVacia && <Totales />}
 
-          {/* CTA */}
+          {/* Nota + CTA */}
+          {!cestaVacia && (
+            <div className="flex items-center justify-between mt-3">
+              <BotonNotas />
+            </div>
+          )}
           <Button
             onClick={handleRealizarPedido}
             disabled={ctaDisabled}
-            className="w-full h-11 mt-4 rounded-md bg-primary text-white hover:bg-primary-hover font-bold text-sm"
+            className="w-full h-11 mt-3 rounded-md bg-primary text-white hover:bg-primary-hover font-bold text-sm"
           >
             {enviando
               ? <Loader2 size={16} className="animate-spin" />
@@ -183,6 +210,7 @@ const CestaPedidos = ({
 
           {/* Derecha: Botones */}
           <div className="flex items-center gap-2 shrink-0">
+            {!cestaVacia && <BotonNotas />}
             {!cestaVacia && (
               <Button
                 variant="outline"
@@ -208,7 +236,7 @@ const CestaPedidos = ({
 
       {/* ── Modal de desglose (mobile) ── */}
       <Dialog open={modalAbierto} onOpenChange={setModalAbierto}>
-        <DialogContent className="max-w-sm rounded-xl border border-neutral/10 bg-surface p-0 gap-0">
+        <DialogContent aria-describedby={undefined} className="max-w-sm rounded-xl border border-neutral/10 bg-surface p-0 gap-0">
           <div className="flex items-center justify-between px-5 py-4 border-b border-neutral/10">
             <DialogHeader className="p-0">
               <DialogTitle className="text-sm font-bold text-secondary flex items-center gap-2">
@@ -232,6 +260,40 @@ const CestaPedidos = ({
               className="w-full h-11 rounded-md bg-primary text-white hover:bg-primary-hover font-bold text-sm"
             >
               {enviando ? <Loader2 size={16} className="animate-spin" /> : "Confirmar Pedido"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Modal de Observaciones ── */}
+      <Dialog open={modalNotas} onOpenChange={setModalNotas}>
+        <DialogContent aria-describedby={undefined} className="max-w-sm rounded-xl border border-neutral/10 bg-surface p-0 gap-0">
+          <DialogHeader className="px-5 pt-5 pb-3">
+            <DialogTitle className="text-sm font-bold text-secondary flex items-center gap-2">
+              <MessageSquarePlus size={15} className="text-primary" /> Observaciones del pedido
+            </DialogTitle>
+            <DialogDescription className="text-xs text-neutral/50 mt-1">
+              Añade una nota opcional que se adjuntará al pedido.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="px-5 pb-2">
+            <Textarea
+              value={observacionesPedido || ""}
+              onChange={(e) => setObservacionesPedido(e.target.value)}
+              placeholder="Ej: Urgente, entregar antes del viernes..."
+              className="min-h-[100px] text-sm resize-none border-neutral/15 focus-visible:ring-primary/30"
+              maxLength={500}
+            />
+            <p className="text-[10px] text-neutral/40 text-right mt-1">
+              {(observacionesPedido || "").length}/500
+            </p>
+          </div>
+          <div className="px-5 pb-5">
+            <Button
+              onClick={() => setModalNotas(false)}
+              className="w-full h-10 rounded-md bg-primary text-white hover:bg-primary-hover font-bold text-sm"
+            >
+              Guardar nota
             </Button>
           </div>
         </DialogContent>

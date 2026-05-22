@@ -522,6 +522,8 @@ const PedidosPage = () => {
                 handleRealizarPedido={hookPedidos.handleRealizarPedido}
                 esAdmin={hookPedidos.esAdmin}
                 getPrecioAplicado={hookPedidos.getPrecioAplicado}
+                observacionesPedido={hookPedidos.observacionesPedido}
+                setObservacionesPedido={hookPedidos.setObservacionesPedido}
               />
             </div>
           </div>

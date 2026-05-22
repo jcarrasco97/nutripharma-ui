@@ -23,7 +23,7 @@ import { toast } from "sonner";
 
 const columnHelper = createColumnHelper();
 
-const DataTableFacturas = ({ esAdmin, forceUpdate, toolbarStart, toolbarEnd }) => {
+const DataTableFacturas = ({ esAdmin, forceUpdate, toolbarEnd }) => {
   const [facturas, setFacturas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [borrandoId, setBorrandoId] = useState(null);
@@ -229,7 +229,6 @@ const DataTableFacturas = ({ esAdmin, forceUpdate, toolbarStart, toolbarEnd }) =
       searchPlaceholder="Buscar archivo..."
       pageSize={5}
       emptyText="No se han encontrado facturas."
-      toolbarStart={toolbarStart}
       toolbarExtra={filtroToolbar}
       toolbarEnd={toolbarEnd}
     />

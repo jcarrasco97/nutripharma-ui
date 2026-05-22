@@ -27,6 +27,7 @@ export const usePedidos = () => {
   const [carrito, setCarrito] = useState([]);
   const [farmaciaSeleccionada, setFarmaciaSeleccionada] = useState("");
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
+  const [observacionesPedido, setObservacionesPedido] = useState("");
 
   const cargarDatos = useCallback(async () => {
     setCargando(true);
@@ -248,12 +249,14 @@ export const usePedidos = () => {
           bonificados: i.bonificados,
           pagadoConSaldo: i.pagadoConSaldo,
         })),
+        observaciones: observacionesPedido || null,
       };
       await pedidosService.crear(payload);
       alert(
         esAdmin ? "Pedido Proxy registrado." : "Pedido realizado con éxito.",
       );
       setCarrito([]);
+      setObservacionesPedido("");
       if (!esAdmin) cargarDatos();
     } catch {
       alert("Error al procesar.");
@@ -404,5 +407,7 @@ export const usePedidos = () => {
     setOrdenFiltro,
     ordenProductos,
     setOrdenProductos,
+    observacionesPedido,
+    setObservacionesPedido,
   };
 };

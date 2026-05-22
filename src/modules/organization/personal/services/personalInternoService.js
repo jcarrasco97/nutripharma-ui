@@ -21,6 +21,10 @@ export const personalInternoService = {
     const response = await axios.delete(`${API_URL}/admin/${id}`, getConfig());
     return response.data;
   },
+  actualizarAdmin: async (id, datos) => {
+    const response = await axios.put(`${API_URL}/admin/${id}`, datos, getConfig());
+    return response.data;
+  },
   // --- NUEVA FUNCIÓN PARA EL CEMENTERIO ---
   listarBajas: async () => {
     const response = await axios.get(`${API_URL}/admin/bajas`, getConfig());

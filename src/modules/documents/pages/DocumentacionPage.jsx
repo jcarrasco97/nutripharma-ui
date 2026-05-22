@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-import { UploadCloud, FileText, ReceiptText } from "lucide-react";
+import { UploadCloud, ReceiptText } from "lucide-react";
 
-import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/Tabs";
 import {
   Sheet,
   SheetContent,
@@ -17,6 +16,11 @@ import SubidaFacturas from "../components/SubidaFacturas";
 import DataTableDocumentos from "../components/DataTableDocumentos";
 import DataTableFacturas from "../components/DataTableFacturas";
 
+const TODAS_LAS_TABS = [
+  { id: "documentos", label: "Documentos" },
+  { id: "facturas",   label: "Facturas" },
+];
+
 const DocumentacionPage = () => {
   const hook = useDocumentacion();
 
@@ -24,42 +28,50 @@ const DocumentacionPage = () => {
   const [sheetAbierto, setSheetAbierto] = useState(false);
   const [updateCounter, setUpdateCounter] = useState(0);
 
-  // ── 1. Botón de Acción Principal (Ahora usa size="lg") ──
-  const botonSubir = (
+  // Tabs visibles según rol — Farmacia solo ve "Documentos"
+  const tabsVisibles = hook.esFarmacia
+    ? TODAS_LAS_TABS.filter(t => t.id === "documentos")
+    : TODAS_LAS_TABS;
+
+  // Botón de subida: solo admin (documentos) o nutricionista (facturas)
+  const mostrarBotonSubir =
+    (hook.isAdmin && tabActivo === "documentos") ||
+    (hook.isNutricionista && tabActivo === "facturas");
+
+  const botonSubir = mostrarBotonSubir ? (
     <Button
       onClick={() => setSheetAbierto(true)}
-      className="w-full md:w-auto bg-primary hover:bg-primary-hover text-surface font-bold gap-2 whitespace-nowrap transition-all active:scale-[0.98]"
+      className="bg-primary hover:bg-primary-hover text-surface font-medium gap-2 whitespace-nowrap transition-all active:scale-[0.98]"
     >
       <UploadCloud size={16} />
-      {tabActivo === "documentos" ? "Subir Documento" : "Subir Factura"}
+      {hook.isAdmin ? "Subir Documento" : "Subir Factura"}
     </Button>
-  );
-
-  // ── 2. Segmented Control (Fondo blanco, activo en verde corporativo) ──
-  const selectorVista = (
-    <Tabs value={tabActivo} onValueChange={setTabActivo} className="w-full md:w-auto">
-      <TabsList className="h-10 p-1 bg-surface border border-neutral/10 rounded-md flex w-full md:w-max">
-        <TabsTrigger
-          value="documentos"
-          className="flex-1 md:flex-none px-4 text-sm font-medium rounded-md transition-all data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-neutral/50 hover:text-secondary"
-        >
-          Documentos
-        </TabsTrigger>
-        <TabsTrigger
-          value="facturas"
-          className="flex-1 md:flex-none px-4 text-sm font-medium rounded-md transition-all data-[state=active]:bg-primary/10 data-[state=active]:text-primary text-neutral/50 hover:text-secondary"
-        >
-          Facturas
-        </TabsTrigger>
-      </TabsList>
-    </Tabs>
-  );
+  ) : null;
 
   return (
-    <div className="space-y-6 animate-fade-in pb-10">
+    <div className="space-y-4 animate-fade-in pb-10 -mt-2 md:-mt-4">
 
-      {/* ── 3. Tablas con el Selector Integrado en su Toolbar ── */}
+      {/* TABS — patrón underline igual que AdministracionPage */}
+      <div className="flex gap-2">
+        {tabsVisibles.map((tab) => {
+          const isActive = tabActivo === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setTabActivo(tab.id)}
+              className={`pb-2 text-[14px] font-medium transition-colors whitespace-nowrap border-b-2 px-1 outline-none ${
+                isActive
+                  ? "border-primary text-primary"
+                  : "border-transparent text-neutral/50 hover:text-secondary hover:border-neutral/30"
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
 
+      {/* TABLA DOCUMENTOS */}
       {tabActivo === "documentos" && (
         <DataTableDocumentos
           documentos={hook.documentosFiltrados}
@@ -69,26 +81,25 @@ const DocumentacionPage = () => {
           borrandoId={hook.borrandoId}
           descargandoId={hook.descargandoId}
           cargando={hook.cargando}
-          toolbarStart={selectorVista}
-          toolbarEnd={botonSubir} // <--- CAMBIADO A toolbarEnd
+          toolbarEnd={botonSubir}
         />
       )}
 
+      {/* TABLA FACTURAS */}
       {tabActivo === "facturas" && (
         <DataTableFacturas
           esAdmin={hook.isAdmin}
           forceUpdate={updateCounter}
-          toolbarStart={selectorVista}
-          toolbarEnd={botonSubir} // <--- CAMBIADO A toolbarEnd
+          toolbarEnd={botonSubir}
         />
       )}
 
-      {/* ── 4. Sheet de subida (Se mantiene intacto) ── */}
+      {/* SHEET DE SUBIDA */}
       <Sheet open={sheetAbierto} onOpenChange={setSheetAbierto}>
-        {tabActivo === "documentos" ? (
+        {hook.isAdmin ? (
           <SheetContent
             side="right"
-            className="w-full sm:max-w-2xl flex flex-col p-0 h-full data-[state=open]:animate-in data-[state=closed]:animate-out slide-in-from-right-1/2 duration-300"
+            className="w-full sm:max-w-2xl flex flex-col p-0 h-full"
           >
             <SheetHeader className="px-6 pt-6 pb-4 border-b border-neutral/10 shrink-0 bg-primary">
               <div className="flex items-center gap-3">
@@ -96,33 +107,29 @@ const DocumentacionPage = () => {
                   <UploadCloud size={18} className="text-surface" />
                 </div>
                 <div>
-                  <SheetTitle className="text-surface text-base font-bold">
+                  <SheetTitle className="text-surface text-base font-medium">
                     Subir Documento
                   </SheetTitle>
-                  <p className="text-surface/70 text-xs font-medium mt-0.5">
-                    Sube PDFs, Word o Imágenes directamente a la nube
-                    corporativa.
+                  <p className="text-surface/70 text-xs mt-0.5">
+                    PDFs, Word o Imágenes directamente a la nube corporativa.
                   </p>
                 </div>
               </div>
             </SheetHeader>
-
             <ScrollArea className="flex-1 px-6 py-6">
               <PanelSubidaDocumentos
                 formulario={hook.formulario}
                 setFormulario={hook.setFormulario}
                 destinatarios={hook.destinatarios}
                 subiendo={hook.subiendo}
-                handleSubir={(e) => {
-                  hook.handleSubir(e);
-                }}
+                handleSubir={(e) => { hook.handleSubir(e); }}
               />
             </ScrollArea>
           </SheetContent>
         ) : (
           <SheetContent
             side="right"
-            className="w-full sm:max-w-2xl flex flex-col p-0 h-full data-[state=open]:animate-in data-[state=closed]:animate-out slide-in-from-right-1/2 duration-300"
+            className="w-full sm:max-w-2xl flex flex-col p-0 h-full"
           >
             <SheetHeader className="px-6 pt-6 pb-4 border-b border-neutral/10 shrink-0 bg-secondary">
               <div className="flex items-center gap-3">
@@ -130,21 +137,19 @@ const DocumentacionPage = () => {
                   <ReceiptText size={18} className="text-surface" />
                 </div>
                 <div>
-                  <SheetTitle className="text-surface text-base font-bold">
+                  <SheetTitle className="text-surface text-base font-medium">
                     Subir Factura de Gastos / Km
                   </SheetTitle>
-                  <p className="text-surface/70 text-xs font-medium mt-0.5">
-                    El sistema renombrará tu archivo automáticamente:
-                    fecha_Km_Nombre_Apellidos
+                  <p className="text-surface/70 text-xs mt-0.5">
+                    El sistema renombrará tu archivo: fecha_Km_Nombre_Apellidos
                   </p>
                 </div>
               </div>
             </SheetHeader>
-
             <ScrollArea className="flex-1 px-6 py-6">
               <SubidaFacturas
                 onSubidaExitosa={() => {
-                  setUpdateCounter((c) => c + 1);
+                  setUpdateCounter(c => c + 1);
                   setSheetAbierto(false);
                 }}
               />

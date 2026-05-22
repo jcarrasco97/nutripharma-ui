@@ -362,6 +362,23 @@ const ModalDetalleValidacion = ({
                 </div>
               </div>
 
+              {/* Observaciones del pedido (si existen) */}
+              {detalle.observaciones?.trim() && (
+                <div className="bg-amber-50/50 border border-dashed border-amber-200/50 rounded-md p-4 flex gap-3 items-start">
+                  <div className="bg-amber-100/60 p-1.5 rounded-md shrink-0 mt-0.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-amber-700/70 uppercase tracking-widest mb-1">
+                      Observaciones
+                    </p>
+                    <p className="text-sm font-medium text-secondary/80 leading-relaxed whitespace-pre-wrap">
+                      {detalle.observaciones}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {detalle.repartos && detalle.repartos.length > 0 && (
                 <div className="border border-neutral/10 rounded-md overflow-hidden">
                   <p className="bg-neutral/5 text-[10px] font-bold text-neutral/50 uppercase px-4 py-2.5 border-b border-neutral/10 tracking-wider">Reparto de Comisión</p>

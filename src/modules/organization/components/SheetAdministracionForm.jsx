@@ -69,7 +69,7 @@ const SheetAdministracionForm = ({
   };
 
   const titulo = modoEdicion
-    ? `Editar ${pestana === "nutricionistas" ? "Nutricionista" : pestana === "farmacias" ? "Farmacia" : "Producto"}`
+    ? `Editar ${pestana === "nutricionistas" ? "Nutricionista" : pestana === "farmacias" ? "Farmacia" : pestana === "personal" ? "Administrador" : "Producto"}`
     : `Crear ${pestana === "nutricionistas" ? "Nutricionista" : pestana === "farmacias" ? "Farmacia" : pestana === "productos" ? "Producto" : "Administrador"}`;
 
   const setField = (name, value) => {
@@ -111,7 +111,7 @@ const SheetAdministracionForm = ({
           <form id="sheet-form" onSubmit={onSubmit} className="space-y-5 py-5">
 
             {/* ── PERSONAL INTERNO (SuperAdmin) ── */}
-            {pestana === "personal" && (
+            {pestana === "personal" && !modoEdicion && (
               <div className="space-y-4">
                 <p className="text-[11px] font-bold text-neutral/50 uppercase tracking-widest">Credenciales</p>
                 <Field>
@@ -152,6 +152,56 @@ const SheetAdministracionForm = ({
                   <FieldLabel>Apellidos *</FieldLabel>
                   <FieldContent><Input type="text" name="apellidos" value={formDataAdmin?.apellidos || ""} onChange={handleChangeAdmin} required placeholder="Apellidos" /></FieldContent>
                 </Field>
+              </div>
+            )}
+
+            {/* ── PERSONAL INTERNO (Modo Edición) ── */}
+            {pestana === "personal" && modoEdicion && (
+              <div className="space-y-4">
+                <p className="text-[11px] font-bold text-neutral/50 uppercase tracking-widest">Credenciales</p>
+                <Field>
+                  <FieldLabel>Correo corporativo *</FieldLabel>
+                  <FieldContent>
+                    <Input type="email" value={current?.email || ""} onChange={(e) => setField("email", e.target.value)} required placeholder="correo@nutripharma.com" />
+                  </FieldContent>
+                </Field>
+                <Field>
+                  <FieldLabel>Nueva contraseña (vacío = sin cambios)</FieldLabel>
+                  <FieldContent>
+                    <div className="relative">
+                      <Input type={mostrarPassword ? "text" : "password"} value={current?.password || ""} onChange={(e) => setField("password", e.target.value)} placeholder="Nueva contraseña (opcional)" className="pr-10" />
+                      <button type="button" onClick={() => setMostrarPassword(!mostrarPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral/40 hover:text-neutral">
+                        {mostrarPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
+                  </FieldContent>
+                </Field>
+                {current?.password && (
+                  <Field>
+                    <FieldLabel>Confirmar contraseña *</FieldLabel>
+                    <FieldContent>
+                      <div className="relative">
+                        <Input type={mostrarConfirm ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required placeholder="Repetir contraseña" className={`pr-10 ${passwordMismatch ? "border-red-400" : ""}`} />
+                        <button type="button" onClick={() => setMostrarConfirm(!mostrarConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral/40 hover:text-neutral">
+                          {mostrarConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                      </div>
+                      {passwordMismatch && <p className="text-xs text-red-500 mt-1">Las contraseñas no coinciden.</p>}
+                    </FieldContent>
+                  </Field>
+                )}
+                <Separator />
+                <p className="text-[11px] font-bold text-neutral/50 uppercase tracking-widest">Perfil</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field>
+                    <FieldLabel>Nombre *</FieldLabel>
+                    <FieldContent><Input type="text" value={current?.nombre || ""} onChange={(e) => setField("nombre", e.target.value)} required placeholder="Nombre" /></FieldContent>
+                  </Field>
+                  <Field>
+                    <FieldLabel>Apellidos *</FieldLabel>
+                    <FieldContent><Input type="text" value={current?.apellidos || ""} onChange={(e) => setField("apellidos", e.target.value)} required placeholder="Apellidos" /></FieldContent>
+                  </Field>
+                </div>
               </div>
             )}
 
@@ -257,6 +307,10 @@ const SheetAdministracionForm = ({
                 <Field>
                   <FieldLabel>CIF *</FieldLabel>
                   <FieldContent><Input type="text" value={current?.cif || ""} onChange={(e) => setField("cif", e.target.value)} required placeholder="CIF" /></FieldContent>
+                </Field>
+                <Field>
+                  <FieldLabel>Teléfono (Opcional)</FieldLabel>
+                  <FieldContent><Input type="text" value={current?.telefono || ""} onChange={(e) => setField("telefono", e.target.value)} placeholder="Ej: 600 000 000" /></FieldContent>
                 </Field>
                 <Field>
                   <FieldLabel>Dirección *</FieldLabel>

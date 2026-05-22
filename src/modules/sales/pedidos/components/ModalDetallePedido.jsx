@@ -154,6 +154,23 @@ const ModalDetallePedido = ({ pedido, onCerrar }) => {
               })}
             </div>
 
+          {/* Bloque 2.5: Observaciones (solo si existen) */}
+          {pedido.observaciones?.trim() && (
+            <div className="bg-amber-50/50 border border-dashed border-amber-200/50 rounded-xl p-4 flex gap-3 items-start">
+              <div className="bg-amber-100/60 p-1.5 rounded-md shrink-0 mt-0.5">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-amber-700/70 uppercase tracking-widest mb-1">
+                  Observaciones
+                </p>
+                <p className="text-sm font-medium text-[#342c1e]/80 leading-relaxed whitespace-pre-wrap">
+                  {pedido.observaciones}
+                </p>
+              </div>
+            </div>
+          )}
+
             {/* Resumen de Totales */}
             <div className="space-y-2 p-4 border-t border-gray-200 bg-[#f4f7f4]">
               {totalVirtual > 0 && (
