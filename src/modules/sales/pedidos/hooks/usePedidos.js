@@ -268,15 +268,9 @@ export const usePedidos = () => {
   // --- MOTOR DE HISTORIAL ---
 
   const productosFiltrados = [...productos].sort((a, b) => {
-    // Modo 1: Merchandising del Admin (localStorage / OrdenPorDefectoProducto)
+    // Modo 1: Merchandising del Admin (campo `orden` del backend — tabla orden_por_defecto_producto)
     if (ordenProductos === "por_defecto") {
-      const saved = JSON.parse(localStorage.getItem("orden_recomendados_nutripharma") || "[]");
-      const idxA = saved.indexOf(a.id);
-      const idxB = saved.indexOf(b.id);
-      if (idxA === -1 && idxB === -1) return (a.nombreProducto || "").localeCompare(b.nombreProducto || "");
-      if (idxA === -1) return 1;
-      if (idxB === -1) return -1;
-      return idxA - idxB;
+      return (a.orden ?? 999) - (b.orden ?? 999) || (a.nombreProducto || "").localeCompare(b.nombreProducto || "");
     }
     // Modo 2: Recomendados por histórico de compras de la farmacia
     if (ordenProductos === "recomendados") {

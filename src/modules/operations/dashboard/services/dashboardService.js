@@ -92,4 +92,25 @@ export const dashboardService = {
     const response = await axios.post(`${API_URL}/dashboard/admin/clinico/pdf`, payload, config);
     return response.data;
   },
+
+  descargarInformeProductosExcel: async (payload) => {
+    const config = getConfig();
+    config.responseType = 'blob';
+    const response = await axios.post(`${API_URL}/dashboard/admin/rendimiento-productos/excel`, payload, config);
+    return response.data;
+  },
+
+  descargarInformeFacturacionExcel: async (payload) => {
+    const config = getConfig();
+    config.responseType = 'blob';
+    const response = await axios.post(`${API_URL}/dashboard/admin/facturacion/excel`, payload, config);
+    return response.data;
+  },
+
+  descargarInformeClinicoExcel: async (payload) => {
+    const config = getConfig();
+    config.responseType = 'blob';
+    const response = await axios.post(`${API_URL}/dashboard/admin/clinico/excel`, payload, config);
+    return response.data;
+  },
 };

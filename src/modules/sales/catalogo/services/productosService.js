@@ -58,4 +58,8 @@ export const productosService = {
     const res = await axios.get(`${API_URL}/mas-vendidos`, getConfig());
     return res.data;
   },
+  guardarOrdenRecomendado: async (productIds) => {
+    const res = await axios.put(`${API_URL}/orden-recomendado`, productIds, getConfig());
+    return res.data;
+  },
 };

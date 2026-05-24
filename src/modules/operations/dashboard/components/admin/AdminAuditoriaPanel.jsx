@@ -101,7 +101,7 @@ const AdminAuditoriaPanel = () => {
 
         // Filtramos Pedidos válidos donde esta nutri tiene comisión (Reparto)
         const misPedidos = todosPedidos.filter(p =>
-          (p.estado === "ENVIADO" || p.estado === "LIQUIDADO") &&
+          p.estado === "ENVIADO" &&
           p.repartos?.some(r => r.nutricionistaId?.toString() === selectedNutri.toString())
         );
 

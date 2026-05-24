@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { X, FileText, Download, BarChart3, Loader2, CheckCircle2 } from "lucide-react";
+import { X, FileText, Download, BarChart3, Loader2, CheckCircle2, FileSpreadsheet } from "lucide-react";
 import { dashboardService } from "../../services/dashboardService";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 import html2canvas from "html2canvas";
@@ -71,6 +71,7 @@ const ModalGeneradorInformes = ({ isOpen, onClose, farmacias = [], nutricionista
   const [fullReport, setFullReport] = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [loadingPdf, setLoadingPdf] = useState(false);
+  const [loadingExcel, setLoadingExcel] = useState(false);
   const chartRef = useRef(null);
 
   if (!isOpen && !modoPagina) return null;
@@ -161,6 +162,41 @@ const ModalGeneradorInformes = ({ isOpen, onClose, farmacias = [], nutricionista
       alert("Error al descargar el PDF.");
     } finally {
       setLoadingPdf(false);
+    }
+  };
+
+  const handleDownloadExcel = async () => {
+    setLoadingExcel(true);
+    try {
+      const payload = {
+        anioInicio: parseInt(filtros.anioInicio),
+        anioFin: parseInt(filtros.anioFin),
+        mes: filtros.mes ? parseInt(filtros.mes) : null,
+        farmaciaId: filtros.farmaciaId ? parseInt(filtros.farmaciaId) : null,
+        nutricionistaId: filtros.nutricionistaId ? parseInt(filtros.nutricionistaId) : null,
+        tipoInforme: filtros.tipo,
+        incluirPromocionales: filtros.incluirPromo,
+        incluirPersonal: filtros.incluirPers
+      };
+
+      let blob;
+      let filename = `informe_${filtros.tipo.toLowerCase()}_${filtros.anioInicio}.xlsx`;
+
+      if (filtros.tipo === "PRODUCTOS") blob = await dashboardService.descargarInformeProductosExcel(payload);
+      else if (filtros.tipo === "FACTURACION") blob = await dashboardService.descargarInformeFacturacionExcel(payload);
+      else if (filtros.tipo === "CLINICO") blob = await dashboardService.descargarInformeClinicoExcel(payload);
+
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(new Blob([blob]));
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+    } catch (error) {
+      console.error(error);
+      alert("Error al descargar el Excel.");
+    } finally {
+      setLoadingExcel(false);
     }
   };
 
@@ -472,14 +508,24 @@ const ModalGeneradorInformes = ({ isOpen, onClose, farmacias = [], nutricionista
             Cumple con normativas de auditoría interna
           </span>
         </div>
-        <Button
-          onClick={handleDownloadPdf}
-          disabled={loadingPdf || previewData.length === 0}
-          className="h-10 px-6 gap-2 bg-primary text-surface hover:bg-primary-hover rounded-md font-medium"
-        >
-          {loadingPdf ? <Loader2 className="animate-spin" size={15} /> : <Download size={15} />}
-          Emitir Informe Oficial PDF
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={handleDownloadExcel}
+            disabled={loadingExcel || previewData.length === 0}
+            className="h-10 px-6 gap-2 bg-[#217346] text-white hover:bg-[#1e603b] rounded-md font-medium"
+          >
+            {loadingExcel ? <Loader2 className="animate-spin" size={15} /> : <FileSpreadsheet size={15} />}
+            Exportar a Excel
+          </Button>
+          <Button
+            onClick={handleDownloadPdf}
+            disabled={loadingPdf || previewData.length === 0}
+            className="h-10 px-6 gap-2 bg-primary text-surface hover:bg-primary-hover rounded-md font-medium"
+          >
+            {loadingPdf ? <Loader2 className="animate-spin" size={15} /> : <Download size={15} />}
+            Emitir Informe PDF
+          </Button>
+        </div>
       </div>
     </>
   );

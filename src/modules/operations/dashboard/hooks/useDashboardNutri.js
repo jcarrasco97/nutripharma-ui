@@ -60,7 +60,7 @@ export const useDashboardNutri = () => {
 
     // Extraemos meses de consultas validadas
     consultasRaw.forEach((c) => {
-      if (c.fecha && c.estado === "VALIDADA") {
+      if (c.fecha && (c.estado === "VALIDADA" || c.estado === "LIQUIDADA")) {
         mesesUnicos.add(c.fecha.substring(0, 7));
       }
     });
@@ -69,7 +69,7 @@ export const useDashboardNutri = () => {
     pedidosRaw.forEach((p) => {
       if (
         p.fechaPedido &&
-        (p.estado === "ENVIADO" || p.estado === "LIQUIDADO")
+        p.estado === "ENVIADO"
       ) {
         mesesUnicos.add(p.fechaPedido.substring(0, 7));
       }
@@ -91,12 +91,12 @@ export const useDashboardNutri = () => {
     if (!perfil) return null;
 
     const consultasMes = consultasRaw.filter(
-      (c) => c.fecha?.startsWith(mesActivo) && c.estado === "VALIDADA",
+      (c) => c.fecha?.startsWith(mesActivo) && (c.estado === "VALIDADA" || c.estado === "LIQUIDADA"),
     );
     const pedidosMes = pedidosRaw.filter(
       (p) =>
         p.fechaPedido?.startsWith(mesActivo) &&
-        (p.estado === "ENVIADO" || p.estado === "LIQUIDADO"),
+        p.estado === "ENVIADO",
     );
 
     const totalNuevas = consultasMes.reduce(

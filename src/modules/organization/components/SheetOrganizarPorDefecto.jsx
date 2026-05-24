@@ -3,27 +3,21 @@ import { ChevronDown, ChevronUp, GripVertical, ListOrdered, X } from "lucide-rea
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/shared/components/ui/Sheet";
 import { Button } from "@/shared/components/ui/Button";
 import { ScrollArea } from "@/shared/components/ui/ScrollArea";
+import { productosService } from "@/modules/sales/catalogo";
 
 const SheetOrganizarPorDefecto = ({ abierto, onClose, productos }) => {
     const [lista, setLista] = useState([]);
+    const [guardando, setGuardando] = useState(false);
     const dragItem = useRef();
     const dragOverItem = useRef();
 
     useEffect(() => {
         if (abierto) {
-            const saved = JSON.parse(
-                localStorage.getItem("orden_recomendados_nutripharma") || "[]"
-            );
+            // Ordenamos por el campo `orden` que viene del backend (tabla orden_por_defecto_producto)
             const activos = productos.filter((p) => !p.fechaBaja);
-            const ordenados = [...activos].sort((a, b) => {
-                const idxA = saved.indexOf(a.id);
-                const idxB = saved.indexOf(b.id);
-                if (idxA === -1 && idxB === -1)
-                    return (a.nombreProducto || "").localeCompare(b.nombreProducto || "");
-                if (idxA === -1) return 1;
-                if (idxB === -1) return -1;
-                return idxA - idxB;
-            });
+            const ordenados = [...activos].sort((a, b) =>
+                (a.orden ?? 999) - (b.orden ?? 999) || (a.nombreProducto || "").localeCompare(b.nombreProducto || "")
+            );
             setLista(ordenados);
         }
     }, [abierto, productos]);
@@ -47,13 +41,18 @@ const SheetOrganizarPorDefecto = ({ abierto, onClose, productos }) => {
         setLista(copia);
     };
 
-    const guardar = () => {
-        localStorage.setItem(
-            "orden_recomendados_nutripharma",
-            JSON.stringify(lista.map((p) => p.id))
-        );
-        alert("Orden guardado.");
-        onClose();
+    const guardar = async () => {
+        setGuardando(true);
+        try {
+            await productosService.guardarOrdenRecomendado(lista.map((p) => p.id));
+            alert("Orden guardado. Se aplicará a todos los usuarios.");
+            onClose();
+        } catch (error) {
+            console.error("Error al guardar el orden:", error);
+            alert("Error al guardar el orden.");
+        } finally {
+            setGuardando(false);
+        }
     };
 
     return (
@@ -123,9 +122,10 @@ const SheetOrganizarPorDefecto = ({ abierto, onClose, productos }) => {
                 <div className="px-6 py-4 border-t border-neutral/10 shrink-0 bg-surface">
                     <Button
                         onClick={guardar}
+                        disabled={guardando}
                         className="w-full bg-primary hover:bg-primary-hover text-surface font-bold rounded-md h-10"
                     >
-                        Guardar Posiciones
+                        {guardando ? "Guardando..." : "Guardar Posiciones"}
                     </Button>
                 </div>
 

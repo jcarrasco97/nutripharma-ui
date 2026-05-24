@@ -219,6 +219,7 @@ export const useAdministracion = () => {
           email: itemEditando.email,
           direccion: itemEditando.direccion,
           esProvinciaLocal: itemEditando.esProvinciaLocal,
+          porcentajeComision: parseFloat(itemEditando.porcentajeComision) || 0,
           password: itemEditando.password || undefined,
         });
       } else if (pestana === "productos") {
