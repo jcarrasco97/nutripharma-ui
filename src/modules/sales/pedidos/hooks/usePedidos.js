@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { jwtDecode } from "jwt-decode";
 import { pedidosService } from "../services/pedidosService";
+import { configuracionService } from "../services/configuracionService";
 // Consumimos el resto a través de las APIs públicas de cada módulo
 import { productosService } from "@/modules/sales/catalogo";
 import { farmaciaService } from "@/modules/organization/farmacias";
@@ -18,6 +19,7 @@ export const usePedidos = () => {
   const [cargando, setCargando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [errorCarga, setErrorCarga] = useState(null);
+  const [limiteMonedero, setLimiteMonedero] = useState(80);
 
   const [mesFiltro, setMesFiltro] = useState("INITIAL");
   const [ordenFiltro, setOrdenFiltro] = useState("recientes");
@@ -49,16 +51,20 @@ export const usePedidos = () => {
       setEsAdmin(soyAdmin);
       setEsNutricionista(soyNutricionista);
 
-      const [datosProds, datosPeds, datosTopVentas] = await Promise.all([
+      const [datosProds, datosPeds, datosTopVentas, configData] = await Promise.all([
         productosService.listarTodos().catch(() => []),
         soyAdmin
           ? Promise.resolve([])
           : pedidosService.obtenerMisPedidos().catch(() => []),
         productosService.obtenerTopVentasGlobal().catch(() => []),
+        configuracionService.obtenerConfiguracion().catch(() => ({ limiteMonedero: 80 })),
       ]);
       setProductos(datosProds);
       setPedidos(datosPeds);
       setIdsMasVendidos(datosTopVentas);
+      if (configData?.limiteMonedero) {
+        setLimiteMonedero(configData.limiteMonedero);
+      }
 
       if (soyFarmacia) {
         const miPerfilFarm = await farmaciaService
@@ -126,12 +132,12 @@ export const usePedidos = () => {
   const totalVirtual = carrito
     .filter((i) => i.pagadoConSaldo)
     .reduce((s, i) => s + i.cantidad * getPrecioAplicado(i.productoInfo), 0);
-  const umbralAlcanzado = totalReal >= 80;
+  const umbralAlcanzado = totalReal >= limiteMonedero;
   const saldoRestante = (farmaciaActual?.saldoVirtual || 0) - totalVirtual;
 
   const agregarAlCarrito = (producto, usarSaldo = false) => {
     if (usarSaldo && !umbralAlcanzado)
-      return alert("Mínimo 80€ en compra real para usar saldo.");
+      return alert(`Mínimo ${limiteMonedero}€ en compra real para usar saldo.`);
     if (usarSaldo && saldoRestante < getPrecioAplicado(producto))
       return alert("Saldo insuficiente.");
 
@@ -228,7 +234,7 @@ export const usePedidos = () => {
         .filter((i) => !i.pagadoConSaldo)
         .reduce((s, i) => s + i.cantidad * getPrecioAplicado(i.productoInfo), 0);
 
-      if (nuevoTotalReal < 80) {
+      if (nuevoTotalReal < limiteMonedero) {
         return carritoActualizado.filter((i) => !i.pagadoConSaldo);
       }
 
@@ -388,6 +394,8 @@ export const usePedidos = () => {
     totalVirtual,
     saldoRestante,
     umbralAlcanzado,
+    limiteMonedero,
+    setLimiteMonedero,
     agregarAlCarrito,
     modificarCantidad,
     handleRealizarPedido,

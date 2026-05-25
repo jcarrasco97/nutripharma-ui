@@ -1,7 +1,7 @@
 import React from "react";
 import { Wallet, Banknote, Check, Info } from "lucide-react";
 
-const TarjetaMonedero = ({ saldoRestante, umbralAlcanzado, totalReal }) => (
+const TarjetaMonedero = ({ saldoRestante, umbralAlcanzado, totalReal, limiteMonedero = 80 }) => (
   <div
     className={`relative overflow-hidden rounded-[2.5rem] p-8 text-white shadow-xl ${umbralAlcanzado ? "bg-gradient-to-r from-[#006633] to-[#68b54e]" : "bg-gradient-to-r from-[#062e3a] to-[#342c1e]"}`}
   >
@@ -30,7 +30,7 @@ const TarjetaMonedero = ({ saldoRestante, umbralAlcanzado, totalReal }) => (
             <p className="text-xs font-bold text-white/80">
               Faltan{" "}
               <span className="text-white font-black">
-                {(80 - totalReal).toFixed(2)}€
+                {(limiteMonedero - totalReal).toFixed(2)}€
               </span>{" "}
               para usar saldo
             </p>
@@ -38,7 +38,7 @@ const TarjetaMonedero = ({ saldoRestante, umbralAlcanzado, totalReal }) => (
           <div className="w-48 bg-white/10 h-1.5 rounded-full">
             <div
               className="bg-[#b1cb0c] h-full rounded-full transition-all"
-              style={{ width: `${(totalReal / 80) * 100}%` }}
+              style={{ width: `${(totalReal / limiteMonedero) * 100}%` }}
             ></div>
           </div>
         </div>

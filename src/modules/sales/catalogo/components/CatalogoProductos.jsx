@@ -78,6 +78,7 @@ const CatalogoProductos = ({
   getPrecioAplicado,
   totalReal,
   carrito,
+  limiteMonedero = 80,
 }) => {
 
   // Helpers
@@ -97,7 +98,7 @@ const CatalogoProductos = ({
     else modificarCantidad(prod.id, 1, isSaldo);
   };
 
-  const progreso = Math.min((totalReal / 80) * 100, 100);
+  const progreso = Math.min((totalReal / limiteMonedero) * 100, 100);
 
   // ─── Disparador del Toaster ───
   useEffect(() => {
@@ -143,7 +144,7 @@ const CatalogoProductos = ({
                     className="h-1.5 flex-1 bg-white/10 [&>div]:bg-[#bed000]"
                   />
                   <span className="text-xs font-bold text-white/50 shrink-0">
-                    80€
+                    {limiteMonedero}€
                   </span>
                 </div>
               )}

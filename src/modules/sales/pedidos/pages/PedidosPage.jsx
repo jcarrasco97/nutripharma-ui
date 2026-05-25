@@ -13,7 +13,8 @@ import {
   ArrowUpDown,
   ArrowLeft,
   Plus,
-  History, // <-- Añadido
+  History,
+  Settings,
 } from "lucide-react";
 import { createColumnHelper } from "@tanstack/react-table";
 
@@ -25,6 +26,7 @@ import { useValidaciones } from "@/modules/operations/validaciones";
 import ModalDetallePedido from "../components/ModalDetallePedido";
 import { ModalDetalleValidacion } from "@/modules/operations/validaciones";
 import ModalRepartoComisiones from "@/modules/operations/validaciones/components/ModalRepartoComisiones";
+import { configuracionService } from "../services/configuracionService";
 
 // ── Sub-componentes de Pedidos (usuario) ──
 import { CatalogoProductos } from "@/modules/sales/catalogo";
@@ -259,7 +261,7 @@ const PedidosPage = () => {
         {hookPedidos.esAdmin ? (
           /* 👑 CABECERA ADMIN (Gestor) */
           vistaActiva === "nuevo" ? (
-            <div className="mb-6">
+            <div className="mb-6 flex items-center justify-between">
               <Button
                 variant="ghost"
                 className="text-neutral/60 hover:text-secondary -ml-4"
@@ -267,6 +269,50 @@ const PedidosPage = () => {
               >
                 <ArrowLeft size={16} className="mr-2" /> Volver a la gestión de pedidos
               </Button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2 text-neutral/60 hover:text-secondary border-neutral/20 shadow-sm">
+                    <Settings size={14} /> Ajustes Monedero
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-4 rounded-md shadow-xl border-neutral/10 bg-surface z-50" align="end">
+                  <h4 className="font-bold text-sm text-secondary mb-1">Configuración Global</h4>
+                  <p className="text-[11px] text-neutral/60 mb-4 leading-snug">
+                    Cambia el importe mínimo de compra real necesario para que las farmacias puedan canjear su saldo virtual.
+                  </p>
+                  <div className="flex gap-2 items-center">
+                    <div className="relative w-full">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral/40 font-bold text-xs">€</span>
+                      <Input 
+                        type="number" 
+                        min="0"
+                        step="0.01"
+                        defaultValue={hookPedidos.limiteMonedero}
+                        id="input-limite"
+                        className="h-8 pl-6 text-sm bg-transparent border-neutral/20 focus-visible:ring-primary/30"
+                      />
+                    </div>
+                    <Button 
+                      size="sm" 
+                      className="h-8 bg-primary text-white shrink-0 font-bold text-xs px-4"
+                      onClick={async () => {
+                         const val = parseFloat(document.getElementById('input-limite').value);
+                         if(!isNaN(val) && val >= 0) {
+                            try {
+                              await configuracionService.actualizarLimiteMonedero(val);
+                              hookPedidos.setLimiteMonedero(val);
+                              alert('Límite actualizado correctamente a nivel global.');
+                            } catch(e) {
+                              alert('Error al actualizar el límite del monedero.');
+                            }
+                         }
+                      }}
+                    >
+                      Guardar
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           ) : (
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 min-h-[40px] mb-4">
@@ -507,6 +553,7 @@ const PedidosPage = () => {
                 getPrecioAplicado={hookPedidos.getPrecioAplicado}
                 totalReal={hookPedidos.totalReal}
                 carrito={hookPedidos.carrito}
+                limiteMonedero={hookPedidos.limiteMonedero}
               />
             </div>
 
@@ -524,6 +571,7 @@ const PedidosPage = () => {
                 getPrecioAplicado={hookPedidos.getPrecioAplicado}
                 observacionesPedido={hookPedidos.observacionesPedido}
                 setObservacionesPedido={hookPedidos.setObservacionesPedido}
+                limiteMonedero={hookPedidos.limiteMonedero}
               />
             </div>
           </div>

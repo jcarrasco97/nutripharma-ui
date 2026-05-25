@@ -23,6 +23,7 @@ const CestaPedidos = ({
   getPrecioAplicado,
   observacionesPedido,
   setObservacionesPedido,
+  limiteMonedero,
 }) => {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [modalNotas, setModalNotas] = useState(false);
@@ -114,7 +115,7 @@ const CestaPedidos = ({
             Total a pagar
           </p>
           {!umbralAlcanzado && totalReal > 0 && !esAdmin && (
-            <p className="text-[10px] text-amber-600 font-medium mt-0.5">Mín. 80€</p>
+            <p className="text-[10px] text-amber-600 font-medium mt-0.5">Mín. {limiteMonedero}€</p>
           )}
         </div>
         <p className="text-xl font-bold text-secondary">{totalReal.toFixed(2)}€</p>
@@ -199,11 +200,6 @@ const CestaPedidos = ({
             {totalVirtual > 0 && (
               <p className="text-[11px] text-primary font-medium mt-0.5 flex items-center gap-1">
                 <Wallet size={10} /> Saldo descontado: −{totalVirtual.toFixed(2)}€
-              </p>
-            )}
-            {!umbralAlcanzado && totalReal > 0 && !esAdmin && (
-              <p className="text-[10px] text-amber-600 font-medium mt-0.5">
-                Faltan {(80 - totalReal).toFixed(2)}€ para el monedero
               </p>
             )}
           </div>
