@@ -37,6 +37,8 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
     revisiones: 0,
     promociones: 0,
     personalFarmacia: 0,
+    horaInicio: "00:00",
+    horaFin: "00:00",
   });
 
   // =========================================================================
@@ -51,31 +53,45 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
       const userRoles = Array.isArray(decoded.roles)
         ? decoded.roles.map((r) => (typeof r === "string" ? r : r.authority))
         : [];
-      const soyAdmin = userRoles.includes("ROLE_ADMIN") || userRoles.includes("ROLE_SUPERADMIN");
+      const soyAdmin =
+        userRoles.includes("ROLE_ADMIN") ||
+        userRoles.includes("ROLE_SUPERADMIN");
 
       if (pestañaActual === "consultas") {
         // 👇 3. Bifurcamos las llamadas: Si no es admin, pide sus propias consultas y no carga el listado de nutris
         const [todas, nutris] = await Promise.all([
-          soyAdmin ? consultasService.obtenerTodas() : consultasService.obtenerMisConsultas(),
-          soyAdmin ? nutricionistasService.listarTodas().catch(() => []) : Promise.resolve([])
+          soyAdmin
+            ? consultasService.obtenerTodas()
+            : consultasService.obtenerMisConsultas(),
+          soyAdmin
+            ? nutricionistasService.listarTodas().catch(() => [])
+            : Promise.resolve([]),
         ]);
 
         setListaNutrisGlobal(nutris);
-        setPendientes(todas.filter(c => c.estado === "PENDIENTE_VALIDACION" || c.estado === "CON_INCIDENCIA"));
-        setPendientesLiquidar(todas.filter(c => c.estado === "VALIDADA"));
-        setHistorial(todas.filter(c => c.estado !== "BORRADOR"));
-
+        setPendientes(
+          todas.filter(
+            (c) =>
+              c.estado === "PENDIENTE_VALIDACION" ||
+              c.estado === "CON_INCIDENCIA",
+          ),
+        );
+        setPendientesLiquidar(todas.filter((c) => c.estado === "VALIDADA"));
+        setHistorial(todas.filter((c) => c.estado !== "BORRADOR"));
       } else if (pestañaActual === "pedidos") {
         // 👇 4. Bifurcamos Pedidos (El error principal)
         const [todos, nutris] = await Promise.all([
-          soyAdmin ? pedidosService.obtenerTodos() : pedidosService.obtenerMisPedidos(),
-          soyAdmin ? nutricionistasService.listarTodas().catch(() => []) : Promise.resolve([])
+          soyAdmin
+            ? pedidosService.obtenerTodos()
+            : pedidosService.obtenerMisPedidos(),
+          soyAdmin
+            ? nutricionistasService.listarTodas().catch(() => [])
+            : Promise.resolve([]),
         ]);
 
         setPendientes(todos.filter((p) => p.estado === "PENDIENTE_ENVIO"));
         setHistorial(todos.filter((p) => p.estado !== "PENDIENTE_ENVIO"));
         setListaNutrisGlobal(nutris);
-
       } else if (pestañaActual === "suministros") {
         // 👇 5. Bifurcamos Suministros
         const todos = soyAdmin
@@ -106,6 +122,8 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
       revisiones: consulta.revisiones || 0,
       promociones: consulta.promociones || 0,
       personalFarmacia: consulta.personalFarmacia || 0,
+      horaInicio: consulta.horaInicio || "00:00",
+      horaFin: consulta.horaFin || "00:00",
     });
   };
 
@@ -118,7 +136,10 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
       return;
     setEnviando(true);
     try {
-      await consultasService.editarYValidarTurnoAdmin(detalleSeleccionado.id, formEdicion);
+      await consultasService.editarYValidarTurnoAdmin(
+        detalleSeleccionado.id,
+        formEdicion,
+      );
       avanzarDespuesDeAccion();
       cargarDatos();
       alert(
@@ -128,7 +149,7 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
       console.error(error);
       alert(
         error.response?.data?.message ||
-        "Error al editar y validar la consulta.",
+          "Error al editar y validar la consulta.",
       );
     } finally {
       setEnviando(false);
@@ -161,8 +182,9 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
     const targetId = localStorage.getItem("np_target_consulta_id");
 
     if (targetId && (pendientes.length > 0 || historial.length > 0)) {
-      let encontrada = pendientes.find(p => p.id.toString() === targetId) ||
-        historial.find(h => h.id.toString() === targetId);
+      let encontrada =
+        pendientes.find((p) => p.id.toString() === targetId) ||
+        historial.find((h) => h.id.toString() === targetId);
 
       if (encontrada) {
         setTimeout(() => {
@@ -371,7 +393,9 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
   // =========================================================================
   // 🧭 NAVEGACIÓN MODO ENFOQUE (EL MAZO DE CARTAS)
   // =========================================================================
-  const indexActual = pendientes.findIndex(p => p.id === detalleSeleccionado?.id);
+  const indexActual = pendientes.findIndex(
+    (p) => p.id === detalleSeleccionado?.id,
+  );
   const hayAnterior = indexActual > 0;
   const haySiguiente = indexActual >= 0 && indexActual < pendientes.length - 1;
   const totalPendientes = pendientes.length;
@@ -384,6 +408,8 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
         revisiones: consulta.revisiones || 0,
         promociones: consulta.promociones || 0,
         personalFarmacia: consulta.personalFarmacia || 0,
+        horaInicio: consulta.horaInicio || "00:00",
+        horaFin: consulta.horaFin || "00:00",
       });
     }
   };
@@ -410,23 +436,34 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
   // 💰 LÓGICA DE LIQUIDACIÓN (CIERRE DE CAJA)
   // =========================================================================
   const toggleSeleccionLiquidacion = (id) => {
-    setSeleccionadasLiquidacion(prev =>
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    setSeleccionadasLiquidacion((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
     );
   };
 
   const seleccionarTodasLiquidacion = (idsVisibles) => {
-    const todasSeleccionadas = idsVisibles.every(id => seleccionadasLiquidacion.includes(id));
+    const todasSeleccionadas = idsVisibles.every((id) =>
+      seleccionadasLiquidacion.includes(id),
+    );
     if (todasSeleccionadas) {
-      setSeleccionadasLiquidacion(prev => prev.filter(id => !idsVisibles.includes(id)));
+      setSeleccionadasLiquidacion((prev) =>
+        prev.filter((id) => !idsVisibles.includes(id)),
+      );
     } else {
-      setSeleccionadasLiquidacion(prev => [...new Set([...prev, ...idsVisibles])]);
+      setSeleccionadasLiquidacion((prev) => [
+        ...new Set([...prev, ...idsVisibles]),
+      ]);
     }
   };
 
   const handleLiquidarLote = async () => {
     if (seleccionadasLiquidacion.length === 0) return;
-    if (!window.confirm(`¿Confirmas que has revisado y pagado estas ${seleccionadasLiquidacion.length} consultas? Pasarán al estado LIQUIDADA y desaparecerán de esta bandeja.`)) return;
+    if (
+      !window.confirm(
+        `¿Confirmas que has revisado y pagado estas ${seleccionadasLiquidacion.length} consultas? Pasarán al estado LIQUIDADA y desaparecerán de esta bandeja.`,
+      )
+    )
+      return;
 
     setEnviando(true);
     try {
@@ -497,6 +534,6 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
     listaNutrisGlobal,
     toggleSeleccionLiquidacion,
     seleccionarTodasLiquidacion,
-    handleLiquidarLote
+    handleLiquidarLote,
   };
 };
