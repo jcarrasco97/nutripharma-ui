@@ -1,5 +1,5 @@
 import React from "react";
-import { Lock, XCircle } from "lucide-react";
+import { Lock, XCircle, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import logoUrl from "@/assets/logo.svg";
 

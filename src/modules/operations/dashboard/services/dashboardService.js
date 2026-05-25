@@ -78,9 +78,10 @@ export const dashboardService = {
     return response.data;
   },
 
-  obtenerRendimientoClinico: async (anioInicio, anioFin, mes, nutriId) => {
+  obtenerRendimientoClinico: async (anioInicio, anioFin, mes, farmaciaId, nutriId) => {
     let url = `${API_URL}/dashboard/admin/rendimiento-clinico?anioInicio=${anioInicio}&anioFin=${anioFin}`;
     if (mes) url += `&mes=${mes}`;
+    if (farmaciaId) url += `&farmaciaId=${farmaciaId}`;
     if (nutriId) url += `&nutricionistaId=${nutriId}`;
     const response = await axios.get(url, getConfig());
     return response.data;
@@ -111,6 +112,27 @@ export const dashboardService = {
     const config = getConfig();
     config.responseType = 'blob';
     const response = await axios.post(`${API_URL}/dashboard/admin/clinico/excel`, payload, config);
+    return response.data;
+  },
+
+  obtenerVentasFarmacia: async (anioInicio, anioFin, nutriId) => {
+    let url = `${API_URL}/dashboard/admin/ventas-farmacia?anioInicio=${anioInicio}&anioFin=${anioFin}`;
+    if (nutriId) url += `&nutricionistaId=${nutriId}`;
+    const response = await axios.get(url, getConfig());
+    return response.data;
+  },
+
+  descargarInformeVentasFarmaciaPdf: async (payload) => {
+    const config = getConfig();
+    config.responseType = 'blob';
+    const response = await axios.post(`${API_URL}/dashboard/admin/ventas-farmacia/pdf`, payload, config);
+    return response.data;
+  },
+
+  descargarInformeVentasFarmaciaExcel: async (payload) => {
+    const config = getConfig();
+    config.responseType = 'blob';
+    const response = await axios.post(`${API_URL}/dashboard/admin/ventas-farmacia/excel`, payload, config);
     return response.data;
   },
 };

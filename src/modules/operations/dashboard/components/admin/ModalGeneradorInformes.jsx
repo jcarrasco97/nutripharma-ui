@@ -1,61 +1,126 @@
-import React, { useState, useRef } from "react";
-import { X, FileText, Download, BarChart3, Loader2, CheckCircle2, FileSpreadsheet } from "lucide-react";
+import React, { useState, useRef, useMemo } from "react";
+import {
+  X, FileText, Download, BarChart3, Loader2, CheckCircle2, FileSpreadsheet,
+} from "lucide-react";
 import { dashboardService } from "../../services/dashboardService";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
+} from "recharts";
 import html2canvas from "html2canvas";
 import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
+  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@/shared/components/ui/Select";
 import { Button } from "@/shared/components/ui/Button";
 
-// ── Tooltips personalizados (sin cambios) ────────────────────────────────────
+// ── Tooltips ─────────────────────────────────────────────────────────────────
 
 const CustomTooltipProductos = ({ active, payload, label }) => {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    return (
-      <div className="bg-surface p-4 rounded-md shadow-lg border border-neutral/10 min-w-[200px]">
-        <p className="font-semibold text-secondary mb-3 border-b border-neutral/10 pb-2">{label}</p>
-        <p className="text-sm mb-1 text-neutral/60">Unidades: <span className="font-bold text-secondary">{data.cantidadVendida}</span></p>
-        <p className="text-sm mb-1 text-primary font-medium">Total PVF: {data.ingresosGeneradosPvf?.toFixed(2)} €</p>
-        <p className="text-sm mb-2 text-secondary font-medium">Total PVP: {data.ingresosPotencialesPvp?.toFixed(2)} €</p>
-        <p className="text-xs text-neutral/40 border-t border-neutral/10 pt-2">PVF/ud: {data.precioVentaFarmacia?.toFixed(2)}€ | PVP/ud: {data.precioVentaPublico?.toFixed(2)}€</p>
-      </div>
-    );
-  }
-  return null;
+  if (!active || !payload?.length) return null;
+  const d = payload[0].payload;
+  return (
+    <div className="bg-surface p-4 rounded-md shadow-lg border border-neutral/10 min-w-[200px]">
+      <p className="font-semibold text-secondary mb-3 border-b border-neutral/10 pb-2">{label}</p>
+      <p className="text-sm mb-1 text-neutral/60">Unidades: <span className="font-bold text-secondary">{d.cantidadVendida}</span></p>
+      <p className="text-sm mb-1 text-primary font-medium">Total PVF: {Number(d.ingresosGeneradosPvf).toFixed(2)} €</p>
+      <p className="text-sm mb-2 text-secondary font-medium">Total PVP: {Number(d.ingresosPotencialesPvp).toFixed(2)} €</p>
+      <p className="text-xs text-neutral/40 border-t border-neutral/10 pt-2">
+        PVF/ud: {Number(d.precioVentaFarmacia).toFixed(2)} € | PVP/ud: {Number(d.precioVentaPublico).toFixed(2)} €
+      </p>
+    </div>
+  );
+};
+
+const CustomTooltipFacturacion = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  const consultas = payload.find(p => p.dataKey === "ingresosConsultas");
+  const pedidos = payload.find(p => p.dataKey === "ingresosPedidos");
+  return (
+    <div className="bg-surface p-4 rounded-md shadow-lg border border-neutral/10 min-w-[200px]">
+      <p className="font-semibold text-secondary mb-3 border-b border-neutral/10 pb-2">{label}</p>
+      <p className="text-sm mb-1 font-medium" style={{ color: "#b1cb0c" }}>
+        Consultas: {Number(consultas?.value || 0).toFixed(2)} €
+      </p>
+      <p className="text-sm mb-2 font-medium text-secondary">
+        Productos: {Number(pedidos?.value || 0).toFixed(2)} €
+      </p>
+      <p className="text-sm font-bold text-primary border-t border-neutral/10 pt-2">
+        Total: {(Number(consultas?.value || 0) + Number(pedidos?.value || 0)).toFixed(2)} €
+      </p>
+    </div>
+  );
 };
 
 const CustomTooltipClinico = ({ active, payload, label }) => {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    return (
-      <div className="bg-surface p-4 rounded-md shadow-lg border border-neutral/10 min-w-[220px]">
-        <p className="font-semibold text-secondary mb-3 border-b border-neutral/10 pb-2">{label}</p>
-        <div className="space-y-1 mb-3">
-          <p className="text-xs font-medium text-neutral/40 uppercase tracking-wider">Volumen de Trabajo</p>
-          <p className="text-sm">Nuevas: <span className="font-bold">{data.nuevas}</span></p>
-          <p className="text-sm">Revisiones: <span className="font-bold">{data.revisiones}</span></p>
-          <p className="text-sm text-blue-600">Promo: <span className="font-bold">{data.promocionales}</span></p>
-          <p className="text-sm text-purple-600">Personal: <span className="font-bold">{data.personal}</span></p>
-        </div>
-        <div className="border-t border-neutral/10 pt-2">
-          <p className="text-xs font-medium text-primary uppercase tracking-wider">Ingreso Generado</p>
-          <p className="text-lg font-bold text-primary">{data.ingresosGenerados?.toFixed(2)} €</p>
-        </div>
+  if (!active || !payload?.length) return null;
+  const d = payload[0].payload;
+  return (
+    <div className="bg-surface p-4 rounded-md shadow-lg border border-neutral/10 min-w-[220px]">
+      <p className="font-semibold text-secondary mb-3 border-b border-neutral/10 pb-2">{label}</p>
+      <div className="space-y-1 mb-3">
+        <p className="text-xs font-medium text-neutral/40 uppercase tracking-wider">Volumen de Trabajo</p>
+        <p className="text-sm">Nuevas: <span className="font-bold">{d.nuevas}</span></p>
+        <p className="text-sm">Revisiones: <span className="font-bold">{d.revisiones}</span></p>
+        <p className="text-sm text-blue-600">Promo: <span className="font-bold">{d.promocionales}</span></p>
+        <p className="text-sm text-purple-600">Personal: <span className="font-bold">{d.personal}</span></p>
       </div>
-    );
-  }
-  return null;
+      <div className="border-t border-neutral/10 pt-2">
+        <p className="text-xs font-medium text-primary uppercase tracking-wider">Ingreso Estimado</p>
+        <p className="text-lg font-bold text-primary">{Number(d.ingresosGenerados).toFixed(2)} €</p>
+      </div>
+    </div>
+  );
 };
 
-// ── Componente principal ─────────────────────────────────────────────────────
+const CustomTooltipVentasFarmacia = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  const d = payload[0].payload;
+  const total = (d.totalConsultas || 0) + (d.totalPedidos || 0);
+  return (
+    <div className="bg-surface p-4 rounded-md shadow-lg border border-neutral/10 min-w-[220px]">
+      <p className="font-semibold text-secondary mb-3 border-b border-neutral/10 pb-2">{label}</p>
+      <p className="text-sm mb-1 font-medium" style={{ color: "#b1cb0c" }}>
+        Consultas: {(d.totalConsultas || 0).toFixed(2)} €
+      </p>
+      <p className="text-sm mb-2 font-medium text-secondary">
+        Productos: {(d.totalPedidos || 0).toFixed(2)} €
+      </p>
+      <div className="border-t border-neutral/10 pt-2">
+        <p className="text-sm font-bold text-primary">Total: {total.toFixed(2)} €</p>
+      </div>
+    </div>
+  );
+};
 
-const ModalGeneradorInformes = ({ isOpen, onClose, farmacias = [], nutricionistas = [], modoPagina = false }) => {
+// ── Configuración por tipo ────────────────────────────────────────────────────
+
+const TIPOS_INFORME = [
+  { value: "PRODUCTOS",       label: "Rendimiento de Productos" },
+  { value: "FACTURACION",     label: "Facturación Global" },
+  { value: "CLINICO",         label: "Análisis Clínico por Farmacia" },
+  { value: "VENTAS_FARMACIA", label: "Ventas por Centro" },
+];
+
+const TIPO_CFG = {
+  PRODUCTOS:       { hasMes: true,  hasFarmacia: true,  hasExcel: true,  recordLabel: "productos encontrados" },
+  FACTURACION:     { hasMes: false, hasFarmacia: true,  hasExcel: true,  recordLabel: "meses desglosados" },
+  CLINICO:         { hasMes: true,  hasFarmacia: true,  hasExcel: true,  recordLabel: "farmacias analizadas" },
+  VENTAS_FARMACIA: { hasMes: false, hasFarmacia: false, hasExcel: true,  recordLabel: "centros con actividad" },
+};
+
+const ANOS = [...Array(6)].map((_, i) => String(new Date().getFullYear() - i));
+const MESES_NOMBRES = Array.from({ length: 12 }, (_, i) =>
+  new Date(2000, i).toLocaleString("es-ES", { month: "long" }).toUpperCase()
+);
+
+// ── Componente principal ──────────────────────────────────────────────────────
+
+const ModalGeneradorInformes = ({
+  isOpen,
+  onClose,
+  farmacias = [],
+  nutricionistas = [],
+  modoPagina = false,
+}) => {
   const [filtros, setFiltros] = useState({
     tipo: "PRODUCTOS",
     anioInicio: new Date().getFullYear(),
@@ -64,9 +129,8 @@ const ModalGeneradorInformes = ({ isOpen, onClose, farmacias = [], nutricionista
     farmaciaId: "",
     nutricionistaId: "",
     incluirPromo: true,
-    incluirPers: true
+    incluirPers: true,
   });
-
   const [previewData, setPreviewData] = useState([]);
   const [fullReport, setFullReport] = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
@@ -74,23 +138,98 @@ const ModalGeneradorInformes = ({ isOpen, onClose, farmacias = [], nutricionista
   const [loadingExcel, setLoadingExcel] = useState(false);
   const chartRef = useRef(null);
 
+  // Filtrado en cascada dentro del propio componente
+  const farmaciasDisponibles = useMemo(() => {
+    if (!filtros.nutricionistaId) return farmacias;
+    const nutri = nutricionistas.find(n => String(n.id) === String(filtros.nutricionistaId));
+    if (!nutri?.asignaciones?.length) return farmacias;
+    const ids = nutri.asignaciones.map(a => String(a.farmaciaId));
+    return farmacias.filter(f => ids.includes(String(f.id)));
+  }, [filtros.nutricionistaId, farmacias, nutricionistas]);
+
+  const nutrisDisponibles = useMemo(() => {
+    if (!filtros.farmaciaId) return nutricionistas;
+    return nutricionistas.filter(n =>
+      n.asignaciones?.some(a => String(a.farmaciaId) === String(filtros.farmaciaId))
+    );
+  }, [filtros.farmaciaId, nutricionistas]);
+
   if (!isOpen && !modoPagina) return null;
+
+  const cfg = TIPO_CFG[filtros.tipo] || TIPO_CFG.PRODUCTOS;
+
+  const handleTipoChange = (tipo) => {
+    setFiltros(prev => ({
+      ...prev,
+      tipo,
+      mes: "",
+      farmaciaId: TIPO_CFG[tipo]?.hasFarmacia ? prev.farmaciaId : "",
+    }));
+    setPreviewData([]);
+    setFullReport(null);
+  };
+
+  const handleSelectChange = (name) => (val) => {
+    setFiltros(prev => {
+      const next = { ...prev, [name]: val === "__none__" ? "" : val };
+      if (parseInt(next.anioInicio) > parseInt(next.anioFin)) next.anioFin = next.anioInicio;
+      return next;
+    });
+  };
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFiltros(prev => {
+      const next = { ...prev, [name]: type === "checkbox" ? checked : value };
+      if (parseInt(next.anioInicio) > parseInt(next.anioFin)) next.anioFin = next.anioInicio;
+      return next;
+    });
+  };
 
   const handlePreview = async () => {
     setLoadingPreview(true);
     try {
       let res = null;
       if (filtros.tipo === "PRODUCTOS") {
-        res = await dashboardService.obtenerRendimientoProductos(filtros.anioInicio, filtros.anioFin, filtros.mes || null, filtros.farmaciaId || null, filtros.nutricionistaId || null);
+        res = await dashboardService.obtenerRendimientoProductos(
+          filtros.anioInicio, filtros.anioFin,
+          filtros.mes || null, filtros.farmaciaId || null, filtros.nutricionistaId || null
+        );
+        setFullReport(res);
+        setPreviewData(res?.totalesRango || []);
       } else if (filtros.tipo === "FACTURACION") {
-        res = await dashboardService.obtenerFacturacionAdmin(filtros.anioInicio, filtros.anioFin, filtros.farmaciaId || null, filtros.nutricionistaId || null);
+        res = await dashboardService.obtenerFacturacionAdmin(
+          filtros.anioInicio, filtros.anioFin,
+          filtros.farmaciaId || null, filtros.nutricionistaId || null
+        );
+        setFullReport(res);
+        setPreviewData(res?.totalesRango || []);
       } else if (filtros.tipo === "CLINICO") {
-        res = await dashboardService.obtenerRendimientoClinico(filtros.anioInicio, filtros.anioFin, filtros.mes || null, filtros.nutricionistaId || null);
+        res = await dashboardService.obtenerRendimientoClinico(
+          filtros.anioInicio, filtros.anioFin,
+          filtros.mes || null, filtros.farmaciaId || null, filtros.nutricionistaId || null
+        );
+        setFullReport(res);
+        setPreviewData(res?.totalesRango || []);
+      } else if (filtros.tipo === "VENTAS_FARMACIA") {
+        res = await dashboardService.obtenerVentasFarmacia(
+          filtros.anioInicio, filtros.anioFin,
+          filtros.nutricionistaId || null
+        );
+        setFullReport(res);
+        const summary = (res || []).map(item => ({
+          farmaciaNombre: item.farmaciaNombre,
+          totalConsultas: (item.reporte?.totalesRango || []).reduce(
+            (s, m) => s + Number(m.ingresosConsultas || 0), 0
+          ),
+          totalPedidos: (item.reporte?.totalesRango || []).reduce(
+            (s, m) => s + Number(m.ingresosPedidos || 0), 0
+          ),
+        }));
+        setPreviewData(summary);
       }
-      setFullReport(res);
-      setPreviewData(res?.totalesRango || []);
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
       alert("Error al cargar la previsualización.");
     } finally {
       setLoadingPreview(false);
@@ -98,67 +237,67 @@ const ModalGeneradorInformes = ({ isOpen, onClose, farmacias = [], nutricionista
   };
 
   const setYearData = (anio) => {
-    if (!fullReport) return;
+    if (!fullReport || filtros.tipo === "VENTAS_FARMACIA") return;
     if (anio === "TOTAL") {
       setPreviewData(fullReport.totalesRango || []);
     } else {
-      const desglose = fullReport.desglosesPorAnio?.find(d => d.anio === parseInt(anio));
-      if (desglose) setPreviewData(desglose.datos || []);
+      const d = fullReport.desglosesPorAnio?.find(d => d.anio === parseInt(anio));
+      if (d) setPreviewData(d.datos || []);
     }
   };
 
   const captureChartAsBase64 = async () => {
-    const container = chartRef.current;
-    if (!container) return null;
+    if (!chartRef.current) return null;
     try {
-      const canvas = await html2canvas(container, {
-        backgroundColor: "#ffffff",
-        scale: 2,
-        logging: false,
-        useCORS: true,
-        onclone: (clonedDoc) => {
-          const el = clonedDoc.querySelector('[ref="chartRef"]');
-          if (el) el.style.display = "block";
-        }
+      const canvas = await html2canvas(chartRef.current, {
+        backgroundColor: "#ffffff", scale: 2, logging: false, useCORS: true,
       });
       return canvas.toDataURL("image/png", 1.0);
-    } catch (error) {
-      console.error("Error capturando la gráfica:", error);
+    } catch (e) {
+      console.error("Error capturando gráfica:", e);
       return null;
     }
+  };
+
+  const buildPayload = (withChart = false, base64 = null) => ({
+    anioInicio: parseInt(filtros.anioInicio),
+    anioFin: parseInt(filtros.anioFin),
+    mes: filtros.mes ? parseInt(filtros.mes) : null,
+    farmaciaId: filtros.farmaciaId ? parseInt(filtros.farmaciaId) : null,
+    nutricionistaId: filtros.nutricionistaId ? parseInt(filtros.nutricionistaId) : null,
+    tipoInforme: filtros.tipo,
+    graficaBase64: withChart ? base64 : null,
+    incluirPromocionales: filtros.incluirPromo,
+    incluirPersonal: filtros.incluirPers,
+  });
+
+  const triggerDownload = (blob, filename) => {
+    const link = document.createElement("a");
+    link.href = window.URL.createObjectURL(new Blob([blob]));
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode.removeChild(link);
   };
 
   const handleDownloadPdf = async () => {
     setLoadingPdf(true);
     try {
-      const base64Image = await captureChartAsBase64();
-      const payload = {
-        anioInicio: parseInt(filtros.anioInicio),
-        anioFin: parseInt(filtros.anioFin),
-        mes: filtros.mes ? parseInt(filtros.mes) : null,
-        farmaciaId: filtros.farmaciaId ? parseInt(filtros.farmaciaId) : null,
-        nutricionistaId: filtros.nutricionistaId ? parseInt(filtros.nutricionistaId) : null,
-        tipoInforme: filtros.tipo,
-        graficaBase64: base64Image,
-        incluirPromocionales: filtros.incluirPromo,
-        incluirPersonal: filtros.incluirPers
-      };
+      const base64 = filtros.tipo !== "VENTAS_FARMACIA" ? await captureChartAsBase64() : null;
+      const payload = buildPayload(true, base64);
+      const filename = filtros.tipo === "VENTAS_FARMACIA"
+        ? `informe_ventas_centros_${filtros.anioInicio}.pdf`
+        : `informe_${filtros.tipo.toLowerCase()}_${filtros.anioInicio}.pdf`;
 
       let blob;
-      let filename = `informe_${filtros.tipo.toLowerCase()}_${filtros.anioInicio}.pdf`;
-
-      if (filtros.tipo === "PRODUCTOS") blob = await dashboardService.descargarInformeProductosPdf(payload);
+      if (filtros.tipo === "PRODUCTOS")        blob = await dashboardService.descargarInformeProductosPdf(payload);
       else if (filtros.tipo === "FACTURACION") blob = await dashboardService.descargarInformeFacturacionPdf(payload);
-      else if (filtros.tipo === "CLINICO") blob = await dashboardService.descargarInformeClinicoPdf(payload);
+      else if (filtros.tipo === "CLINICO")     blob = await dashboardService.descargarInformeClinicoPdf(payload);
+      else if (filtros.tipo === "VENTAS_FARMACIA") blob = await dashboardService.descargarInformeVentasFarmaciaPdf(payload);
 
-      const link = document.createElement('a');
-      link.href = window.URL.createObjectURL(new Blob([blob]));
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-    } catch (error) {
-      console.error(error);
+      triggerDownload(blob, filename);
+    } catch (err) {
+      console.error(err);
       alert("Error al descargar el PDF.");
     } finally {
       setLoadingPdf(false);
@@ -166,88 +305,58 @@ const ModalGeneradorInformes = ({ isOpen, onClose, farmacias = [], nutricionista
   };
 
   const handleDownloadExcel = async () => {
+    if (!cfg.hasExcel) return;
     setLoadingExcel(true);
     try {
-      const payload = {
-        anioInicio: parseInt(filtros.anioInicio),
-        anioFin: parseInt(filtros.anioFin),
-        mes: filtros.mes ? parseInt(filtros.mes) : null,
-        farmaciaId: filtros.farmaciaId ? parseInt(filtros.farmaciaId) : null,
-        nutricionistaId: filtros.nutricionistaId ? parseInt(filtros.nutricionistaId) : null,
-        tipoInforme: filtros.tipo,
-        incluirPromocionales: filtros.incluirPromo,
-        incluirPersonal: filtros.incluirPers
-      };
+      const payload = buildPayload(false);
+      const filename = `informe_${filtros.tipo.toLowerCase()}_${filtros.anioInicio}.xlsx`;
 
       let blob;
-      let filename = `informe_${filtros.tipo.toLowerCase()}_${filtros.anioInicio}.xlsx`;
+      if (filtros.tipo === "PRODUCTOS")             blob = await dashboardService.descargarInformeProductosExcel(payload);
+      else if (filtros.tipo === "FACTURACION")      blob = await dashboardService.descargarInformeFacturacionExcel(payload);
+      else if (filtros.tipo === "CLINICO")          blob = await dashboardService.descargarInformeClinicoExcel(payload);
+      else if (filtros.tipo === "VENTAS_FARMACIA")  blob = await dashboardService.descargarInformeVentasFarmaciaExcel(payload);
 
-      if (filtros.tipo === "PRODUCTOS") blob = await dashboardService.descargarInformeProductosExcel(payload);
-      else if (filtros.tipo === "FACTURACION") blob = await dashboardService.descargarInformeFacturacionExcel(payload);
-      else if (filtros.tipo === "CLINICO") blob = await dashboardService.descargarInformeClinicoExcel(payload);
-
-      const link = document.createElement('a');
-      link.href = window.URL.createObjectURL(new Blob([blob]));
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-    } catch (error) {
-      console.error(error);
+      triggerDownload(blob, filename);
+    } catch (err) {
+      console.error(err);
       alert("Error al descargar el Excel.");
     } finally {
       setLoadingExcel(false);
     }
   };
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFiltros(prev => {
-      const next = { ...prev, [name]: type === 'checkbox' ? checked : value };
-      if (parseInt(next.anioInicio) > parseInt(next.anioFin)) {
-        next.anioFin = next.anioInicio;
-      }
-      return next;
-    });
-  };
-
-  // Helper para los Select de Shadcn — preserva la lógica de handleChange
-  const handleSelectChange = (name) => (val) => {
-    setFiltros(prev => {
-      const next = { ...prev, [name]: val === "__none__" ? "" : val };
-      if (parseInt(next.anioInicio) > parseInt(next.anioFin)) {
-        next.anioFin = next.anioInicio;
-      }
-      return next;
-    });
-  };
-
-  const ANOS = [...Array(5)].map((_, i) => String(new Date().getFullYear() - i));
-  const MESES = Array.from({ length: 12 }, (_, i) => i + 1);
+  // ── JSX ────────────────────────────────────────────────────────────────────
 
   const content = (
     <>
-      {/* HEADER */}
+      {/* CABECERA */}
       <div className="bg-secondary px-5 py-4 text-white flex justify-between items-center shrink-0">
         <div className="flex items-center gap-3">
           <FileText size={18} className="text-[#b1cb0c]" />
           <div>
-            <h2 className="text-sm font-semibold text-surface leading-tight">Centro de Análisis y Reportes</h2>
-            <p className="text-[10px] text-surface/50 uppercase tracking-wider mt-0.5">Generador Multidimensional</p>
+            <h2 className="text-sm font-semibold text-surface leading-tight">
+              Centro de Análisis y Reportes
+            </h2>
+            <p className="text-[10px] text-surface/50 uppercase tracking-wider mt-0.5">
+              Generador Multidimensional de Informes
+            </p>
           </div>
         </div>
-        <button
-          onClick={onClose}
-          className="text-surface/40 hover:text-surface transition-colors p-1"
-        >
-          <X size={18} />
-        </button>
+        {!modoPagina && (
+          <button
+            onClick={onClose}
+            className="text-surface/40 hover:text-surface transition-colors p-1"
+          >
+            <X size={18} />
+          </button>
+        )}
       </div>
 
-      {/* BODY */}
+      {/* CUERPO */}
       <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
 
-        {/* PANEL LATERAL IZQUIERDO */}
+        {/* PANEL LATERAL */}
         <div className="w-full md:w-72 bg-neutral/[0.02] p-5 border-r border-neutral/10 overflow-y-auto shrink-0">
           <div className="space-y-5">
 
@@ -256,17 +365,14 @@ const ModalGeneradorInformes = ({ isOpen, onClose, farmacias = [], nutricionista
               <label className="block text-[10px] font-medium text-neutral/50 uppercase tracking-wider mb-1.5">
                 Dimensión del Análisis
               </label>
-              <Select
-                value={filtros.tipo}
-                onValueChange={handleSelectChange("tipo")}
-              >
+              <Select value={filtros.tipo} onValueChange={handleTipoChange}>
                 <SelectTrigger size="default" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="PRODUCTOS">Rendimiento de Productos</SelectItem>
-                  <SelectItem value="FACTURACION">Facturación Global (Mensual)</SelectItem>
-                  <SelectItem value="CLINICO">Análisis Clínico (Por Farmacia)</SelectItem>
+                  {TIPOS_INFORME.map(t => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -275,45 +381,36 @@ const ModalGeneradorInformes = ({ isOpen, onClose, farmacias = [], nutricionista
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-[10px] font-medium text-neutral/50 uppercase tracking-wider mb-1.5">
-                  Desde (Año)
+                  Desde
                 </label>
                 <Select
                   value={String(filtros.anioInicio)}
                   onValueChange={handleSelectChange("anioInicio")}
                 >
-                  <SelectTrigger size="default" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger size="default" className="w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {ANOS.map(a => (
-                      <SelectItem key={a} value={a}>{a}</SelectItem>
-                    ))}
+                    {ANOS.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <label className="block text-[10px] font-medium text-neutral/50 uppercase tracking-wider mb-1.5">
-                  Hasta (Año)
+                  Hasta
                 </label>
                 <Select
                   value={String(filtros.anioFin)}
                   onValueChange={handleSelectChange("anioFin")}
-                  disabled={filtros.tipo === "FACTURACION"}
                 >
-                  <SelectTrigger size="default" className="w-full disabled:opacity-30">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger size="default" className="w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {ANOS.map(a => (
-                      <SelectItem key={a} value={a}>{a}</SelectItem>
-                    ))}
+                    {ANOS.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
-            {/* Filtro de mes */}
-            {filtros.tipo !== "FACTURACION" && (
+            {/* Filtro mes — solo tipos que lo admiten */}
+            {cfg.hasMes && (
               <div>
                 <label className="block text-[10px] font-medium text-neutral/50 uppercase tracking-wider mb-1.5">
                   Filtro de Mes
@@ -327,31 +424,30 @@ const ModalGeneradorInformes = ({ isOpen, onClose, farmacias = [], nutricionista
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">Año Completo</SelectItem>
-                    {MESES.map(m => (
-                      <SelectItem key={m} value={String(m)}>
-                        {new Date(2000, m - 1).toLocaleString('es-ES', { month: 'long' }).toUpperCase()}
-                      </SelectItem>
+                    {MESES_NOMBRES.map((m, i) => (
+                      <SelectItem key={i + 1} value={String(i + 1)}>{m}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             )}
 
-            {/* Entidades */}
+            {/* Entidades con cascada */}
             <div className="space-y-3">
-              <label className="block text-[10px] font-medium text-neutral/50 uppercase tracking-wider mb-1.5">
+              <label className="block text-[10px] font-medium text-neutral/50 uppercase tracking-wider">
                 Entidades
               </label>
+
               <Select
                 value={filtros.nutricionistaId || "__none__"}
                 onValueChange={handleSelectChange("nutricionistaId")}
               >
                 <SelectTrigger size="default" className="w-full">
-                  <SelectValue placeholder="Cualquier Nutricionista" />
+                  <SelectValue placeholder="Todos los Nutricionistas" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">Cualquier Nutricionista</SelectItem>
-                  {nutricionistas.map(n => (
+                  <SelectItem value="__none__">Todos los Nutricionistas</SelectItem>
+                  {nutrisDisponibles.map(n => (
                     <SelectItem key={n.id} value={String(n.id)}>
                       {n.nombre} {n.apellidos}
                     </SelectItem>
@@ -359,17 +455,17 @@ const ModalGeneradorInformes = ({ isOpen, onClose, farmacias = [], nutricionista
                 </SelectContent>
               </Select>
 
-              {filtros.tipo !== "CLINICO" && (
+              {cfg.hasFarmacia && (
                 <Select
                   value={filtros.farmaciaId || "__none__"}
                   onValueChange={handleSelectChange("farmaciaId")}
                 >
                   <SelectTrigger size="default" className="w-full">
-                    <SelectValue placeholder="Cualquier Farmacia" />
+                    <SelectValue placeholder="Todas las Farmacias" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">Cualquier Farmacia</SelectItem>
-                    {farmacias.map(f => (
+                    <SelectItem value="__none__">Todas las Farmacias</SelectItem>
+                    {farmaciasDisponibles.map(f => (
                       <SelectItem key={f.id} value={String(f.id)}>
                         {f.nombre}
                       </SelectItem>
@@ -377,9 +473,15 @@ const ModalGeneradorInformes = ({ isOpen, onClose, farmacias = [], nutricionista
                   </SelectContent>
                 </Select>
               )}
+
+              {filtros.tipo === "VENTAS_FARMACIA" && (
+                <p className="text-[10px] text-neutral/40 italic leading-tight">
+                  Muestra todos los centros. Filtra por nutricionista para ver solo sus centros asignados.
+                </p>
+              )}
             </div>
 
-            {/* Checkboxes CLINICO */}
+            {/* Métricas extra para CLINICO */}
             {filtros.tipo === "CLINICO" && (
               <div className="bg-surface border border-neutral/10 rounded-md p-3 space-y-3">
                 <label className="block text-[10px] font-medium text-neutral/50 uppercase tracking-wider">
@@ -412,30 +514,35 @@ const ModalGeneradorInformes = ({ isOpen, onClose, farmacias = [], nutricionista
               </div>
             )}
 
-            {/* Botón Cargar Análisis */}
+            {/* Botón cargar */}
             <Button
               variant="outline"
               className="w-full h-10 gap-2 border-primary/20 text-primary hover:bg-primary/5"
               onClick={handlePreview}
               disabled={loadingPreview}
             >
-              {loadingPreview ? <Loader2 className="animate-spin" size={15} /> : <BarChart3 size={15} />}
+              {loadingPreview
+                ? <Loader2 className="animate-spin" size={15} />
+                : <BarChart3 size={15} />
+              }
               Cargar Análisis
             </Button>
           </div>
         </div>
 
-        {/* PANEL DERECHO */}
+        {/* PANEL DERECHO — previsualización */}
         <div className="flex-1 bg-surface p-5 flex flex-col overflow-hidden">
           <div className="flex justify-between items-center mb-4 gap-3 flex-wrap">
             <div className="flex flex-col items-start gap-2">
               <h3 className="text-sm font-semibold text-secondary">Previsualización Operativa</h3>
-              {fullReport?.desglosesPorAnio?.length > 1 && (
+              {fullReport?.desglosesPorAnio?.length > 1 && filtros.tipo !== "VENTAS_FARMACIA" && (
                 <select
                   onChange={(e) => setYearData(e.target.value)}
                   className="h-8 px-2 border border-primary/20 rounded-md text-xs font-medium bg-surface text-secondary outline-none focus:border-primary"
                 >
-                  <option value="TOTAL">Total del Rango ({filtros.anioInicio} - {filtros.anioFin})</option>
+                  <option value="TOTAL">
+                    Total del Rango ({filtros.anioInicio}–{filtros.anioFin})
+                  </option>
                   {fullReport.desglosesPorAnio.map(d => (
                     <option key={d.anio} value={d.anio}>Desglose Año {d.anio}</option>
                   ))}
@@ -444,7 +551,7 @@ const ModalGeneradorInformes = ({ isOpen, onClose, farmacias = [], nutricionista
             </div>
             {previewData.length > 0 && (
               <span className="bg-primary/10 text-primary rounded-md text-[10px] font-medium px-2 py-0.5">
-                {previewData.length} registros encontrados
+                {previewData.length} {cfg.recordLabel}
               </span>
             )}
           </div>
@@ -455,34 +562,109 @@ const ModalGeneradorInformes = ({ isOpen, onClose, farmacias = [], nutricionista
             ) : previewData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 {filtros.tipo === "PRODUCTOS" ? (
-                  <BarChart data={previewData} layout="vertical" margin={{ top: 0, right: 30, left: 20, bottom: 0 }}>
+                  <BarChart
+                    data={previewData}
+                    layout="vertical"
+                    margin={{ top: 0, right: 30, left: 20, bottom: 0 }}
+                  >
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
                     <XAxis type="number" />
-                    <YAxis dataKey="productoNombre" type="category" width={140} tick={{ fontSize: 10, fontWeight: 'bold' }} />
-                    <Tooltip content={<CustomTooltipProductos />} cursor={{ fill: '#f4f7f4' }} />
-                    <Bar dataKey="cantidadVendida" fill="#367933" radius={[0, 4, 4, 0]} barSize={20} isAnimationActive={false} />
+                    <YAxis
+                      dataKey="productoNombre"
+                      type="category"
+                      width={140}
+                      tick={{ fontSize: 10, fontWeight: "bold" }}
+                    />
+                    <Tooltip content={<CustomTooltipProductos />} cursor={{ fill: "#f4f7f4" }} />
+                    <Bar
+                      dataKey="cantidadVendida"
+                      fill="#367933"
+                      radius={[0, 4, 4, 0]}
+                      barSize={20}
+                      isAnimationActive={false}
+                    />
                   </BarChart>
                 ) : filtros.tipo === "FACTURACION" ? (
-                  <BarChart data={previewData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                  <BarChart
+                    data={previewData}
+                    margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
+                  >
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                    <XAxis dataKey="mesTexto" tick={{ fontSize: 12, fontWeight: 'bold' }} />
-                    <YAxis tickFormatter={(val) => `${val}€`} />
-                    <Tooltip cursor={{ fill: '#f4f7f4' }} />
-                    <Legend wrapperStyle={{ paddingTop: '20px', fontWeight: 'bold' }} />
-                    <Bar dataKey="ingresosConsultas" name="Servicios" stackId="a" fill="#b1cb0c" isAnimationActive={false} />
-                    <Bar dataKey="ingresosPedidos" name="Ventas" stackId="a" fill="#062e3a" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                    <XAxis dataKey="mesTexto" tick={{ fontSize: 12, fontWeight: "bold" }} />
+                    <YAxis tickFormatter={(v) => `${v}€`} />
+                    <Tooltip content={<CustomTooltipFacturacion />} cursor={{ fill: "#f4f7f4" }} />
+                    <Legend wrapperStyle={{ paddingTop: "20px", fontWeight: "bold" }} />
+                    <Bar
+                      dataKey="ingresosConsultas"
+                      name="Consultas"
+                      stackId="a"
+                      fill="#b1cb0c"
+                      isAnimationActive={false}
+                    />
+                    <Bar
+                      dataKey="ingresosPedidos"
+                      name="Productos"
+                      stackId="a"
+                      fill="#062e3a"
+                      radius={[4, 4, 0, 0]}
+                      isAnimationActive={false}
+                    />
                   </BarChart>
-                ) : (
-                  <BarChart data={previewData} margin={{ top: 20, right: 30, left: 20, bottom: 70 }}>
+                ) : filtros.tipo === "CLINICO" ? (
+                  <BarChart
+                    data={previewData}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 70 }}
+                  >
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                    <XAxis dataKey="farmaciaNombre" />
+                    <XAxis
+                      dataKey="farmaciaNombre"
+                      tick={{ fontSize: 10 }}
+                      interval={0}
+                    />
                     <YAxis />
-                    <Tooltip content={<CustomTooltipClinico />} cursor={{ fill: '#f4f7f4' }} />
-                    <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: '20px' }} />
+                    <Tooltip content={<CustomTooltipClinico />} cursor={{ fill: "#f4f7f4" }} />
+                    <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: "20px" }} />
                     <Bar dataKey="nuevas" name="Nuevas" stackId="a" fill="#062e3a" isAnimationActive={false} />
                     <Bar dataKey="revisiones" name="Revisiones" stackId="a" fill="#367933" isAnimationActive={false} />
-                    {filtros.incluirPromo && <Bar dataKey="promocionales" name="Promocionales" stackId="a" fill="#4B9CD3" isAnimationActive={false} />}
-                    {filtros.incluirPers && <Bar dataKey="personal" name="Personal" stackId="a" fill="#8E44AD" isAnimationActive={false} radius={[4, 4, 0, 0]} />}
+                    {filtros.incluirPromo && (
+                      <Bar dataKey="promocionales" name="Promo" stackId="a" fill="#4B9CD3" isAnimationActive={false} />
+                    )}
+                    {filtros.incluirPers && (
+                      <Bar dataKey="personal" name="Personal" stackId="a" fill="#8E44AD" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                    )}
+                  </BarChart>
+                ) : (
+                  // VENTAS_FARMACIA — horizontal: farmacias en eje Y
+                  <BarChart
+                    data={previewData}
+                    layout="vertical"
+                    margin={{ top: 5, right: 60, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
+                    <XAxis type="number" tickFormatter={(v) => `${v}€`} />
+                    <YAxis
+                      dataKey="farmaciaNombre"
+                      type="category"
+                      width={180}
+                      tick={{ fontSize: 10 }}
+                    />
+                    <Tooltip content={<CustomTooltipVentasFarmacia />} cursor={{ fill: "#f4f7f4" }} />
+                    <Legend verticalAlign="top" wrapperStyle={{ paddingBottom: "10px", fontWeight: "bold" }} />
+                    <Bar
+                      dataKey="totalConsultas"
+                      name="Consultas"
+                      stackId="a"
+                      fill="#b1cb0c"
+                      isAnimationActive={false}
+                    />
+                    <Bar
+                      dataKey="totalPedidos"
+                      name="Productos"
+                      stackId="a"
+                      fill="#062e3a"
+                      radius={[0, 4, 4, 0]}
+                      isAnimationActive={false}
+                    />
                   </BarChart>
                 )}
               </ResponsiveContainer>
@@ -500,7 +682,7 @@ const ModalGeneradorInformes = ({ isOpen, onClose, farmacias = [], nutricionista
         </div>
       </div>
 
-      {/* FOOTER */}
+      {/* PIE */}
       <div className="px-5 py-4 bg-neutral/[0.02] border-t border-neutral/10 flex justify-between items-center shrink-0">
         <div className="flex items-center gap-2 text-neutral/40">
           <CheckCircle2 size={14} />
@@ -509,20 +691,28 @@ const ModalGeneradorInformes = ({ isOpen, onClose, farmacias = [], nutricionista
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <Button
-            onClick={handleDownloadExcel}
-            disabled={loadingExcel || previewData.length === 0}
-            className="h-10 px-6 gap-2 bg-[#217346] text-white hover:bg-[#1e603b] rounded-md font-medium"
-          >
-            {loadingExcel ? <Loader2 className="animate-spin" size={15} /> : <FileSpreadsheet size={15} />}
-            Exportar a Excel
-          </Button>
+          {cfg.hasExcel && (
+            <Button
+              onClick={handleDownloadExcel}
+              disabled={loadingExcel || previewData.length === 0}
+              className="h-10 px-6 gap-2 bg-[#217346] text-white hover:bg-[#1e603b] rounded-md font-medium"
+            >
+              {loadingExcel
+                ? <Loader2 className="animate-spin" size={15} />
+                : <FileSpreadsheet size={15} />
+              }
+              Exportar a Excel
+            </Button>
+          )}
           <Button
             onClick={handleDownloadPdf}
             disabled={loadingPdf || previewData.length === 0}
             className="h-10 px-6 gap-2 bg-primary text-surface hover:bg-primary-hover rounded-md font-medium"
           >
-            {loadingPdf ? <Loader2 className="animate-spin" size={15} /> : <Download size={15} />}
+            {loadingPdf
+              ? <Loader2 className="animate-spin" size={15} />
+              : <Download size={15} />
+            }
             Emitir Informe PDF
           </Button>
         </div>
@@ -532,7 +722,7 @@ const ModalGeneradorInformes = ({ isOpen, onClose, farmacias = [], nutricionista
 
   if (modoPagina) {
     return (
-      <div className="bg-surface rounded-md border border-neutral/10 w-full flex flex-col overflow-hidden min-h-[80vh]">
+      <div className="w-full flex flex-col overflow-hidden min-h-[80vh]">
         {content}
       </div>
     );
