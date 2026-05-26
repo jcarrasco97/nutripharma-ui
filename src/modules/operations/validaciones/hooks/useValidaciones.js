@@ -114,13 +114,16 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
   }, [pestañaActual]);
 
   useEffect(() => {
-    cargarDatos();
-  }, [cargarDatos]);
+    (async () => {
+      await cargarDatos();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pestañaActual]);
 
   // =========================================================================
   // LÓGICA DE CONSULTAS (Validar, Editar, Cancelar)
   // =========================================================================
-  const abrirDetalleConsulta = (consulta) => {
+  const abrirDetalleConsulta = useCallback((consulta) => {
     setDetalleSeleccionado(consulta);
     setFormEdicion({
       nuevas: consulta.nuevas || 0,
@@ -130,7 +133,7 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
       horaInicio: consulta.horaInicio || "00:00",
       horaFin: consulta.horaFin || "00:00",
     });
-  };
+  }, []);
 
   const handleEditarYValidar = async () => {
     if (
