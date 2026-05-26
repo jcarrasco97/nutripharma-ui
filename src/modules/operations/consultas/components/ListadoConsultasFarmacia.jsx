@@ -52,7 +52,11 @@ const ListadoConsultasFarmacia = ({ consultasFiltradas }) => {
                 </span>
               </div>
               <span className="text-lg font-black text-[#367933]">
-                {((c.nuevas * 25 + c.revisiones * 20) * 0.3).toFixed(2)}€
+                {c.comisionGenerada != null
+                  ? `${Number(c.comisionGenerada).toFixed(2)}€`
+                  : c.estado === "VALIDADA" || c.estado === "LIQUIDADA"
+                  ? `${((c.nuevas * 25 + c.revisiones * 20) * ((c.porcentajeComision ?? 30) / 100)).toFixed(2)}€`
+                  : "—"}
               </span>
             </div>
           </div>

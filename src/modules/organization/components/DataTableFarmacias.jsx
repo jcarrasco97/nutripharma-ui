@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { DataTable } from "@/shared/components/ui/DataTable";
 import { createColumnHelper } from "@tanstack/react-table";
 import { Button } from "@/shared/components/ui/Button";
@@ -10,7 +10,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/DropdownMenu";
-import { Archive, Edit, MoreHorizontal, RefreshCw, Store, Trash2, Users } from "lucide-react";
+import { Archive, Edit, History, MoreHorizontal, RefreshCw, Store, Trash2, Users, Wallet } from "lucide-react";
+import MovimientosSaldoSheet from "./MovimientosSaldoSheet";
+import AjusteSaldoDialog from "./AjusteSaldoDialog";
 
 const columnHelper = createColumnHelper();
 
@@ -26,6 +28,22 @@ const DataTableFarmacias = ({
   toolbarStart,
   toolbarEnd,
 }) => {
+  const [farmaciaMovimientos, setFarmaciaMovimientos] = useState(null);
+  const [farmaciaAjuste, setFarmaciaAjuste] = useState(null);
+  // Overrides locales de saldo tras un ajuste manual (evita re-fetch global)
+  const [saldoOverrides, setSaldoOverrides] = useState({});
+
+  const handleAjusteExito = (farmaciaActualizada) => {
+    setSaldoOverrides((prev) => ({
+      ...prev,
+      [farmaciaActualizada.id]: farmaciaActualizada.saldoVirtual,
+    }));
+    // Reflejar también en el sheet de movimientos si está abierto para la misma farmacia
+    if (farmaciaMovimientos?.id === farmaciaActualizada.id) {
+      setFarmaciaMovimientos({ ...farmaciaMovimientos, saldoVirtual: farmaciaActualizada.saldoVirtual });
+    }
+  };
+
   const columns = useMemo(
     () => [
       columnHelper.accessor("nombre", {
@@ -84,6 +102,28 @@ const DataTableFarmacias = ({
           </span>
         ),
       }),
+
+      columnHelper.accessor("saldoVirtual", {
+        id: "saldo",
+        header: "Saldo Virtual",
+        enableSorting: true,
+        cell: ({ row }) => {
+          const f = row.original;
+          const saldo = saldoOverrides[f.id] ?? f.saldoVirtual ?? 0;
+          if (!isActivos) return <span className="text-sm text-neutral/40">—</span>;
+          return (
+            <button
+              onClick={() => setFarmaciaAjuste({ ...f, saldoVirtual: saldo })}
+              title="Ajustar saldo virtual"
+              className="group flex items-center gap-1.5 text-sm font-black text-primary hover:text-primary/80 transition-colors whitespace-nowrap"
+            >
+              <Wallet size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+              {Number(saldo).toFixed(2)}€
+            </button>
+          );
+        },
+      }),
+
       columnHelper.accessor("direccion", {
         id: "direccion",
         header: "Dirección",
@@ -185,6 +225,12 @@ const DataTableFarmacias = ({
                       >
                         <Edit size={14} /> Editar
                       </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setFarmaciaMovimientos({ ...f, saldoVirtual: saldoOverrides[f.id] ?? f.saldoVirtual })}
+                        className="rounded-md gap-2"
+                      >
+                        <History size={14} /> Ver movimientos
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator className="bg-neutral/10" />
                       <DropdownMenuItem
                         onClick={() => handleEliminar?.(f.id, "farmacia")}
@@ -215,6 +261,7 @@ const DataTableFarmacias = ({
       abrirModalAsignaciones,
       handleEliminar,
       handleRestaurar,
+      saldoOverrides,
     ]
   );
 
@@ -229,20 +276,33 @@ const DataTableFarmacias = ({
   }
 
   return (
-    <DataTable
-      columns={columns}
-      data={data}
-      searchKey="nombre"
-      searchPlaceholder="Buscar farmacia..."
-      pageSize={5}
-      emptyText={
-        isActivos
-          ? "No hay farmacias activas."
-          : "No hay farmacias en el historial de bajas."
-      }
-      toolbarStart={toolbarStart}
-      toolbarEnd={toolbarEnd}
-    />
+    <>
+      <DataTable
+        columns={columns}
+        data={data}
+        searchKey="nombre"
+        searchPlaceholder="Buscar farmacia..."
+        pageSize={5}
+        emptyText={
+          isActivos
+            ? "No hay farmacias activas."
+            : "No hay farmacias en el historial de bajas."
+        }
+        toolbarStart={toolbarStart}
+        toolbarEnd={toolbarEnd}
+      />
+
+      <MovimientosSaldoSheet
+        farmacia={farmaciaMovimientos}
+        onClose={() => setFarmaciaMovimientos(null)}
+      />
+
+      <AjusteSaldoDialog
+        farmacia={farmaciaAjuste}
+        onClose={() => setFarmaciaAjuste(null)}
+        onExito={handleAjusteExito}
+      />
+    </>
   );
 };
 

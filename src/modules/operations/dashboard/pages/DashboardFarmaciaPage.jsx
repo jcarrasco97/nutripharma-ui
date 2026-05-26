@@ -3,6 +3,7 @@ import { Loader2, AlertCircle, RefreshCcw } from "lucide-react";
 import { useDashboardFarmacia } from "../hooks/useDashboardFarmacia";
 import FarmaciaCabeceraSaldo from "../components/farmacia/FarmaciaCabeceraSaldo";
 import FarmaciaHistorialPedidos from "../components/farmacia/FarmaciaHistorialPedidos";
+import HistorialMovimientosFarmacia from "../components/farmacia/HistorialMovimientosFarmacia";
 
 const DashboardFarmaciaPage = ({ cambiarVista }) => {
   const hook = useDashboardFarmacia();
@@ -40,6 +41,7 @@ const DashboardFarmaciaPage = ({ cambiarVista }) => {
   return (
     <div className="space-y-6 animate-fade-in">
       <FarmaciaCabeceraSaldo perfil={hook.perfil} cambiarVista={cambiarVista} />
+      <HistorialMovimientosFarmacia farmaciaId={hook.perfil.id} />
       <FarmaciaHistorialPedidos
         mesFiltro={hook.mesFiltro}
         setMesFiltro={hook.setMesFiltro}

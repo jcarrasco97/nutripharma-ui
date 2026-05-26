@@ -43,4 +43,20 @@ export const farmaciaService = {
     );
     return response.data;
   },
+  ajustarSaldo: async (id, nuevoSaldo, nota) => {
+    const response = await axios.put(
+      `${API_URL}/${id}/ajustar-saldo`,
+      { nuevoSaldo, nota },
+      getConfig(),
+    );
+    return response.data;
+  },
+  obtenerMovimientos: async (id) => {
+    const response = await axios.get(`${API_URL}/${id}/movimientos`, getConfig());
+    return response.data;
+  },
+  obtenerMisMovimientos: async () => {
+    const response = await axios.get(`${API_URL}/movimientos/me`, getConfig());
+    return response.data;
+  },
 };

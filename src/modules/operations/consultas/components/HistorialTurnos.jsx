@@ -325,6 +325,15 @@ const HistorialTurnos = ({
                         {c.personalFarmacia}
                       </span>
                     </span>
+                    {c.comisionGenerada != null && (
+                      <span className="flex items-center gap-1 bg-[#b1cb0c]/20 text-[#367933] px-2 py-0.5 rounded-lg ml-auto">
+                        <CheckCircle size={11} />
+                        Comisión:{" "}
+                        <span className="font-black">
+                          {Number(c.comisionGenerada).toFixed(2)}€
+                        </span>
+                      </span>
+                    )}
                   </div>
                 </div>
 

@@ -38,6 +38,8 @@ const PanelLiquidacion = ({ hook }) => {
     setFiltroNutriLiquidacion,
     filtroMesLiquidacion,
     setFiltroMesLiquidacion,
+    filtroEstadoLiquidacion,
+    setFiltroEstadoLiquidacion,
     ordenLiquidacion,
     enviando,
     abrirDetalleConsulta,
@@ -62,7 +64,11 @@ const PanelLiquidacion = ({ hook }) => {
         filtroMesLiquidacion !== "ALL"
           ? c.fecha?.startsWith(filtroMesLiquidacion)
           : true;
-      return pasaNutri && pasaMes;
+      const pasaEstado =
+        filtroEstadoLiquidacion !== "ALL"
+          ? c.estado === filtroEstadoLiquidacion
+          : true;
+      return pasaNutri && pasaMes && pasaEstado;
     });
 
     return filtradas.sort((a, b) => {
@@ -79,25 +85,33 @@ const PanelLiquidacion = ({ hook }) => {
         default:              return fechaB - fechaA;
       }
     });
-  }, [pendientesLiquidar, filtroNutriLiquidacion, filtroMesLiquidacion, ordenLiquidacion]);
+  }, [pendientesLiquidar, filtroNutriLiquidacion, filtroMesLiquidacion, filtroEstadoLiquidacion, ordenLiquidacion]);
 
   // ── 3. Matemáticas del carrito ──
   const desglose = useMemo(() => {
-    let nuevas = 0;
-    let revisiones = 0;
+    let nuevasPend = 0, revisionesPend = 0;
+    let nuevasLiq = 0, revisionesLiq = 0;
 
     consultasFiltradas.forEach((c) => {
-      if (seleccionadasLiquidacion.includes(c.id)) {
-        nuevas     += c.nuevas     || 0;
-        revisiones += c.revisiones || 0;
+      if (!seleccionadasLiquidacion.includes(c.id)) return;
+      if (c.estado === "LIQUIDADA") {
+        nuevasLiq      += c.nuevas     || 0;
+        revisionesLiq  += c.revisiones || 0;
+      } else {
+        nuevasPend     += c.nuevas     || 0;
+        revisionesPend += c.revisiones || 0;
       }
     });
 
-    const totalNuevas     = nuevas     * 25;
-    const totalRevisiones = revisiones * 20;
-    const totalEuros      = totalNuevas + totalRevisiones;
+    const totalPendiente  = nuevasPend * 25 + revisionesPend * 20;
+    const totalLiquidado  = nuevasLiq  * 25 + revisionesLiq  * 20;
+    const totalEuros      = totalPendiente + totalLiquidado;
 
-    return { nuevas, revisiones, totalNuevas, totalRevisiones, totalEuros };
+    return {
+      nuevasPend, revisionesPend, totalPendiente,
+      nuevasLiq,  revisionesLiq,  totalLiquidado,
+      totalEuros,
+    };
   }, [consultasFiltradas, seleccionadasLiquidacion]);
 
   const todosSeleccionados =
@@ -161,6 +175,28 @@ const PanelLiquidacion = ({ hook }) => {
             {getValue() ? new Date(getValue()).toLocaleDateString("es-ES") : "—"}
           </span>
         ),
+      }),
+
+      // Estado con badge
+      columnHelper.accessor("estado", {
+        id: "estado",
+        header: "Estado",
+        enableSorting: true,
+        cell: ({ getValue }) => {
+          const v = getValue();
+          if (v === "LIQUIDADA") {
+            return (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-700">
+                Liquidada
+              </span>
+            );
+          }
+          return (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700">
+              Pendiente
+            </span>
+          );
+        },
       }),
 
       // Responsable — id="responsable" para que searchKey funcione
@@ -265,12 +301,13 @@ const PanelLiquidacion = ({ hook }) => {
       consultasFiltradas,
       todosSeleccionados,
       abrirDetalleConsulta,
+      filtroEstadoLiquidacion,
     ]
   );
 
-  // ── 5. Toolbar: Select Nutricionista + Select Mes (Shadcn, h-10) ──
+  // ── 5. Toolbar: Select Nutricionista + Select Mes + Select Estado ──
   const toolbarStart = (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 flex-wrap">
       {/* Selector de nutricionista */}
       <Select
         value={filtroNutriLiquidacion || "__ALL__"}
@@ -311,6 +348,21 @@ const PanelLiquidacion = ({ hook }) => {
           ))}
         </SelectContent>
       </Select>
+
+      {/* Selector de estado */}
+      <Select
+        value={filtroEstadoLiquidacion || "ALL"}
+        onValueChange={(val) => setFiltroEstadoLiquidacion(val)}
+      >
+        <SelectTrigger size="default" className="w-[180px]">
+          <SelectValue placeholder="Todos los estados" />
+        </SelectTrigger>
+        <SelectContent position="popper" align="start">
+          <SelectItem value="ALL">Todos los estados</SelectItem>
+          <SelectItem value="VALIDADA">Pendientes (Validadas)</SelectItem>
+          <SelectItem value="LIQUIDADA">Ya liquidadas</SelectItem>
+        </SelectContent>
+      </Select>
     </div>
   );
 
@@ -329,18 +381,27 @@ const PanelLiquidacion = ({ hook }) => {
         `}
       >
         {/* BLOQUE IZQUIERDO: total + desglose */}
-        <div className={`flex flex-col transition-opacity duration-200 ${haySeleccion ? "opacity-100" : "opacity-30"}`}>
+        <div className={`flex flex-col gap-0.5 transition-opacity duration-200 ${haySeleccion ? "opacity-100" : "opacity-30"}`}>
           <p className="text-[10px] font-bold uppercase tracking-wider text-white/50 leading-none mb-0.5">
-            Total a liquidar
+            Total seleccionado
           </p>
           <p className="text-xl font-bold text-[#b1cb0c] tabular-nums leading-tight">
             {desglose.totalEuros.toFixed(2)}€
           </p>
-          <p className="text-xs text-white/50 mt-0.5 tabular-nums">
-            {desglose.nuevas} nuevas ({desglose.totalNuevas.toFixed(2)}€)
-            {" + "}
-            {desglose.revisiones} revis. ({desglose.totalRevisiones.toFixed(2)}€)
-          </p>
+          {/* Desglose pendiente */}
+          {desglose.totalPendiente > 0 && (
+            <p className="text-xs text-amber-300 tabular-nums">
+              Pendiente: {desglose.nuevasPend} nuevas + {desglose.revisionesPend} revis. ={" "}
+              <span className="font-bold">{desglose.totalPendiente.toFixed(2)}€</span>
+            </p>
+          )}
+          {/* Desglose ya liquidado */}
+          {desglose.totalLiquidado > 0 && (
+            <p className="text-xs text-emerald-300 tabular-nums">
+              Ya liquidado: {desglose.nuevasLiq} nuevas + {desglose.revisionesLiq} revis. ={" "}
+              <span className="font-bold">{desglose.totalLiquidado.toFixed(2)}€</span>
+            </p>
+          )}
         </div>
 
         {/* CENTRO: contador de seleccionadas */}
@@ -378,7 +439,13 @@ const PanelLiquidacion = ({ hook }) => {
         pageSize={10}
         toolbarStart={toolbarStart}
         showColumnsToggle={true}
-        emptyText="No hay consultas pendientes con estos filtros."
+        emptyText={
+          filtroEstadoLiquidacion === "LIQUIDADA"
+            ? "No hay consultas liquidadas con estos filtros."
+            : filtroEstadoLiquidacion === "VALIDADA"
+            ? "No hay consultas pendientes de liquidar."
+            : "No hay consultas con estos filtros."
+        }
       />
 
     </div>

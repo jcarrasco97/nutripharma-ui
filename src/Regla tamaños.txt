@@ -1,0 +1,5 @@
+Fila de página (tabs + botón CTA)  →  h-10
+Toolbar de tabla (search, filtros)  →  h-10  ← misma altura, alineados
+Controles dentro de cards/forms     →  h-10
+Paginación / controles secundarios  →  h-8
+Botones de submit en modales/sheets →  h-10 o h-11 (solo ahí)

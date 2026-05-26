@@ -20,6 +20,7 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
   const [seleccionadasLiquidacion, setSeleccionadasLiquidacion] = useState([]);
   const [filtroNutriLiquidacion, setFiltroNutriLiquidacion] = useState("");
   const [filtroMesLiquidacion, setFiltroMesLiquidacion] = useState("ALL");
+  const [filtroEstadoLiquidacion, setFiltroEstadoLiquidacion] = useState("ALL");
   const [ordenLiquidacion, setOrdenLiquidacion] = useState("FECHA_DESC");
 
   // 2. ESTADOS DE MODALES Y EDICIÓN
@@ -76,7 +77,7 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
               c.estado === "CON_INCIDENCIA",
           ),
         );
-        setPendientesLiquidar(todas.filter((c) => c.estado === "VALIDADA"));
+        setPendientesLiquidar(todas.filter((c) => c.estado === "VALIDADA" || c.estado === "LIQUIDADA"));
         setHistorial(todas.filter((c) => c.estado !== "BORRADOR"));
       } else if (pestañaActual === "pedidos") {
         // 👇 4. Bifurcamos Pedidos (El error principal)
@@ -529,6 +530,8 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
     setFiltroNutriLiquidacion,
     filtroMesLiquidacion,
     setFiltroMesLiquidacion,
+    filtroEstadoLiquidacion,
+    setFiltroEstadoLiquidacion,
     ordenLiquidacion,
     setOrdenLiquidacion,
     listaNutrisGlobal,
