@@ -271,6 +271,49 @@ const ModalGeneradorInformes = ({
     incluirPersonal: filtros.incluirPers,
   });
 
+  const generarNombreArchivo = (extension) => {
+    const normalize = (str) => {
+      if (!str) return "";
+      return str
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // Sin tildes
+        .replace(/[^a-zA-Z0-9]/g, "_")   // Solo alfanuméricos y guiones bajos
+        .replace(/_+/g, "_")             // Evitar múltiples guiones juntos
+        .replace(/_$/, "");              // Quitar guion final si lo hay
+    };
+
+    let nombre = `Informe_${filtros.tipo}`;
+
+    // Rango de fechas
+    if (filtros.anioInicio !== filtros.anioFin) {
+      nombre += `_${filtros.anioInicio}_a_${filtros.anioFin}`;
+    } else {
+      nombre += `_${filtros.anioInicio}`;
+      if (filtros.mes) {
+        nombre += `_Mes_${filtros.mes}`;
+      }
+    }
+
+    // Entidades
+    if (filtros.nutricionistaId) {
+      const nutri = nutricionistas.find((n) => String(n.id) === String(filtros.nutricionistaId));
+      if (nutri) {
+        const nombreNutri = normalize(`${nutri.nombre}_${nutri.apellidos}`);
+        nombre += `_Nutri_${nombreNutri}`;
+      }
+    }
+
+    if (filtros.farmaciaId && TIPO_CFG[filtros.tipo]?.hasFarmacia) {
+      const farma = farmacias.find((f) => String(f.id) === String(filtros.farmaciaId));
+      if (farma) {
+        const nombreFarma = normalize(farma.nombre);
+        nombre += `_Farmacia_${nombreFarma}`;
+      }
+    }
+
+    return `${nombre}.${extension}`;
+  };
+
   const triggerDownload = (blob, filename) => {
     const link = document.createElement("a");
     link.href = window.URL.createObjectURL(new Blob([blob]));
@@ -285,9 +328,7 @@ const ModalGeneradorInformes = ({
     try {
       const base64 = filtros.tipo !== "VENTAS_FARMACIA" ? await captureChartAsBase64() : null;
       const payload = buildPayload(true, base64);
-      const filename = filtros.tipo === "VENTAS_FARMACIA"
-        ? `informe_ventas_centros_${filtros.anioInicio}.pdf`
-        : `informe_${filtros.tipo.toLowerCase()}_${filtros.anioInicio}.pdf`;
+      const filename = generarNombreArchivo("pdf");
 
       let blob;
       if (filtros.tipo === "PRODUCTOS")        blob = await dashboardService.descargarInformeProductosPdf(payload);
@@ -309,7 +350,7 @@ const ModalGeneradorInformes = ({
     setLoadingExcel(true);
     try {
       const payload = buildPayload(false);
-      const filename = `informe_${filtros.tipo.toLowerCase()}_${filtros.anioInicio}.xlsx`;
+      const filename = generarNombreArchivo("xlsx");
 
       let blob;
       if (filtros.tipo === "PRODUCTOS")             blob = await dashboardService.descargarInformeProductosExcel(payload);

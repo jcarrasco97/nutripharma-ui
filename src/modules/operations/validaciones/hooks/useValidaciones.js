@@ -77,7 +77,11 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
               c.estado === "CON_INCIDENCIA",
           ),
         );
-        setPendientesLiquidar(todas.filter((c) => c.estado === "VALIDADA" || c.estado === "LIQUIDADA"));
+        setPendientesLiquidar(
+          todas.filter(
+            (c) => c.estado === "VALIDADA" || c.estado === "LIQUIDADA",
+          ),
+        );
         setHistorial(todas.filter((c) => c.estado !== "BORRADOR"));
       } else if (pestañaActual === "pedidos") {
         // 👇 4. Bifurcamos Pedidos (El error principal)
@@ -137,9 +141,21 @@ export const useValidaciones = (pestañaInicial = "consultas") => {
       return;
     setEnviando(true);
     try {
+      // Asegurar formato HH:mm:ss para las horas (backend Jackson requiere segundos)
+      const datosFormateados = {
+        ...formEdicion,
+        horaInicio:
+          formEdicion.horaInicio?.length === 5
+            ? formEdicion.horaInicio + ":00"
+            : formEdicion.horaInicio,
+        horaFin:
+          formEdicion.horaFin?.length === 5
+            ? formEdicion.horaFin + ":00"
+            : formEdicion.horaFin,
+      };
       await consultasService.editarYValidarTurnoAdmin(
         detalleSeleccionado.id,
-        formEdicion,
+        datosFormateados,
       );
       avanzarDespuesDeAccion();
       cargarDatos();

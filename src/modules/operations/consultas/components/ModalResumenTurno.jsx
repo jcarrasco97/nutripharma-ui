@@ -10,6 +10,7 @@ const ModalResumenTurno = ({
   farmaciaNombre,
 }) => {
   if (!mostrar) return null;
+  const totalGenerado = (formulario.nuevas || 0) * 25 + (formulario.revisiones || 0) * 20;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#062e3a]/60 backdrop-blur-sm">
@@ -61,6 +62,7 @@ const ModalResumenTurno = ({
                 </span>
               </p>
             </div>
+            <p className="mt-2 text-sm font-bold text-[#367933]">Ingresos estimados: {totalGenerado} €</p>
           </div>
           <div className="flex gap-3 pt-4">
             <button

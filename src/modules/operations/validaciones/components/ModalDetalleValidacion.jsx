@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Edit3,
   XCircle,
+  DollarSign,
 } from "lucide-react";
 import {
   Dialog,
@@ -237,8 +238,15 @@ const ModalDetalleValidacion = ({
                   <span className="text-xs font-medium text-neutral/50">
                     Farmacia
                   </span>
-                  <span className="text-sm font-semibold text-secondary">
-                    {detalle.farmaciaNombre}
+                  <span className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-secondary">
+                      {detalle.farmaciaNombre}
+                    </span>
+                    {detalle.porcentajeComision != null && (
+                      <span className="text-[10px] font-bold bg-accent/20 text-primary px-1.5 py-0.5 rounded">
+                        {detalle.porcentajeComision}%
+                      </span>
+                    )}
                   </span>
                 </div>
               </div>
@@ -396,6 +404,41 @@ const ModalDetalleValidacion = ({
                   </div>
                 )}
               </div>
+
+              {/* Desglose Financiero (Solo Admin) */}
+              {(() => {
+                const totalGenerado = (formEdicion.nuevas || 0) * 25 + (formEdicion.revisiones || 0) * 20;
+                const pct = detalle.porcentajeComision != null ? detalle.porcentajeComision : 30;
+                const saldoFarmacia = detalle.comisionGenerada != null
+                  ? Number(detalle.comisionGenerada)
+                  : totalGenerado * (pct / 100);
+
+                return (
+                  <div className="bg-surface border border-neutral/10 p-4 rounded-md">
+                    <div className="flex items-center gap-1.5 mb-3 pb-2 border-b border-neutral/5">
+                      <DollarSign size={13} className="text-primary" />
+                      <p className="text-[10px] font-bold text-neutral/40 uppercase tracking-wider">
+                        Desglose Financiero
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-medium text-neutral/50 flex items-center gap-1">
+                          <Banknote size={11} /> Total Generado Empresa
+                        </span>
+                        <span className="text-sm font-bold text-secondary">{totalGenerado.toFixed(2)}€</span>
+                      </div>
+                      <div className="flex justify-between items-center border-t border-neutral/5 pt-2">
+                        <span className="text-xs font-medium text-neutral/50 flex items-center gap-1">
+                          <Wallet size={11} /> Saldo Virtual → Farmacia
+                          <span className="text-[10px] font-bold text-primary/60">({pct}%)</span>
+                        </span>
+                        <span className="text-sm font-bold text-primary">{saldoFarmacia.toFixed(2)}€</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Botones inline de validación (cuando el estado lo permite) */}
               {["BORRADOR", "PENDIENTE_VALIDACION", "CON_INCIDENCIA"].includes(
