@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // URL corregida a /api/farmacia
-const API_URL = "http://localhost:8080/api/farmacias";
+const API_URL = `${import.meta.env.VITE_API_URL}/api/farmacias`;
 
 const getConfig = () => {
   const token = localStorage.getItem("token");

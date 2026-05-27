@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // URL absoluta al controlador
-const API_URL = "http://localhost:8080/api/personal-interno";
+const API_URL = `${import.meta.env.VITE_API_URL}/api/personal-interno`;
 
 const getConfig = () => {
   const token = localStorage.getItem("token");

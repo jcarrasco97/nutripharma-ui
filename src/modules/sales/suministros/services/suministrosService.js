@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // Ajustamos la URL base al nuevo controlador
-const API_URL = "http://localhost:8080/api/suministros";
+const API_URL = `${import.meta.env.VITE_API_URL}/api/suministros`;
 
 const getConfig = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
