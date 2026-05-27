@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Nutripharma ERP</string>
+    <string name="title_activity_main">Nutripharma ERP</string>
+    <string name="package_name">com.jcarrasco97.app</string>
+    <string name="custom_url_scheme">com.jcarrasco97.app</string>
+</resources>
